@@ -1,0 +1,7 @@
+{
+  "name": "BHS - Best Home Services",
+  "description": "An advanced home services platform providing on-demand professional help for cleaning, repairs, and beauty services, with admin, technician, and user dashboards.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
