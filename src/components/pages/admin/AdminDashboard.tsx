@@ -778,8 +778,23 @@ const ServicesTab = ({
             key={service.id}
             className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl overflow-hidden hover:border-slate-700 transition-all group"
           >
-            <div className="h-32 bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 flex items-center justify-center">
+            {/* <div className="h-32 bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 flex items-center justify-center">
               <Package size={48} className="text-violet-400" />
+            </div> */}
+               {/* IMAGE / ICON SECTION */}
+            <div className="h-32 bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 flex items-center justify-center overflow-hidden">
+              {service.image ? (
+                <img
+                  src={service.image}
+                  alt={service.name}
+                  className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
+                />
+              ) : (
+                <Package size={48} className="text-violet-400" />
+              )}
             </div>
             <div className="p-5">
               <div className="flex items-start justify-between mb-3">
