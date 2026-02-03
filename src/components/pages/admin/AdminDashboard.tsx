@@ -117,7 +117,128 @@ interface Booking {
   createdAt: string;
 }
 
-type TabType = "overview" | "bookings" | "services" | "technicians" | "clients" | "settings";
+type TabType =
+  | "overview"
+  | "bookings"
+  | "services"
+  | "technicians"
+  | "clients"
+  | "settings";
+
+// Helper function to match technician category with service
+// Handles: service codes (A10002), service names (Electrical), and variations (Electrician)
+const categoryMatchesService = (
+  techCategory: string,
+  serviceName: string,
+  serviceCode?: string,
+): boolean => {
+  if (!techCategory) return false;
+  if (!serviceName && !serviceCode) return false;
+
+  const techCat = techCategory.toLowerCase().trim();
+  const svcName = (serviceName || "").toLowerCase().trim();
+  const svcCode = (serviceCode || "").toLowerCase().trim();
+
+  // Direct match with service code (e.g., techCategory="A10002" matches serviceCode="A10002")
+  if (svcCode && techCat === svcCode) return true;
+
+  // Direct match with service name
+  if (svcName && techCat === svcName) return true;
+
+  // Contains match (either way)
+  if (svcName && (techCat.includes(svcName) || svcName.includes(techCat)))
+    return true;
+
+  // Service code to service name mapping
+  const serviceCodeToName: Record<string, string[]> = {
+    a10001: ["plumbing", "plumber"],
+    a10002: ["electrical", "electrician", "electric"],
+    a10003: ["ac repair", "ac", "air conditioner", "hvac", "ac technician"],
+    a10004: ["cleaning", "cleaner", "housekeeping"],
+  };
+
+  // If techCategory is a service code, check if service name matches
+  const techCatMappedNames = serviceCodeToName[techCat] || [];
+  if (techCatMappedNames.length > 0) {
+    for (const mappedName of techCatMappedNames) {
+      if (svcName.includes(mappedName) || mappedName.includes(svcName)) {
+        return true;
+      }
+    }
+  }
+
+  // Common category mappings for name variations
+  const categoryMappings: Record<string, string[]> = {
+    electrical: [
+      "electrician",
+      "electric",
+      "wiring",
+      "socket",
+      "switch",
+      "electrical",
+    ],
+    electrician: ["electrical", "electric", "wiring", "socket", "switch"],
+    plumbing: ["plumber", "pipe", "tap", "leak", "drainage", "plumbing"],
+    plumber: ["plumbing", "pipe", "tap", "leak", "drainage"],
+    "ac repair": [
+      "ac",
+      "air conditioner",
+      "cooling",
+      "hvac",
+      "ac technician",
+      "ac service",
+    ],
+    "ac technician": ["ac repair", "ac", "air conditioner", "cooling", "hvac"],
+    ac: ["ac repair", "ac technician", "air conditioner", "cooling", "hvac"],
+    cleaning: ["cleaner", "housekeeping", "maid", "cleaning service"],
+    cleaner: ["cleaning", "housekeeping", "maid"],
+    carpentry: ["carpenter", "wood", "furniture", "carpentry"],
+    carpenter: ["carpentry", "wood", "furniture"],
+    painting: ["painter", "wall", "paint"],
+    painter: ["painting", "wall", "paint"],
+    appliance: ["appliance repair", "appliances", "home appliance"],
+    "appliance repair": ["appliance", "appliances", "home appliance"],
+  };
+
+  // Check if techCategory maps to serviceName or vice versa
+  const techMappings = categoryMappings[techCat] || [];
+  const svcMappings = categoryMappings[svcName] || [];
+
+  // Check if service name is in technician's category mappings
+  for (const mapping of techMappings) {
+    if (svcName.includes(mapping) || mapping.includes(svcName)) {
+      return true;
+    }
+  }
+
+  // Check if technician's category is in service's mappings
+  for (const mapping of svcMappings) {
+    if (techCat.includes(mapping) || mapping.includes(techCat)) {
+      return true;
+    }
+  }
+
+  // Check root word match (remove common suffixes)
+  const getRootWord = (word: string) => {
+    return word
+      .replace(/ian$/, "") // electrician -> electric
+      .replace(/er$/, "") // plumber -> plumb
+      .replace(/ing$/, "") // cleaning -> clean
+      .replace(/or$/, "") // contractor -> contract
+      .replace(/ist$/, ""); // specialist -> special
+  };
+
+  const techRoot = getRootWord(techCat);
+  const svcRoot = getRootWord(svcName);
+
+  if (techRoot.length >= 4 && svcRoot.length >= 4) {
+    if (techRoot.includes(svcRoot) || svcRoot.includes(techRoot)) {
+      return true;
+    }
+  }
+
+  return false;
+};
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -137,12 +258,13 @@ const AdminDashboard = () => {
   const fetchAllData = async () => {
     setLoading(true);
     try {
-      const [usersRes, servicesRes, subServicesRes, bookingsRes] = await Promise.all([
-        fetch(`${API_BASE}/api/auth/users`),
-        fetch(`${API_BASE}/api/services`),
-        fetch(`${API_BASE}/api/subservices`),
-        fetch(`${API_BASE}/api/service-on-booking`),
-      ]);
+      const [usersRes, servicesRes, subServicesRes, bookingsRes] =
+        await Promise.all([
+          fetch(`${API_BASE}/api/auth/users`),
+          fetch(`${API_BASE}/api/services`),
+          fetch(`${API_BASE}/api/subservices`),
+          fetch(`${API_BASE}/api/service-on-booking`),
+        ]);
 
       const usersData = await usersRes.json();
       const servicesData = await servicesRes.json();
@@ -165,34 +287,42 @@ const AdminDashboard = () => {
     totalUsers: users.filter((u) => u.roleId === 2).length,
     totalTechnicians: users.filter((u) => u.roleId === 3).length,
     pendingTechnicians: users.filter(
-      (u) => u.roleId === 3 && u.technician?.status === "PENDING"
+      (u) => u.roleId === 3 && u.technician?.status === "PENDING",
     ).length,
     totalServices: services.length,
     totalSubServices: subServices.length,
     activeTechnicians: users.filter(
-      (u) => u.roleId === 3 && u.technician?.status === "ACCEPT"
+      (u) => u.roleId === 3 && u.technician?.status === "ACCEPT",
     ).length,
   };
 
   // Handle technician status update
-  const handleTechnicianStatus = async (userId: number, status: "APPROVE" | "REJECT") => {
+  const handleTechnicianStatus = async (
+    userId: number,
+    status: "APPROVE" | "REJECT",
+  ) => {
     try {
       const token = sessionStorage.getItem("accessToken");
-      const res = await fetch(`${API_BASE}/api/auth/technician/${userId}/status`, {
-        method: "PATCH",
-        headers: { 
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
+      const res = await fetch(
+        `${API_BASE}/api/auth/technician/${userId}/status`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ status }),
         },
-        body: JSON.stringify({ status }),
-      });
+      );
 
       if (res.ok) {
         fetchAllData();
       } else {
         const errorData = await res.json();
         console.error("Error response:", errorData);
-        alert(`Failed to update status: ${errorData.message || 'Unknown error'}`);
+        alert(
+          `Failed to update status: ${errorData.message || "Unknown error"}`,
+        );
       }
     } catch (error) {
       console.error("Error updating technician status:", error);
@@ -210,7 +340,13 @@ const AdminDashboard = () => {
   // Sidebar navigation items
   const navItems = [
     { id: "overview", label: "Overview", icon: LayoutDashboard },
-    { id: "bookings", label: "Bookings", icon: Calendar, badge: bookings.filter(b => b.work_status === 0 || b.work_status === 1).length },
+    {
+      id: "bookings",
+      label: "Bookings",
+      icon: Calendar,
+      badge: bookings.filter((b) => b.work_status === 0 || b.work_status === 1)
+        .length,
+    },
     { id: "services", label: "Services", icon: Package },
     { id: "technicians", label: "Technicians", icon: UserCog },
     { id: "clients", label: "Clients", icon: Users },
@@ -327,12 +463,19 @@ const AdminDashboard = () => {
 
         {/* Tab Content */}
         {activeTab === "overview" && (
-          <OverviewTab stats={stats} users={users} services={services} onViewTechnicians={() => setActiveTab("technicians")} />
+          <OverviewTab
+            stats={stats}
+            users={users}
+            services={services}
+            onViewTechnicians={() => setActiveTab("technicians")}
+          />
         )}
         {activeTab === "bookings" && (
           <BookingsTab
             bookings={bookings}
-            technicians={users.filter((u) => u.roleId === 3 && u.technician?.status === "ACCEPT")}
+            technicians={users.filter(
+              (u) => u.roleId === 3 && u.technician?.status === "ACCEPT",
+            )}
             onRefresh={fetchAllData}
             searchQuery={searchQuery}
           />
@@ -411,7 +554,9 @@ const OverviewTab = ({
     },
   ];
 
-  const pendingTechs = users.filter((u) => u.roleId === 3 && u.technician?.status === "PENDING");
+  const pendingTechs = users.filter(
+    (u) => u.roleId === 3 && u.technician?.status === "PENDING",
+  );
 
   return (
     <div className="space-y-8">
@@ -433,7 +578,11 @@ const OverviewTab = ({
                   stat.up ? "text-emerald-400" : "text-amber-400"
                 }`}
               >
-                {stat.up ? <ArrowUpRight size={14} /> : <AlertCircle size={14} />}
+                {stat.up ? (
+                  <ArrowUpRight size={14} />
+                ) : (
+                  <AlertCircle size={14} />
+                )}
                 {stat.change}
               </span>
             </div>
@@ -452,10 +601,12 @@ const OverviewTab = ({
             </div>
             <div className="flex-1">
               <h3 className="text-white font-bold text-lg mb-1">
-                {pendingTechs.length} Technician{pendingTechs.length > 1 ? "s" : ""} Awaiting Approval
+                {pendingTechs.length} Technician
+                {pendingTechs.length > 1 ? "s" : ""} Awaiting Approval
               </h3>
               <p className="text-slate-400 text-sm mb-4">
-                New technician applications have been submitted. Review their documents and credentials.
+                New technician applications have been submitted. Review their
+                documents and credentials.
               </p>
               <button
                 onClick={onViewTechnicians}
@@ -475,7 +626,7 @@ const OverviewTab = ({
         <div className="lg:col-span-2 bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl p-6">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-bold text-white">Recent Technicians</h3>
-            <button 
+            <button
               onClick={onViewTechnicians}
               className="text-violet-400 text-sm font-semibold hover:text-violet-300 flex items-center gap-1"
             >
@@ -508,8 +659,8 @@ const OverviewTab = ({
                       tech.technician?.status === "ACCEPT"
                         ? "bg-emerald-500/20 text-emerald-400"
                         : tech.technician?.status === "PENDING"
-                        ? "bg-amber-500/20 text-amber-400"
-                        : "bg-red-500/20 text-red-400"
+                          ? "bg-amber-500/20 text-amber-400"
+                          : "bg-red-500/20 text-red-400"
                     }`}
                   >
                     {tech.technician?.status || "PENDING"}
@@ -533,7 +684,7 @@ const OverviewTab = ({
               <Plus size={20} className="text-violet-400" />
               Add New Service
             </button>
-            <button 
+            <button
               onClick={onViewTechnicians}
               className="w-full flex items-center gap-4 p-4 bg-slate-800/50 border border-slate-700 rounded-xl text-white font-semibold hover:border-slate-600 transition-all"
             >
@@ -626,7 +777,7 @@ const ServicesTab = ({
   const filteredServices = services.filter(
     (s) =>
       s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.service_code.toLowerCase().includes(searchQuery.toLowerCase())
+      s.service_code.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   // Show success message
@@ -640,7 +791,7 @@ const ServicesTab = ({
       alert("Service name is required");
       return;
     }
-    
+
     setSaving(true);
     try {
       const method = editingService ? "PUT" : "POST";
@@ -652,7 +803,8 @@ const ServicesTab = ({
       const submitData = new FormData();
       submitData.append("name", formData.name);
       submitData.append("description", formData.description);
-      if (formData.service_code) submitData.append("service_code", formData.service_code);
+      if (formData.service_code)
+        submitData.append("service_code", formData.service_code);
       if (serviceImage) submitData.append("image", serviceImage);
 
       const res = await fetch(url, {
@@ -667,9 +819,18 @@ const ServicesTab = ({
 
       setShowModal(false);
       setEditingService(null);
-      setFormData({ name: "", service_code: "", description: "", status: "ACTIVE" });
+      setFormData({
+        name: "",
+        service_code: "",
+        description: "",
+        status: "ACTIVE",
+      });
       setServiceImage(null);
-      showSuccess(editingService ? "Service updated successfully!" : "Service added successfully!");
+      showSuccess(
+        editingService
+          ? "Service updated successfully!"
+          : "Service added successfully!",
+      );
       await onRefresh(); // Wait for refresh
     } catch (error: any) {
       console.error("Error saving service:", error);
@@ -680,7 +841,11 @@ const ServicesTab = ({
   };
 
   const handleSubSubmit = async () => {
-    if (!subFormData.name.trim() || !subFormData.price || !subFormData.service_code) {
+    if (
+      !subFormData.name.trim() ||
+      !subFormData.price ||
+      !subFormData.service_code
+    ) {
       alert("Name, price, and category are required");
       return;
     }
@@ -781,7 +946,7 @@ const ServicesTab = ({
             {/* <div className="h-32 bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 flex items-center justify-center">
               <Package size={48} className="text-violet-400" />
             </div> */}
-               {/* IMAGE / ICON SECTION */}
+            {/* IMAGE / ICON SECTION */}
             <div className="h-32 bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 flex items-center justify-center overflow-hidden">
               {service.image ? (
                 <img
@@ -799,7 +964,9 @@ const ServicesTab = ({
             <div className="p-5">
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <h4 className="text-white font-bold text-lg">{service.name}</h4>
+                  <h4 className="text-white font-bold text-lg">
+                    {service.name}
+                  </h4>
                   <p className="text-slate-500 text-xs font-mono">
                     {service.service_code}
                   </p>
@@ -819,7 +986,10 @@ const ServicesTab = ({
               </p>
               <div className="flex items-center justify-between pt-4 border-t border-slate-800">
                 <span className="text-slate-500 text-sm">
-                  {subServices.filter((s) => s.service_id === service.id).length}{" "}
+                  {
+                    subServices.filter((s) => s.service_id === service.id)
+                      .length
+                  }{" "}
                   sub-services
                 </span>
                 <div className="flex gap-2">
@@ -873,22 +1043,39 @@ const ServicesTab = ({
           <table className="w-full">
             <thead className="bg-slate-800/50">
               <tr>
-                <th className="text-left p-4 text-slate-400 font-semibold text-sm">Service</th>
-                <th className="text-left p-4 text-slate-400 font-semibold text-sm">Code</th>
-                <th className="text-left p-4 text-slate-400 font-semibold text-sm">Category</th>
-                <th className="text-left p-4 text-slate-400 font-semibold text-sm">Price</th>
-                <th className="text-left p-4 text-slate-400 font-semibold text-sm">Actions</th>
+                <th className="text-left p-4 text-slate-400 font-semibold text-sm">
+                  Service
+                </th>
+                <th className="text-left p-4 text-slate-400 font-semibold text-sm">
+                  Code
+                </th>
+                <th className="text-left p-4 text-slate-400 font-semibold text-sm">
+                  Category
+                </th>
+                <th className="text-left p-4 text-slate-400 font-semibold text-sm">
+                  Price
+                </th>
+                <th className="text-left p-4 text-slate-400 font-semibold text-sm">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
               {subServices.map((sub) => (
-                <tr key={sub.id} className="border-t border-slate-800 hover:bg-slate-800/30 transition-colors">
+                <tr
+                  key={sub.id}
+                  className="border-t border-slate-800 hover:bg-slate-800/30 transition-colors"
+                >
                   <td className="p-4">
                     <p className="text-white font-semibold">{sub.name}</p>
-                    <p className="text-slate-500 text-sm line-clamp-1">{sub.description}</p>
+                    <p className="text-slate-500 text-sm line-clamp-1">
+                      {sub.description}
+                    </p>
                   </td>
                   <td className="p-4">
-                    <span className="text-slate-400 font-mono text-sm">{sub.subservice_code}</span>
+                    <span className="text-slate-400 font-mono text-sm">
+                      {sub.subservice_code}
+                    </span>
                   </td>
                   <td className="p-4">
                     <span className="px-3 py-1 bg-violet-500/20 text-violet-400 rounded-lg text-sm font-medium">
@@ -896,7 +1083,9 @@ const ServicesTab = ({
                     </span>
                   </td>
                   <td className="p-4">
-                    <span className="text-emerald-400 font-bold">₹{sub.price}</span>
+                    <span className="text-emerald-400 font-bold">
+                      ₹{sub.price}
+                    </span>
                   </td>
                   <td className="p-4">
                     <div className="flex gap-2">
@@ -927,18 +1116,30 @@ const ServicesTab = ({
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 w-full max-w-lg mx-4 animate-in zoom-in-95 duration-200">
             <h3 className="text-2xl font-bold text-white mb-6">
-              {editingService ? "Edit Service Category" : "Add Service Category"}
+              {editingService
+                ? "Edit Service Category"
+                : "Add Service Category"}
             </h3>
             <div className="space-y-4">
               {/* Image Upload */}
               <div>
-                <label className="text-slate-400 text-sm font-medium block mb-2">Category Image (Thumbnail)</label>
+                <label className="text-slate-400 text-sm font-medium block mb-2">
+                  Category Image (Thumbnail)
+                </label>
                 <div className="flex items-center gap-4">
                   <div className="w-20 h-20 bg-slate-800 border-2 border-dashed border-slate-600 rounded-xl flex items-center justify-center overflow-hidden">
                     {serviceImage ? (
-                      <img src={URL.createObjectURL(serviceImage)} alt="Preview" className="w-full h-full object-cover" />
+                      <img
+                        src={URL.createObjectURL(serviceImage)}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                      />
                     ) : editingService?.image ? (
-                      <img src={editingService.image} alt="Current" className="w-full h-full object-cover" />
+                      <img
+                        src={editingService.image}
+                        alt="Current"
+                        className="w-full h-full object-cover"
+                      />
                     ) : (
                       <Package size={24} className="text-slate-500" />
                     )}
@@ -947,7 +1148,9 @@ const ServicesTab = ({
                     <input
                       type="file"
                       accept="image/*"
-                      onChange={(e) => setServiceImage(e.target.files?.[0] || null)}
+                      onChange={(e) =>
+                        setServiceImage(e.target.files?.[0] || null)
+                      }
                       className="hidden"
                       id="service-image"
                     />
@@ -958,25 +1161,35 @@ const ServicesTab = ({
                       <Plus size={16} />
                       {serviceImage ? "Change Image" : "Upload Image"}
                     </label>
-                    <p className="text-slate-500 text-xs mt-1">JPG, PNG up to 2MB</p>
+                    <p className="text-slate-500 text-xs mt-1">
+                      JPG, PNG up to 2MB
+                    </p>
                   </div>
                 </div>
               </div>
               <div>
-                <label className="text-slate-400 text-sm font-medium block mb-2">Service Name *</label>
+                <label className="text-slate-400 text-sm font-medium block mb-2">
+                  Service Name *
+                </label>
                 <input
                   type="text"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
                   placeholder="e.g., AC Repair"
                   className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-violet-500"
                 />
               </div>
               <div>
-                <label className="text-slate-400 text-sm font-medium block mb-2">Description</label>
+                <label className="text-slate-400 text-sm font-medium block mb-2">
+                  Description
+                </label>
                 <textarea
                   value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
                   placeholder="Service description..."
                   rows={3}
                   className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-violet-500 resize-none"
@@ -1004,8 +1217,10 @@ const ServicesTab = ({
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                       Saving...
                     </>
+                  ) : editingService ? (
+                    "Save Changes"
                   ) : (
-                    editingService ? "Save Changes" : "Add Service"
+                    "Add Service"
                   )}
                 </button>
               </div>
@@ -1018,15 +1233,23 @@ const ServicesTab = ({
       {showSubModal && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 w-full max-w-lg mx-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-2xl font-bold text-white mb-6">Add Sub-Service</h3>
+            <h3 className="text-2xl font-bold text-white mb-6">
+              Add Sub-Service
+            </h3>
             <div className="space-y-4">
               {/* Image Upload */}
               <div>
-                <label className="text-slate-400 text-sm font-medium block mb-2">Service Image (Thumbnail)</label>
+                <label className="text-slate-400 text-sm font-medium block mb-2">
+                  Service Image (Thumbnail)
+                </label>
                 <div className="flex items-center gap-4">
                   <div className="w-20 h-20 bg-slate-800 border-2 border-dashed border-slate-600 rounded-xl flex items-center justify-center overflow-hidden">
                     {subServiceImage ? (
-                      <img src={URL.createObjectURL(subServiceImage)} alt="Preview" className="w-full h-full object-cover" />
+                      <img
+                        src={URL.createObjectURL(subServiceImage)}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                      />
                     ) : (
                       <Wrench size={24} className="text-slate-500" />
                     )}
@@ -1035,7 +1258,9 @@ const ServicesTab = ({
                     <input
                       type="file"
                       accept="image/*"
-                      onChange={(e) => setSubServiceImage(e.target.files?.[0] || null)}
+                      onChange={(e) =>
+                        setSubServiceImage(e.target.files?.[0] || null)
+                      }
                       className="hidden"
                       id="subservice-image"
                     />
@@ -1046,49 +1271,75 @@ const ServicesTab = ({
                       <Plus size={16} />
                       {subServiceImage ? "Change Image" : "Upload Image"}
                     </label>
-                    <p className="text-slate-500 text-xs mt-1">JPG, PNG up to 2MB</p>
+                    <p className="text-slate-500 text-xs mt-1">
+                      JPG, PNG up to 2MB
+                    </p>
                   </div>
                 </div>
               </div>
               <div>
-                <label className="text-slate-400 text-sm font-medium block mb-2">Category *</label>
+                <label className="text-slate-400 text-sm font-medium block mb-2">
+                  Category *
+                </label>
                 <select
                   value={subFormData.service_code}
-                  onChange={(e) => setSubFormData({ ...subFormData, service_code: e.target.value })}
+                  onChange={(e) =>
+                    setSubFormData({
+                      ...subFormData,
+                      service_code: e.target.value,
+                    })
+                  }
                   className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-violet-500"
                 >
                   <option value="">Select category</option>
                   {services.map((s) => (
-                    <option key={s.id} value={s.service_code}>{s.name} ({s.service_code})</option>
+                    <option key={s.id} value={s.service_code}>
+                      {s.name} ({s.service_code})
+                    </option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="text-slate-400 text-sm font-medium block mb-2">Service Name *</label>
+                <label className="text-slate-400 text-sm font-medium block mb-2">
+                  Service Name *
+                </label>
                 <input
                   type="text"
                   value={subFormData.name}
-                  onChange={(e) => setSubFormData({ ...subFormData, name: e.target.value })}
+                  onChange={(e) =>
+                    setSubFormData({ ...subFormData, name: e.target.value })
+                  }
                   placeholder="e.g., AC Gas Refill"
                   className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-violet-500"
                 />
               </div>
               <div>
-                <label className="text-slate-400 text-sm font-medium block mb-2">Price (₹) *</label>
+                <label className="text-slate-400 text-sm font-medium block mb-2">
+                  Price (₹) *
+                </label>
                 <input
                   type="number"
                   value={subFormData.price}
-                  onChange={(e) => setSubFormData({ ...subFormData, price: e.target.value })}
+                  onChange={(e) =>
+                    setSubFormData({ ...subFormData, price: e.target.value })
+                  }
                   placeholder="e.g., 1500"
                   min="0"
                   className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-violet-500"
                 />
               </div>
               <div>
-                <label className="text-slate-400 text-sm font-medium block mb-2">Description</label>
+                <label className="text-slate-400 text-sm font-medium block mb-2">
+                  Description
+                </label>
                 <textarea
                   value={subFormData.description}
-                  onChange={(e) => setSubFormData({ ...subFormData, description: e.target.value })}
+                  onChange={(e) =>
+                    setSubFormData({
+                      ...subFormData,
+                      description: e.target.value,
+                    })
+                  }
                   placeholder="Service description..."
                   rows={3}
                   className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-violet-500 resize-none"
@@ -1138,7 +1389,9 @@ const TechniciansTab = ({
   onStatusUpdate: (id: number, status: "APPROVE" | "REJECT") => void;
   searchQuery: string;
 }) => {
-  const [filter, setFilter] = useState<"ALL" | "PENDING" | "ACCEPT" | "REJECT">("ALL");
+  const [filter, setFilter] = useState<"ALL" | "PENDING" | "ACCEPT" | "REJECT">(
+    "ALL",
+  );
   const [selectedTech, setSelectedTech] = useState<User | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
@@ -1150,9 +1403,15 @@ const TechniciansTab = ({
     return matchesSearch && matchesFilter;
   });
 
-  const pendingCount = users.filter((u) => u.technician?.status === "PENDING").length;
-  const approvedCount = users.filter((u) => u.technician?.status === "ACCEPT").length;
-  const rejectedCount = users.filter((u) => u.technician?.status === "REJECT").length;
+  const pendingCount = users.filter(
+    (u) => u.technician?.status === "PENDING",
+  ).length;
+  const approvedCount = users.filter(
+    (u) => u.technician?.status === "ACCEPT",
+  ).length;
+  const rejectedCount = users.filter(
+    (u) => u.technician?.status === "REJECT",
+  ).length;
 
   const openDetail = (tech: User) => {
     setSelectedTech(tech);
@@ -1215,9 +1474,12 @@ const TechniciansTab = ({
           <AlertCircle className="text-amber-400 flex-shrink-0" size={24} />
           <div className="flex-1">
             <p className="text-white font-semibold">
-              {pendingCount} application{pendingCount > 1 ? "s" : ""} pending review
+              {pendingCount} application{pendingCount > 1 ? "s" : ""} pending
+              review
             </p>
-            <p className="text-slate-400 text-sm">Review documents and approve or reject technicians</p>
+            <p className="text-slate-400 text-sm">
+              Review documents and approve or reject technicians
+            </p>
           </div>
           <button
             onClick={() => setFilter("PENDING")}
@@ -1244,7 +1506,9 @@ const TechniciansTab = ({
                       {tech.name.charAt(0)}
                     </div>
                     <div>
-                      <h4 className="text-xl font-bold text-white">{tech.name}</h4>
+                      <h4 className="text-xl font-bold text-white">
+                        {tech.name}
+                      </h4>
                       <p className="text-slate-400">@{tech.username}</p>
                       <div className="flex items-center gap-2 mt-1">
                         <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded text-xs font-bold">
@@ -1262,7 +1526,9 @@ const TechniciansTab = ({
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex items-center gap-2 text-slate-400">
                     <Mail size={16} />
-                    <span className="text-sm truncate">{tech.email || "N/A"}</span>
+                    <span className="text-sm truncate">
+                      {tech.email || "N/A"}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2 text-slate-400">
                     <Phone size={16} />
@@ -1288,7 +1554,9 @@ const TechniciansTab = ({
 
                 {/* Documents Summary */}
                 <div className="p-4 bg-slate-800/50 rounded-xl">
-                  <p className="text-slate-400 text-xs font-medium mb-3">DOCUMENTS SUBMITTED</p>
+                  <p className="text-slate-400 text-xs font-medium mb-3">
+                    DOCUMENTS SUBMITTED
+                  </p>
                   <div className="flex flex-wrap gap-2">
                     {tech.technician?.aadharDoc && (
                       <span className="px-2 py-1 bg-emerald-500/20 text-emerald-400 rounded text-xs flex items-center gap-1">
@@ -1346,9 +1614,14 @@ const TechniciansTab = ({
 
           {filteredUsers.length === 0 && (
             <div className="col-span-full text-center py-16">
-              <CheckCircle2 size={48} className="text-emerald-500 mx-auto mb-4" />
+              <CheckCircle2
+                size={48}
+                className="text-emerald-500 mx-auto mb-4"
+              />
               <p className="text-white font-semibold text-lg">All Caught Up!</p>
-              <p className="text-slate-500">No pending applications to review</p>
+              <p className="text-slate-500">
+                No pending applications to review
+              </p>
             </div>
           )}
         </div>
@@ -1359,31 +1632,54 @@ const TechniciansTab = ({
             <table className="w-full">
               <thead className="bg-slate-800/50">
                 <tr>
-                  <th className="text-left p-4 text-slate-400 font-semibold text-sm">Technician</th>
-                  <th className="text-left p-4 text-slate-400 font-semibold text-sm">Contact</th>
-                  <th className="text-left p-4 text-slate-400 font-semibold text-sm">Skill</th>
-                  <th className="text-left p-4 text-slate-400 font-semibold text-sm">Experience</th>
-                  <th className="text-left p-4 text-slate-400 font-semibold text-sm">Status</th>
-                  <th className="text-left p-4 text-slate-400 font-semibold text-sm">Actions</th>
+                  <th className="text-left p-4 text-slate-400 font-semibold text-sm">
+                    Technician
+                  </th>
+                  <th className="text-left p-4 text-slate-400 font-semibold text-sm">
+                    Contact
+                  </th>
+                  <th className="text-left p-4 text-slate-400 font-semibold text-sm">
+                    Skill
+                  </th>
+                  <th className="text-left p-4 text-slate-400 font-semibold text-sm">
+                    Experience
+                  </th>
+                  <th className="text-left p-4 text-slate-400 font-semibold text-sm">
+                    Status
+                  </th>
+                  <th className="text-left p-4 text-slate-400 font-semibold text-sm">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {filteredUsers.map((tech) => (
-                  <tr key={tech.userId} className="border-t border-slate-800 hover:bg-slate-800/30 transition-colors">
+                  <tr
+                    key={tech.userId}
+                    className="border-t border-slate-800 hover:bg-slate-800/30 transition-colors"
+                  >
                     <td className="p-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-fuchsia-500 rounded-xl flex items-center justify-center text-white font-bold">
                           {tech.name.charAt(0)}
                         </div>
                         <div>
-                          <p className="text-white font-semibold">{tech.name}</p>
-                          <p className="text-slate-500 text-sm">@{tech.username}</p>
+                          <p className="text-white font-semibold">
+                            {tech.name}
+                          </p>
+                          <p className="text-slate-500 text-sm">
+                            @{tech.username}
+                          </p>
                         </div>
                       </div>
                     </td>
                     <td className="p-4">
-                      <p className="text-white text-sm">{tech.email || "N/A"}</p>
-                      <p className="text-slate-500 text-sm">{tech.mobile || "N/A"}</p>
+                      <p className="text-white text-sm">
+                        {tech.email || "N/A"}
+                      </p>
+                      <p className="text-slate-500 text-sm">
+                        {tech.mobile || "N/A"}
+                      </p>
                     </td>
                     <td className="p-4">
                       <span className="px-3 py-1 bg-violet-500/20 text-violet-400 rounded-lg text-sm font-medium">
@@ -1391,7 +1687,9 @@ const TechniciansTab = ({
                       </span>
                     </td>
                     <td className="p-4">
-                      <span className="text-white">{tech.technician?.experience || 0} years</span>
+                      <span className="text-white">
+                        {tech.technician?.experience || 0} years
+                      </span>
                     </td>
                     <td className="p-4">
                       <span
@@ -1399,8 +1697,8 @@ const TechniciansTab = ({
                           tech.technician?.status === "ACCEPT"
                             ? "bg-emerald-500/20 text-emerald-400"
                             : tech.technician?.status === "PENDING"
-                            ? "bg-amber-500/20 text-amber-400"
-                            : "bg-red-500/20 text-red-400"
+                              ? "bg-amber-500/20 text-amber-400"
+                              : "bg-red-500/20 text-red-400"
                         }`}
                       >
                         {tech.technician?.status || "PENDING"}
@@ -1418,14 +1716,21 @@ const TechniciansTab = ({
                         {tech.technician?.status === "PENDING" && (
                           <>
                             <button
-                              onClick={() => onStatusUpdate(tech.userId, "APPROVE")}
+                              onClick={() =>
+                                onStatusUpdate(tech.userId, "APPROVE")
+                              }
                               className="p-2 hover:bg-emerald-500/20 rounded-lg transition-colors"
                               title="Approve"
                             >
-                              <CheckCircle2 size={16} className="text-emerald-400" />
+                              <CheckCircle2
+                                size={16}
+                                className="text-emerald-400"
+                              />
                             </button>
                             <button
-                              onClick={() => onStatusUpdate(tech.userId, "REJECT")}
+                              onClick={() =>
+                                onStatusUpdate(tech.userId, "REJECT")
+                              }
                               className="p-2 hover:bg-red-500/20 rounded-lg transition-colors"
                               title="Reject"
                             >
@@ -1503,13 +1808,16 @@ const TechnicianDetailModal = ({
                 t?.status === "ACCEPT"
                   ? "bg-emerald-500/20 text-emerald-400"
                   : t?.status === "PENDING"
-                  ? "bg-amber-500/20 text-amber-400"
-                  : "bg-red-500/20 text-red-400"
+                    ? "bg-amber-500/20 text-amber-400"
+                    : "bg-red-500/20 text-red-400"
               }`}
             >
               {t?.status || "PENDING"}
             </span>
-            <button onClick={onClose} className="p-2 hover:bg-slate-800 rounded-xl transition-colors">
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-slate-800 rounded-xl transition-colors"
+            >
               <X size={24} className="text-slate-400" />
             </button>
           </div>
@@ -1538,10 +1846,17 @@ const TechnicianDetailModal = ({
               </h3>
               <div className="space-y-3">
                 <InfoRow label="Primary Skill" value={t?.skill} />
-                <InfoRow label="Experience" value={t?.experience ? `${t.experience} years` : "N/A"} />
+                <InfoRow
+                  label="Experience"
+                  value={t?.experience ? `${t.experience} years` : "N/A"}
+                />
                 <InfoRow label="Category" value={t?.techCategory} />
                 <InfoRow label="Availability" value={t?.timeDuration} />
-                <InfoRow label="Emergency Service" value={t?.emergencyAvailable ? "Yes" : "No"} highlight={t?.emergencyAvailable} />
+                <InfoRow
+                  label="Emergency Service"
+                  value={t?.emergencyAvailable ? "Yes" : "No"}
+                  highlight={t?.emergencyAvailable}
+                />
               </div>
             </div>
           </div>
@@ -1555,14 +1870,18 @@ const TechnicianDetailModal = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <p className="text-slate-400 text-sm mb-2">Aadhar Card</p>
-                <p className="text-white font-mono text-lg mb-3">{t?.aadharCardNo || "Not provided"}</p>
+                <p className="text-white font-mono text-lg mb-3">
+                  {t?.aadharCardNo || "Not provided"}
+                </p>
                 {t?.aadharDoc && (
                   <DocumentPreview url={t.aadharDoc} label="Aadhar Document" />
                 )}
               </div>
               <div>
                 <p className="text-slate-400 text-sm mb-2">PAN Card</p>
-                <p className="text-white font-mono text-lg mb-3">{t?.panCardNo || "Not provided"}</p>
+                <p className="text-white font-mono text-lg mb-3">
+                  {t?.panCardNo || "Not provided"}
+                </p>
                 {t?.panDoc && (
                   <DocumentPreview url={t.panDoc} label="PAN Document" />
                 )}
@@ -1582,7 +1901,10 @@ const TechnicianDetailModal = ({
               <InfoRow label="Branch" value={t?.branchName} />
             </div>
             {t?.bankPassbookDoc && (
-              <DocumentPreview url={t.bankPassbookDoc} label="Bank Passbook / Cancelled Cheque" />
+              <DocumentPreview
+                url={t.bankPassbookDoc}
+                label="Bank Passbook / Cancelled Cheque"
+              />
             )}
           </div>
 
@@ -1593,7 +1915,10 @@ const TechnicianDetailModal = ({
                 <FileText size={18} className="text-violet-400" />
                 Experience Certificate
               </h3>
-              <DocumentPreview url={t.experienceCertDoc} label="Experience Certificate" />
+              <DocumentPreview
+                url={t.experienceCertDoc}
+                label="Experience Certificate"
+              />
             </div>
           )}
         </div>
@@ -1623,10 +1948,20 @@ const TechnicianDetailModal = ({
 };
 
 // Helper Components
-const InfoRow = ({ label, value, highlight }: { label: string; value?: string | number; highlight?: boolean }) => (
+const InfoRow = ({
+  label,
+  value,
+  highlight,
+}: {
+  label: string;
+  value?: string | number;
+  highlight?: boolean;
+}) => (
   <div className="flex justify-between items-center">
     <span className="text-slate-400 text-sm">{label}</span>
-    <span className={`font-medium ${highlight ? "text-emerald-400" : "text-white"}`}>
+    <span
+      className={`font-medium ${highlight ? "text-emerald-400" : "text-white"}`}
+    >
       {value || "N/A"}
     </span>
   </div>
@@ -1634,7 +1969,7 @@ const InfoRow = ({ label, value, highlight }: { label: string; value?: string | 
 
 const DocumentPreview = ({ url, label }: { url: string; label: string }) => {
   const isPDF = url.toLowerCase().endsWith(".pdf");
-  
+
   return (
     <div className="bg-slate-700/50 rounded-xl p-4 flex items-center justify-between">
       <div className="flex items-center gap-3">
@@ -1642,12 +1977,18 @@ const DocumentPreview = ({ url, label }: { url: string; label: string }) => {
           {isPDF ? (
             <FileText size={24} className="text-red-400" />
           ) : (
-            <img src={url} alt={label} className="w-12 h-12 object-cover rounded-lg" />
+            <img
+              src={url}
+              alt={label}
+              className="w-12 h-12 object-cover rounded-lg"
+            />
           )}
         </div>
         <div>
           <p className="text-white font-medium">{label}</p>
-          <p className="text-slate-400 text-xs">{isPDF ? "PDF Document" : "Image"}</p>
+          <p className="text-slate-400 text-xs">
+            {isPDF ? "PDF Document" : "Image"}
+          </p>
         </div>
       </div>
       <a
@@ -1674,7 +2015,7 @@ const ClientsTab = ({
   const filteredUsers = users.filter(
     (u) =>
       u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.email?.toLowerCase().includes(searchQuery.toLowerCase())
+      u.email?.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   return (
@@ -1691,7 +2032,9 @@ const ClientsTab = ({
         </div>
         <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
           <p className="text-slate-500 text-sm">New This Week</p>
-          <p className="text-2xl font-bold text-violet-400">{Math.min(users.length, 3)}</p>
+          <p className="text-2xl font-bold text-violet-400">
+            {Math.min(users.length, 3)}
+          </p>
         </div>
       </div>
 
@@ -1701,30 +2044,49 @@ const ClientsTab = ({
           <table className="w-full">
             <thead className="bg-slate-800/50">
               <tr>
-                <th className="text-left p-4 text-slate-400 font-semibold text-sm">Client</th>
-                <th className="text-left p-4 text-slate-400 font-semibold text-sm">Email</th>
-                <th className="text-left p-4 text-slate-400 font-semibold text-sm">Phone</th>
-                <th className="text-left p-4 text-slate-400 font-semibold text-sm">Address</th>
-                <th className="text-left p-4 text-slate-400 font-semibold text-sm">Actions</th>
+                <th className="text-left p-4 text-slate-400 font-semibold text-sm">
+                  Client
+                </th>
+                <th className="text-left p-4 text-slate-400 font-semibold text-sm">
+                  Email
+                </th>
+                <th className="text-left p-4 text-slate-400 font-semibold text-sm">
+                  Phone
+                </th>
+                <th className="text-left p-4 text-slate-400 font-semibold text-sm">
+                  Address
+                </th>
+                <th className="text-left p-4 text-slate-400 font-semibold text-sm">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
               {filteredUsers.map((client) => (
-                <tr key={client.userId} className="border-t border-slate-800 hover:bg-slate-800/30 transition-colors">
+                <tr
+                  key={client.userId}
+                  className="border-t border-slate-800 hover:bg-slate-800/30 transition-colors"
+                >
                   <td className="p-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center text-white font-bold">
                         {client.name.charAt(0)}
                       </div>
                       <div>
-                        <p className="text-white font-semibold">{client.name}</p>
-                        <p className="text-slate-500 text-sm">@{client.username}</p>
+                        <p className="text-white font-semibold">
+                          {client.name}
+                        </p>
+                        <p className="text-slate-500 text-sm">
+                          @{client.username}
+                        </p>
                       </div>
                     </div>
                   </td>
                   <td className="p-4 text-white">{client.email || "N/A"}</td>
                   <td className="p-4 text-white">{client.mobile || "N/A"}</td>
-                  <td className="p-4 text-slate-400 max-w-xs truncate">{client.address || "N/A"}</td>
+                  <td className="p-4 text-slate-400 max-w-xs truncate">
+                    {client.address || "N/A"}
+                  </td>
                   <td className="p-4">
                     <button className="p-2 hover:bg-slate-800 rounded-lg">
                       <Eye size={16} className="text-slate-400" />
@@ -1759,17 +2121,33 @@ const BookingsTab = ({
   onRefresh: () => void;
   searchQuery: string;
 }) => {
-  const [filter, setFilter] = useState<"ALL" | "NEW" | "PENDING" | "IN_PROGRESS" | "COMPLETED">("ALL");
+  const [filter, setFilter] = useState<
+    "ALL" | "NEW" | "PENDING" | "IN_PROGRESS" | "COMPLETED"
+  >("ALL");
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [assigning, setAssigning] = useState(false);
 
-  const WORK_STATUS: Record<number, { label: string; color: string; bg: string }> = {
-    0: { label: "New", color: "text-blue-400", bg: "bg-blue-500/20" },
-    1: { label: "Pending", color: "text-amber-400", bg: "bg-amber-500/20" },
-    2: { label: "In Progress", color: "text-violet-400", bg: "bg-violet-500/20" },
-    3: { label: "Completed", color: "text-emerald-400", bg: "bg-emerald-500/20" },
-    4: { label: "Rejected", color: "text-red-400", bg: "bg-red-500/20" },
+  // Work Status mapping based on backend:
+  // 0 = Rejected (technician rejected) or Unassigned awaiting action
+  // 1 = Pending/Accepted (technician accepted, work in progress)
+  // 3 = Completed
+  const WORK_STATUS: Record<
+    number,
+    { label: string; color: string; bg: string }
+  > = {
+    0: { label: "Unassigned", color: "text-red-400", bg: "bg-red-500/20" },
+    1: { label: "Accepted", color: "text-amber-400", bg: "bg-amber-500/20" },
+    2: {
+      label: "In Progress",
+      color: "text-violet-400",
+      bg: "bg-violet-500/20",
+    },
+    3: {
+      label: "Completed",
+      color: "text-emerald-400",
+      bg: "bg-emerald-500/20",
+    },
   };
 
   const filteredBookings = bookings.filter((b) => {
@@ -1779,8 +2157,10 @@ const BookingsTab = ({
       b.subservice?.name?.toLowerCase().includes(searchQuery.toLowerCase());
 
     if (filter === "ALL") return matchesSearch;
-    if (filter === "NEW") return matchesSearch && b.work_status === 0;
-    if (filter === "PENDING") return matchesSearch && b.work_status === 1;
+    // "NEW" filter now shows all unassigned bookings (technician_allocated: false)
+    if (filter === "NEW") return matchesSearch && !b.technician_allocated;
+    if (filter === "PENDING")
+      return matchesSearch && b.technician_allocated && b.work_status === 1;
     if (filter === "IN_PROGRESS") return matchesSearch && b.work_status === 2;
     if (filter === "COMPLETED") return matchesSearch && b.work_status === 3;
     return matchesSearch;
@@ -1788,22 +2168,39 @@ const BookingsTab = ({
 
   const stats = {
     total: bookings.length,
-    new: bookings.filter((b) => b.work_status === 0).length,
-    pending: bookings.filter((b) => b.work_status === 1).length,
+    // Unassigned bookings that need technician assignment
+    new: bookings.filter((b) => !b.technician_allocated).length,
+    // Assigned and accepted by technician
+    pending: bookings.filter(
+      (b) => b.technician_allocated && b.work_status === 1,
+    ).length,
     inProgress: bookings.filter((b) => b.work_status === 2).length,
     completed: bookings.filter((b) => b.work_status === 3).length,
   };
 
+  // Assign technician using existing Swagger API: POST /api/service-on-booking/accept/:order_id
+  // Admin can assign a technician by calling the accept API with the target technician's ID
   const handleAssignTechnician = async (technicianId: number) => {
     if (!selectedBooking) return;
 
     setAssigning(true);
     try {
-      const res = await fetch(`${API_BASE}/api/service-on-booking/${selectedBooking.id}/assign`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ technician_id: technicianId }),
-      });
+      const token = sessionStorage.getItem("accessToken");
+      // Use the accept API with opinion=1 (Accept) to assign the technician
+      const res = await fetch(
+        `${API_BASE}/api/service-on-booking/accept/${selectedBooking.order_id}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            technician_id: technicianId,
+            opinion: 1, // 1 = Accept (assigns and accepts the job)
+          }),
+        },
+      );
 
       if (res.ok) {
         setShowAssignModal(false);
@@ -1827,10 +2224,25 @@ const BookingsTab = ({
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         {[
           { id: "ALL", label: "Total", count: stats.total, color: "violet" },
-          { id: "NEW", label: "New", count: stats.new, color: "blue" },
-          { id: "PENDING", label: "Pending", count: stats.pending, color: "amber" },
-          { id: "IN_PROGRESS", label: "In Progress", count: stats.inProgress, color: "violet" },
-          { id: "COMPLETED", label: "Completed", count: stats.completed, color: "emerald" },
+          { id: "NEW", label: "Unassigned", count: stats.new, color: "red" },
+          {
+            id: "PENDING",
+            label: "Assigned",
+            count: stats.pending,
+            color: "amber",
+          },
+          {
+            id: "IN_PROGRESS",
+            label: "In Progress",
+            count: stats.inProgress,
+            color: "violet",
+          },
+          {
+            id: "COMPLETED",
+            label: "Completed",
+            count: stats.completed,
+            color: "emerald",
+          },
         ].map((stat) => (
           <button
             key={stat.id}
@@ -1842,28 +2254,33 @@ const BookingsTab = ({
             }`}
           >
             <p className="text-slate-500 text-sm">{stat.label}</p>
-            <p className={`text-2xl font-bold ${filter === stat.id ? `text-${stat.color}-400` : "text-white"}`}>
+            <p
+              className={`text-2xl font-bold ${filter === stat.id ? `text-${stat.color}-400` : "text-white"}`}
+            >
               {stat.count}
             </p>
           </button>
         ))}
       </div>
 
-      {/* New Bookings Alert */}
+      {/* Unassigned Bookings Alert */}
       {stats.new > 0 && (
-        <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4 flex items-center gap-4">
-          <AlertCircle className="text-blue-400 flex-shrink-0" size={24} />
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex items-center gap-4">
+          <AlertCircle className="text-red-400 flex-shrink-0" size={24} />
           <div className="flex-1">
             <p className="text-white font-semibold">
-              {stats.new} new booking{stats.new > 1 ? "s" : ""} need technician assignment
+              {stats.new} booking{stats.new > 1 ? "s" : ""} need technician
+              assignment
             </p>
-            <p className="text-slate-400 text-sm">Assign technicians to process these bookings</p>
+            <p className="text-slate-400 text-sm">
+              These bookings are either new or were rejected by technicians
+            </p>
           </div>
           <button
             onClick={() => setFilter("NEW")}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-400 transition-colors"
+            className="px-4 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-400 transition-colors"
           >
-            View New
+            View Unassigned
           </button>
         </div>
       )}
@@ -1877,54 +2294,103 @@ const BookingsTab = ({
           <table className="w-full">
             <thead className="bg-slate-800/50">
               <tr>
-                <th className="text-left p-4 text-slate-400 font-semibold text-sm">Order ID</th>
-                <th className="text-left p-4 text-slate-400 font-semibold text-sm">Customer</th>
-                <th className="text-left p-4 text-slate-400 font-semibold text-sm">Service</th>
-                <th className="text-left p-4 text-slate-400 font-semibold text-sm">Date & Time</th>
-                <th className="text-left p-4 text-slate-400 font-semibold text-sm">Amount</th>
-                <th className="text-left p-4 text-slate-400 font-semibold text-sm">Status</th>
-                <th className="text-left p-4 text-slate-400 font-semibold text-sm">Technician</th>
-                <th className="text-left p-4 text-slate-400 font-semibold text-sm">Actions</th>
+                <th className="text-left p-4 text-slate-400 font-semibold text-sm">
+                  Order ID
+                </th>
+                <th className="text-left p-4 text-slate-400 font-semibold text-sm">
+                  Customer
+                </th>
+                <th className="text-left p-4 text-slate-400 font-semibold text-sm">
+                  Service
+                </th>
+                <th className="text-left p-4 text-slate-400 font-semibold text-sm">
+                  Date & Time
+                </th>
+                <th className="text-left p-4 text-slate-400 font-semibold text-sm">
+                  Amount
+                </th>
+                <th className="text-left p-4 text-slate-400 font-semibold text-sm">
+                  Status
+                </th>
+                <th className="text-left p-4 text-slate-400 font-semibold text-sm">
+                  Technician
+                </th>
+                <th className="text-left p-4 text-slate-400 font-semibold text-sm">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
               {filteredBookings.map((booking) => {
-                const status = WORK_STATUS[booking.work_status] || WORK_STATUS[0];
+                const status =
+                  WORK_STATUS[booking.work_status] || WORK_STATUS[0];
                 return (
-                  <tr key={booking.id} className="border-t border-slate-800 hover:bg-slate-800/30 transition-colors">
+                  <tr
+                    key={booking.id}
+                    className="border-t border-slate-800 hover:bg-slate-800/30 transition-colors"
+                  >
                     <td className="p-4">
-                      <span className="text-violet-400 font-mono font-bold">{booking.order_id}</span>
-                    </td>
-                    <td className="p-4">
-                      <p className="text-white font-semibold">{booking.User?.name || "N/A"}</p>
-                      <p className="text-slate-500 text-sm">{booking.User?.mobile || ""}</p>
-                    </td>
-                    <td className="p-4">
-                      <p className="text-white">{booking.subservice?.name || booking.subservice_code}</p>
-                      <p className="text-slate-500 text-sm">{booking.service?.name || booking.service_code}</p>
-                    </td>
-                    <td className="p-4">
-                      <p className="text-white">{new Date(booking.date).toLocaleDateString()}</p>
-                      <p className="text-slate-500 text-sm">{booking.time_slot}</p>
-                    </td>
-                    <td className="p-4">
-                      <span className="text-emerald-400 font-bold">₹{booking.total_price}</span>
-                    </td>
-                    <td className="p-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${status.bg} ${status.color}`}>
-                        {status.label}
+                      <span className="text-violet-400 font-mono font-bold">
+                        {booking.order_id}
                       </span>
                     </td>
                     <td className="p-4">
-                      {booking.technician_allocated && booking.technician ? (
-                        <p className="text-white font-medium">{booking.technician.name || "Assigned"}</p>
+                      <p className="text-white font-semibold">
+                        {booking.User?.name || "N/A"}
+                      </p>
+                      <p className="text-slate-500 text-sm">
+                        {booking.User?.mobile || ""}
+                      </p>
+                    </td>
+                    <td className="p-4">
+                      <p className="text-white">
+                        {booking.subservice?.name || booking.subservice_code}
+                      </p>
+                      <p className="text-slate-500 text-sm">
+                        {booking.service?.name || booking.service_code}
+                      </p>
+                    </td>
+                    <td className="p-4">
+                      <p className="text-white">
+                        {new Date(booking.date).toLocaleDateString()}
+                      </p>
+                      <p className="text-slate-500 text-sm">
+                        {booking.time_slot}
+                      </p>
+                    </td>
+                    <td className="p-4">
+                      <span className="text-emerald-400 font-bold">
+                        ₹{booking.total_price}
+                      </span>
+                    </td>
+                    <td className="p-4">
+                      {booking.technician_allocated ? (
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-bold ${status.bg} ${status.color}`}
+                        >
+                          {status.label}
+                        </span>
                       ) : (
-                        <span className="text-slate-500 text-sm">Not assigned</span>
+                        <span className="px-3 py-1 rounded-full text-xs font-bold bg-red-500/20 text-red-400">
+                          Unassigned
+                        </span>
+                      )}
+                    </td>
+                    <td className="p-4">
+                      {booking.technician_allocated && booking.technician ? (
+                        <p className="text-white font-medium">
+                          {booking.technician.name || "Assigned"}
+                        </p>
+                      ) : (
+                        <span className="text-red-400 text-sm font-medium">
+                          Needs Assignment
+                        </span>
                       )}
                     </td>
                     <td className="p-4">
                       <div className="flex gap-2">
-                        {!booking.technician_allocated && booking.work_status === 0 && (
+                        {/* Show Assign button for any unassigned booking */}
+                        {!booking.technician_allocated && (
                           <button
                             onClick={() => {
                               setSelectedBooking(booking);
@@ -1959,54 +2425,110 @@ const BookingsTab = ({
       {showAssignModal && selectedBooking && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 w-full max-w-lg mx-4 animate-in zoom-in-95 duration-200">
-            <h3 className="text-2xl font-bold text-white mb-2">Assign Technician</h3>
+            <h3 className="text-2xl font-bold text-white mb-2">
+              Assign Technician
+            </h3>
             <p className="text-slate-400 mb-2">
-              Booking: <span className="text-violet-400 font-mono">{selectedBooking.order_id}</span>
+              Booking:{" "}
+              <span className="text-violet-400 font-mono">
+                {selectedBooking.order_id}
+              </span>
             </p>
             <p className="text-slate-500 text-sm mb-6">
-              Service: <span className="text-emerald-400">{selectedBooking.service?.name || selectedBooking.service_code}</span>
+              Service:{" "}
+              <span className="text-emerald-400">
+                {selectedBooking.service?.name || selectedBooking.service_code}
+              </span>
             </p>
 
             <div className="space-y-3 max-h-80 overflow-y-auto">
               {(() => {
                 // Filter technicians by the booking's service category
-                const matchingTechnicians = technicians.filter(
-                  (tech) => tech.technician?.techCategory === selectedBooking.service_code
-                );
-                
-                if (matchingTechnicians.length === 0) {
+                // Use smart category matching function (supports both codes and names)
+                const serviceName = selectedBooking.service?.name || "";
+                const serviceCode =
+                  selectedBooking.service_code ||
+                  selectedBooking.service?.service_code ||
+                  "";
+
+                const matchingTechnicians = technicians.filter((tech) => {
+                  const techCategory = tech.technician?.techCategory || "";
+                  // Use smart matching that handles codes (A10002) and names (Electrical/Electrician)
+                  return categoryMatchesService(
+                    techCategory,
+                    serviceName,
+                    serviceCode,
+                  );
+                });
+
+                // If no matching technicians, show ALL available technicians
+                const displayTechnicians =
+                  matchingTechnicians.length > 0
+                    ? matchingTechnicians
+                    : technicians;
+
+                if (displayTechnicians.length === 0) {
                   return (
                     <div className="text-center py-8">
-                      <p className="text-slate-500 mb-2">No technicians available for this service category</p>
-                      <p className="text-slate-600 text-sm">Service: {selectedBooking.service?.name || selectedBooking.service_code}</p>
+                      <p className="text-slate-500 mb-2">
+                        No approved technicians available
+                      </p>
+                      <p className="text-slate-600 text-sm">
+                        Please approve technicians in the Technicians tab first
+                      </p>
                     </div>
                   );
                 }
-                
-                return matchingTechnicians.map((tech) => (
-                  <button
-                    key={tech.userId}
-                    onClick={() => handleAssignTechnician(tech.userId)}
-                    disabled={assigning}
-                    className="w-full p-4 bg-slate-800/50 hover:bg-slate-800 border border-slate-700 rounded-xl flex items-center gap-4 transition-colors disabled:opacity-50"
-                  >
-                    <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-fuchsia-500 rounded-xl flex items-center justify-center text-white font-bold">
-                      {tech.name.charAt(0)}
-                    </div>
-                    <div className="flex-1 text-left">
-                      <p className="text-white font-semibold">{tech.name}</p>
-                      <p className="text-slate-500 text-sm">
-                        {tech.technician?.skill || "General"} • {tech.technician?.experience || 0} yrs exp
-                      </p>
-                    </div>
-                    {tech.technician?.rating && (
-                      <div className="flex items-center gap-1 text-amber-400">
-                        <Star size={14} className="fill-amber-400" />
-                        <span className="text-sm font-bold">{tech.technician.rating.avg_rating}</span>
+
+                return displayTechnicians.map((tech) => {
+                  const techCategory = tech.technician?.techCategory || "";
+                  const isMatch = categoryMatchesService(
+                    techCategory,
+                    serviceName,
+                    serviceCode,
+                  );
+
+                  return (
+                    <button
+                      key={tech.userId}
+                      onClick={() => handleAssignTechnician(tech.userId)}
+                      disabled={assigning}
+                      className={`w-full p-4 hover:bg-slate-800 border rounded-xl flex items-center gap-4 transition-colors disabled:opacity-50 ${
+                        isMatch
+                          ? "bg-emerald-500/10 border-emerald-500/30"
+                          : "bg-slate-800/50 border-slate-700"
+                      }`}
+                    >
+                      <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-fuchsia-500 rounded-xl flex items-center justify-center text-white font-bold">
+                        {tech.name.charAt(0)}
                       </div>
-                    )}
-                  </button>
-                ));
+                      <div className="flex-1 text-left">
+                        <div className="flex items-center gap-2">
+                          <p className="text-white font-semibold">
+                            {tech.name}
+                          </p>
+                          {isMatch && (
+                            <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-xs font-bold rounded">
+                              Best Match
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-slate-500 text-sm">
+                          {tech.technician?.techCategory || "General"} •{" "}
+                          {tech.technician?.experience || 0} yrs exp
+                        </p>
+                      </div>
+                      {tech.technician?.rating && (
+                        <div className="flex items-center gap-1 text-amber-400">
+                          <Star size={14} className="fill-amber-400" />
+                          <span className="text-sm font-bold">
+                            {tech.technician.rating.avg_rating}
+                          </span>
+                        </div>
+                      )}
+                    </button>
+                  );
+                });
               })()}
             </div>
 
@@ -2036,7 +2558,9 @@ const SettingsTab = () => {
         <h3 className="text-xl font-bold text-white mb-6">Platform Settings</h3>
         <div className="space-y-6">
           <div>
-            <label className="text-slate-400 text-sm font-medium block mb-2">Commission Rate (%)</label>
+            <label className="text-slate-400 text-sm font-medium block mb-2">
+              Commission Rate (%)
+            </label>
             <input
               type="number"
               defaultValue={10}
@@ -2044,7 +2568,9 @@ const SettingsTab = () => {
             />
           </div>
           <div>
-            <label className="text-slate-400 text-sm font-medium block mb-2">GST Rate (%)</label>
+            <label className="text-slate-400 text-sm font-medium block mb-2">
+              GST Rate (%)
+            </label>
             <input
               type="number"
               defaultValue={18}
@@ -2052,7 +2578,9 @@ const SettingsTab = () => {
             />
           </div>
           <div>
-            <label className="text-slate-400 text-sm font-medium block mb-2">Emergency Service Fee (₹)</label>
+            <label className="text-slate-400 text-sm font-medium block mb-2">
+              Emergency Service Fee (₹)
+            </label>
             <input
               type="number"
               defaultValue={500}

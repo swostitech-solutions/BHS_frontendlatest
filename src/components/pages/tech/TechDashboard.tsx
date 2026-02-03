@@ -38,9 +38,42 @@ import {
   Eye,
   MessageSquare,
   Zap,
+  RefreshCw,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE } from "../../../config/api";
+
+// Custom CSS animations for the notification popup
+const notificationStyles = `
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes scaleIn {
+    from { transform: scale(0.8); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  @keyframes wiggle {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-15deg); }
+    75% { transform: rotate(15deg); }
+  }
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+  @keyframes slideInUp {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .animate-fadeIn { animation: fadeIn 0.3s ease-out; }
+  .animate-scaleIn { animation: scaleIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+  .animate-wiggle { animation: wiggle 0.5s ease-in-out infinite; }
+  .animate-shimmer { animation: shimmer 2s linear infinite; }
+  .animate-slideInUp { animation: slideInUp 0.4s ease-out; }
+`;
 
 // Types
 interface Booking {
@@ -52,13 +85,15 @@ interface Booking {
   date: string;
   time_slot: string;
   total_price: number;
-  work_status: number; // 0=New, 1=Accepted/Pending, 2=In Progress, 3=Completed, 4=Rejected
+  work_status: number; // 0=Rejected/Unassigned, 1=Accepted/Pending, 3=Completed
   work_status_code: string;
   technician_allocated: boolean;
+  technician_id?: number;
   image?: string;
   User?: { name: string; mobile: string; email: string };
   service?: { name: string };
   subservice?: { name: string; price: number };
+  technician?: { id: number; name?: string; mobile?: string; email?: string };
 }
 
 interface TechnicianProfile {
@@ -97,6 +132,121 @@ const WORK_STATUS = {
   REJECTED: 4,
 };
 
+// Helper function to match technician category with service
+// Handles: service codes (A10002), service names (Electrical), and variations (Electrician)
+const categoryMatchesService = (
+  techCategory: string,
+  serviceName: string,
+  serviceCode?: string,
+): boolean => {
+  if (!techCategory) return false;
+  if (!serviceName && !serviceCode) return false;
+
+  const techCat = techCategory.toLowerCase().trim();
+  const svcName = (serviceName || "").toLowerCase().trim();
+  const svcCode = (serviceCode || "").toLowerCase().trim();
+
+  // Direct match with service code (e.g., techCategory="A10002" matches serviceCode="A10002")
+  if (svcCode && techCat === svcCode) return true;
+
+  // Direct match with service name
+  if (svcName && techCat === svcName) return true;
+
+  // Contains match (either way)
+  if (svcName && (techCat.includes(svcName) || svcName.includes(techCat)))
+    return true;
+
+  // Service code to service name mapping
+  const serviceCodeToName: Record<string, string[]> = {
+    a10001: ["plumbing", "plumber"],
+    a10002: ["electrical", "electrician", "electric"],
+    a10003: ["ac repair", "ac", "air conditioner", "hvac", "ac technician"],
+    a10004: ["cleaning", "cleaner", "housekeeping"],
+  };
+
+  // If techCategory is a service code, check if service name matches
+  const techCatMappedNames = serviceCodeToName[techCat] || [];
+  if (techCatMappedNames.length > 0) {
+    for (const mappedName of techCatMappedNames) {
+      if (svcName.includes(mappedName) || mappedName.includes(svcName)) {
+        return true;
+      }
+    }
+  }
+
+  // Common category mappings for name variations
+  const categoryMappings: Record<string, string[]> = {
+    electrical: [
+      "electrician",
+      "electric",
+      "wiring",
+      "socket",
+      "switch",
+      "electrical",
+    ],
+    electrician: ["electrical", "electric", "wiring", "socket", "switch"],
+    plumbing: ["plumber", "pipe", "tap", "leak", "drainage", "plumbing"],
+    plumber: ["plumbing", "pipe", "tap", "leak", "drainage"],
+    "ac repair": [
+      "ac",
+      "air conditioner",
+      "cooling",
+      "hvac",
+      "ac technician",
+      "ac service",
+    ],
+    "ac technician": ["ac repair", "ac", "air conditioner", "cooling", "hvac"],
+    ac: ["ac repair", "ac technician", "air conditioner", "cooling", "hvac"],
+    cleaning: ["cleaner", "housekeeping", "maid", "cleaning service"],
+    cleaner: ["cleaning", "housekeeping", "maid"],
+    carpentry: ["carpenter", "wood", "furniture", "carpentry"],
+    carpenter: ["carpentry", "wood", "furniture"],
+    painting: ["painter", "wall", "paint"],
+    painter: ["painting", "wall", "paint"],
+    appliance: ["appliance repair", "appliances", "home appliance"],
+    "appliance repair": ["appliance", "appliances", "home appliance"],
+  };
+
+  // Check if techCategory maps to serviceName or vice versa
+  const techMappings = categoryMappings[techCat] || [];
+  const svcMappings = categoryMappings[svcName] || [];
+
+  // Check if service name is in technician's category mappings
+  for (const mapping of techMappings) {
+    if (svcName.includes(mapping) || mapping.includes(svcName)) {
+      return true;
+    }
+  }
+
+  // Check if technician's category is in service's mappings
+  for (const mapping of svcMappings) {
+    if (techCat.includes(mapping) || mapping.includes(techCat)) {
+      return true;
+    }
+  }
+
+  // Check root word match (remove common suffixes)
+  const getRootWord = (word: string) => {
+    return word
+      .replace(/ian$/, "") // electrician -> electric
+      .replace(/er$/, "") // plumber -> plumb
+      .replace(/ing$/, "") // cleaning -> clean
+      .replace(/or$/, "") // contractor -> contract
+      .replace(/ist$/, ""); // specialist -> special
+  };
+
+  const techRoot = getRootWord(techCat);
+  const svcRoot = getRootWord(svcName);
+
+  if (techRoot.length >= 4 && svcRoot.length >= 4) {
+    if (techRoot.includes(svcRoot) || svcRoot.includes(techRoot)) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
 const TechDashboard = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabType>("dashboard");
@@ -109,6 +259,25 @@ const TechDashboard = () => {
   const [notifications, setNotifications] = useState<Booking[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
 
+  // NEW: Enhanced notification state
+  const [newJobAlert, setNewJobAlert] = useState<Booking | null>(null);
+  const [showNewJobPopup, setShowNewJobPopup] = useState(false);
+  const [seenJobIds, setSeenJobIds] = useState<Set<string>>(new Set());
+  const [isPolling, setIsPolling] = useState(true);
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Inject custom styles
+  useEffect(() => {
+    const styleEl = document.createElement("style");
+    styleEl.textContent = notificationStyles;
+    document.head.appendChild(styleEl);
+    return () => {
+      document.head.removeChild(styleEl);
+    };
+  }, []);
+
   // Get user from session
   useEffect(() => {
     const userData = sessionStorage.getItem("user");
@@ -117,35 +286,214 @@ const TechDashboard = () => {
       setProfile(user);
       // Use the user.id (userId) to fetch available bookings matching technician's category
       fetchBookings(user.id);
+
+      // Initialize seen job IDs from localStorage
+      const savedSeenIds = localStorage.getItem(`seenJobs_${user.id}`);
+      if (savedSeenIds) {
+        setSeenJobIds(new Set(JSON.parse(savedSeenIds)));
+      }
     } else {
       setLoading(false);
     }
   }, []);
 
-  // Fetch available bookings for technician (matches their service category)
+  // NEW: Polling for new jobs every 10 seconds
+  useEffect(() => {
+    if (!profile?.id || !isPolling) return;
+
+    pollingIntervalRef.current = setInterval(() => {
+      fetchBookingsWithNotification(profile.id);
+      setLastRefresh(new Date());
+    }, 10000); // Poll every 10 seconds
+
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
+  }, [profile?.id, isPolling, seenJobIds]);
+
+  // NEW: Fetch bookings and check for new jobs
+  const fetchBookingsWithNotification = async (techUserId: number) => {
+    try {
+      const userDataStr = sessionStorage.getItem("user");
+      const userData = userDataStr ? JSON.parse(userDataStr) : null;
+      const techCategory = userData?.technicianDetails?.techCategory;
+
+      const res = await fetch(`${API_BASE}/api/service-on-booking`);
+      if (!res.ok) return;
+
+      const data = await res.json();
+      const allBookings: Booking[] = data.bookings || [];
+
+      const relevantBookings = allBookings.filter((b: Booking) => {
+        if (b.technician_allocated && b.technician?.id === techUserId) {
+          return true;
+        }
+        if (!b.technician_allocated) {
+          const serviceName = b.service?.name || "";
+          const serviceCode = b.service_code || b.service?.service_code || "";
+          // Use smart category matching (supports both service codes and names)
+          if (categoryMatchesService(techCategory, serviceName, serviceCode)) {
+            return true;
+          }
+        }
+        return false;
+      });
+
+      // Check for NEW jobs (not seen before)
+      const newUnseenJobs = relevantBookings.filter(
+        (b) => !b.technician_allocated && !seenJobIds.has(b.order_id),
+      );
+
+      if (newUnseenJobs.length > 0) {
+        // Show popup for the first new job
+        setNewJobAlert(newUnseenJobs[0]);
+        setShowNewJobPopup(true);
+
+        // Play notification sound
+        playNotificationSound();
+
+        // Vibrate if supported
+        if (navigator.vibrate) {
+          navigator.vibrate([200, 100, 200]);
+        }
+      }
+
+      setBookings(relevantBookings);
+      setNotifications(relevantBookings.filter((b) => !b.technician_allocated));
+    } catch (error) {
+      console.error("Polling error:", error);
+    }
+  };
+
+  // NEW: Play notification sound
+  const playNotificationSound = () => {
+    try {
+      // Create a simple beep sound using Web Audio API
+      const audioContext = new (
+        window.AudioContext || (window as any).webkitAudioContext
+      )();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      oscillator.frequency.value = 800;
+      oscillator.type = "sine";
+      gainNode.gain.value = 0.3;
+
+      oscillator.start();
+      setTimeout(() => {
+        oscillator.stop();
+        audioContext.close();
+      }, 200);
+
+      // Second beep
+      setTimeout(() => {
+        const audioContext2 = new (
+          window.AudioContext || (window as any).webkitAudioContext
+        )();
+        const oscillator2 = audioContext2.createOscillator();
+        const gainNode2 = audioContext2.createGain();
+
+        oscillator2.connect(gainNode2);
+        gainNode2.connect(audioContext2.destination);
+
+        oscillator2.frequency.value = 1000;
+        oscillator2.type = "sine";
+        gainNode2.gain.value = 0.3;
+
+        oscillator2.start();
+        setTimeout(() => {
+          oscillator2.stop();
+          audioContext2.close();
+        }, 200);
+      }, 250);
+    } catch (e) {
+      console.log("Audio not supported");
+    }
+  };
+
+  // NEW: Mark job as seen
+  const markJobAsSeen = (orderId: string) => {
+    const newSeenIds = new Set(seenJobIds);
+    newSeenIds.add(orderId);
+    setSeenJobIds(newSeenIds);
+
+    // Save to localStorage
+    if (profile?.id) {
+      localStorage.setItem(
+        `seenJobs_${profile.id}`,
+        JSON.stringify([...newSeenIds]),
+      );
+    }
+  };
+
+  // NEW: Handle accepting job from popup
+  const handleAcceptFromPopup = async () => {
+    if (!newJobAlert) return;
+
+    markJobAsSeen(newJobAlert.order_id);
+    await handleAcceptJob(newJobAlert.order_id);
+    setShowNewJobPopup(false);
+    setNewJobAlert(null);
+  };
+
+  // NEW: Handle rejecting/dismissing job from popup
+  const handleDismissPopup = () => {
+    if (newJobAlert) {
+      markJobAsSeen(newJobAlert.order_id);
+    }
+    setShowNewJobPopup(false);
+    setNewJobAlert(null);
+  };
+
+  // Fetch bookings for technician:
+  // 1. All bookings assigned to this technician
+  // 2. Unassigned bookings matching technician's category (for accepting)
   const fetchBookings = async (techUserId: number) => {
     setLoading(true);
     try {
-      // Use the new endpoint that fetches bookings matching technician's techCategory
-      const res = await fetch(
-        `${API_BASE}/api/service-on-booking/technician/${techUserId}/available`
-      );
+      // Get the user profile to know their techCategory
+      const userDataStr = sessionStorage.getItem("user");
+      const userData = userDataStr ? JSON.parse(userDataStr) : null;
+      const techCategory = userData?.technicianDetails?.techCategory;
 
+      // Fetch ALL bookings using existing Swagger API
+      const res = await fetch(`${API_BASE}/api/service-on-booking`);
       if (!res.ok) throw new Error("Failed to fetch bookings");
 
       const data = await res.json();
+      const allBookings: Booking[] = data.bookings || [];
 
-      const bookingList = data.bookings || [];
+      // Filter bookings:
+      // 1. Bookings assigned to this technician (any status)
+      // 2. Unassigned bookings (technician_allocated: false) matching technician's category
+      const relevantBookings = allBookings.filter((b: Booking) => {
+        // Already assigned to this technician
+        // NOTE: b.technician.id is USER ID (backend maps it from user.id in response)
+        if (b.technician_allocated && b.technician?.id === techUserId) {
+          return true;
+        }
+        // Unassigned booking matching category (new job requests)
+        // Use smart category matching function
+        if (!b.technician_allocated) {
+          const serviceName = b.service?.name || "";
+          const serviceCode = b.service_code || b.service?.service_code || "";
+          if (categoryMatchesService(techCategory, serviceName, serviceCode)) {
+            return true;
+          }
+        }
+        return false;
+      });
 
-      setBookings(bookingList);
+      setBookings(relevantBookings);
 
-      // New bookings = unassigned ones that match category
+      // New bookings = unassigned ones that match category (for notifications)
       setNotifications(
-        bookingList.filter(
-          (b: Booking) =>
-            b.work_status === WORK_STATUS.NEW ||
-            (b.work_status === WORK_STATUS.PENDING && !b.technician_allocated)
-        )
+        relevantBookings.filter((b: Booking) => !b.technician_allocated),
       );
     } catch (error) {
       console.error("Error fetching bookings:", error);
@@ -156,63 +504,159 @@ const TechDashboard = () => {
     }
   };
 
+  // Accept job using existing Swagger API: POST /api/service-on-booking/accept/:order_id
+  // This API both assigns the technician AND accepts the job (opinion=1)
+  const [acceptingJob, setAcceptingJob] = useState(false);
+  const [showSuccessToast, setShowSuccessToast] = useState(false);
+  const [showErrorToast, setShowErrorToast] = useState<string | null>(null);
 
-  const handleAcceptJob = async (bookingId: number) => {
+  const handleAcceptJob = async (orderId: string) => {
     try {
-      // First, assign the technician to this booking
-      await fetch(`${API_BASE}/api/service-on-booking/${bookingId}/assign`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ technician_id: profile?.id }),
-      });
-      
-      // Then update the status
-      await fetch(`${API_BASE}/api/service-on-booking/${bookingId}/status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ work_status: WORK_STATUS.PENDING, work_status_code: "ACCEPTED" }),
-      });
-      
+      setAcceptingJob(true);
+      const token = sessionStorage.getItem("accessToken");
+      // Backend expects USER ID, not technician record ID
+      // (it looks up technician by userId internally)
+
+      if (!profile?.id) {
+        setShowErrorToast("Profile not found. Please log in again.");
+        return;
+      }
+
+      const res = await fetch(
+        `${API_BASE}/api/service-on-booking/accept/${orderId}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            technician_id: profile.id, // USER ID
+            opinion: 1, // 1 = Accept
+          }),
+        },
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        // Check if job was already taken by another technician
+        if (
+          data.message?.includes("already accepted") ||
+          data.message?.includes("already allocated")
+        ) {
+          setShowErrorToast(
+            "This job has already been accepted by another technician. Refreshing...",
+          );
+          // Mark as seen so it doesn't show again
+          markJobAsSeen(orderId);
+        } else {
+          setShowErrorToast(data.message || "Failed to accept job");
+        }
+        // Refresh to get updated job list
+        if (profile?.id) fetchBookings(profile.id);
+        return;
+      }
+
+      // Success! Mark job as seen and show success toast
+      markJobAsSeen(orderId);
+      setShowSuccessToast(true);
+      setTimeout(() => setShowSuccessToast(false), 3000);
+
       if (profile?.id) fetchBookings(profile.id);
       setShowJobModal(false);
     } catch (error) {
       console.error("Error accepting job:", error);
+      setShowErrorToast("Failed to accept job. Please try again.");
+    } finally {
+      setAcceptingJob(false);
     }
   };
 
-  const handleRejectJob = async (bookingId: number) => {
+  // Reject job using existing Swagger API: POST /api/service-on-booking/accept/:order_id
+  // opinion=2 means reject
+  const handleRejectJob = async (orderId: string) => {
     try {
-      await fetch(`${API_BASE}/api/service-on-booking/${bookingId}/status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ work_status: WORK_STATUS.REJECTED, work_status_code: "REJECTED" }),
-      });
+      const token = sessionStorage.getItem("accessToken");
+      // Backend expects USER ID, not technician record ID
+
+      if (!profile?.id) {
+        alert("Profile not found. Please log in again.");
+        return;
+      }
+
+      const res = await fetch(
+        `${API_BASE}/api/service-on-booking/accept/${orderId}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            technician_id: profile.id, // USER ID
+            opinion: 2, // 2 = Reject
+          }),
+        },
+      );
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        alert(errorData.message || "Failed to reject job");
+        return;
+      }
+
       if (profile?.id) fetchBookings(profile.id);
       setShowJobModal(false);
     } catch (error) {
       console.error("Error rejecting job:", error);
+      alert("Failed to reject job. Please try again.");
     }
   };
 
-  const updateWorkStatus = async (bookingId: number, status: number, statusCode: string, imageFile?: File) => {
+  // Update work status using existing Swagger API: POST /api/service-on-booking/work-status/:order_id
+  const updateWorkStatus = async (
+    orderId: string,
+    status: number,
+    notes?: string,
+    imageFile?: File,
+  ) => {
     try {
+      const token = sessionStorage.getItem("accessToken");
+      // Backend expects USER ID
       const formData = new FormData();
+      formData.append("technician_id", String(profile?.id));
       formData.append("work_status", String(status));
-      formData.append("work_status_code", statusCode);
+      if (notes) {
+        formData.append("notes", notes);
+      }
       if (imageFile) {
         formData.append("image", imageFile);
       }
 
-      await fetch(`${API_BASE}/api/service-on-booking/${bookingId}/status`, {
-        method: "PATCH",
-        body: formData,
-      });
-      
+      const res = await fetch(
+        `${API_BASE}/api/service-on-booking/work-status/${orderId}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        },
+      );
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        alert(errorData.message || "Failed to update status");
+        return;
+      }
+
       if (profile?.id) fetchBookings(profile.id);
       setShowStatusModal(false);
       setSelectedJob(null);
     } catch (error) {
       console.error("Error updating status:", error);
+      alert("Failed to update status. Please try again.");
     }
   };
 
@@ -232,22 +676,29 @@ const TechDashboard = () => {
   //   completedJobs: bookings.filter((b) => b.work_status === WORK_STATUS.COMPLETED).length,
   //   activeJobs: bookings.filter((b) => b.work_status === WORK_STATUS.IN_PROGRESS).length,
   //   pendingJobs: bookings.filter((b) => b.work_status === WORK_STATUS.PENDING || b.work_status === WORK_STATUS.NEW).length,
-    const stats = {
+  const stats = {
     totalJobs: bookings.length,
-    completedJobs: bookings.filter((b) => b.work_status === WORK_STATUS.COMPLETED).length,
-    activeJobs: bookings.filter((b) => b.work_status === WORK_STATUS.IN_PROGRESS).length,
-    pendingJobs: bookings.filter((b) => b.work_status === WORK_STATUS.PENDING || b.work_status === WORK_STATUS.NEW).length,
+    completedJobs: bookings.filter(
+      (b) => b.work_status === WORK_STATUS.COMPLETED,
+    ).length,
+    activeJobs: bookings.filter(
+      (b) => b.work_status === WORK_STATUS.IN_PROGRESS,
+    ).length,
+    pendingJobs: bookings.filter(
+      (b) =>
+        b.work_status === WORK_STATUS.PENDING ||
+        b.work_status === WORK_STATUS.NEW,
+    ).length,
     // totalEarnings: bookings
     //   .filter((b) => b.work_status === WORK_STATUS.COMPLETED)
     //   .reduce((sum, b) => sum + (b.total_price || 0), 0),
 
     totalEarnings: bookings
-  .filter((b) => b.work_status === WORK_STATUS.COMPLETED)
-  .reduce((sum, b) => {
-    const price = Number(b.total_price);
-    return sum + (isNaN(price) ? 0 : price);
-  }, 0),
-
+      .filter((b) => b.work_status === WORK_STATUS.COMPLETED)
+      .reduce((sum, b) => {
+        const price = Number(b.total_price);
+        return sum + (isNaN(price) ? 0 : price);
+      }, 0),
   };
 
   const navItems = [
@@ -276,9 +727,12 @@ const TechDashboard = () => {
           <div className="w-32 h-32 mx-auto mb-8 bg-gradient-to-br from-amber-500/20 to-orange-500/20 rounded-full flex items-center justify-center animate-pulse">
             <Clock size={64} className="text-amber-400" />
           </div>
-          <h1 className="text-4xl font-black text-white mb-4">Verification in Progress</h1>
+          <h1 className="text-4xl font-black text-white mb-4">
+            Verification in Progress
+          </h1>
           <p className="text-slate-400 text-lg mb-8">
-            Your account is currently under review. Our team is verifying your documents and credentials. This usually takes 24-48 hours.
+            Your account is currently under review. Our team is verifying your
+            documents and credentials. This usually takes 24-48 hours.
           </p>
           <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 mb-8">
             <div className="flex items-center justify-between mb-4">
@@ -288,11 +742,19 @@ const TechDashboard = () => {
               </span>
             </div>
             <div className="w-full bg-slate-800 rounded-full h-2 mb-2">
-              <div className="bg-gradient-to-r from-amber-500 to-orange-500 h-2 rounded-full animate-pulse" style={{ width: "60%" }} />
+              <div
+                className="bg-gradient-to-r from-amber-500 to-orange-500 h-2 rounded-full animate-pulse"
+                style={{ width: "60%" }}
+              />
             </div>
-            <p className="text-slate-500 text-sm">Document verification in progress</p>
+            <p className="text-slate-500 text-sm">
+              Document verification in progress
+            </p>
           </div>
-          <button onClick={handleLogout} className="text-slate-400 hover:text-white transition-colors font-medium">
+          <button
+            onClick={handleLogout}
+            className="text-slate-400 hover:text-white transition-colors font-medium"
+          >
             Logout and check later
           </button>
         </div>
@@ -308,19 +770,26 @@ const TechDashboard = () => {
           <div className="w-32 h-32 mx-auto mb-8 bg-gradient-to-br from-red-500/20 to-rose-500/20 rounded-full flex items-center justify-center">
             <XCircle size={64} className="text-red-400" />
           </div>
-          <h1 className="text-4xl font-black text-white mb-4">Application Rejected</h1>
+          <h1 className="text-4xl font-black text-white mb-4">
+            Application Rejected
+          </h1>
           <p className="text-slate-400 text-lg mb-8">
-            Unfortunately, your technician application was not approved. This could be due to incomplete documents or verification issues.
+            Unfortunately, your technician application was not approved. This
+            could be due to incomplete documents or verification issues.
           </p>
           <div className="bg-slate-900/50 border border-red-500/30 rounded-2xl p-6 mb-8">
             <p className="text-red-400 text-sm mb-4">
-              If you believe this is an error, please contact our support team with your application details.
+              If you believe this is an error, please contact our support team
+              with your application details.
             </p>
             <button className="px-6 py-3 bg-red-500/20 text-red-400 rounded-xl font-semibold hover:bg-red-500/30 transition-colors">
               Contact Support
             </button>
           </div>
-          <button onClick={handleLogout} className="text-slate-400 hover:text-white transition-colors font-medium">
+          <button
+            onClick={handleLogout}
+            className="text-slate-400 hover:text-white transition-colors font-medium"
+          >
             Logout
           </button>
         </div>
@@ -355,9 +824,15 @@ const TechDashboard = () => {
         {/* Service Specialization Badge */}
         {profile?.technicianDetails?.techCategory && (
           <div className="mb-6 p-3 bg-gradient-to-r from-violet-500/10 to-purple-500/10 border border-violet-500/20 rounded-xl">
-            <p className="text-violet-400 text-xs font-bold uppercase tracking-wider mb-1">Specialization</p>
-            <p className="text-white font-semibold text-sm">{profile.technicianDetails.techCategory}</p>
-            <p className="text-slate-500 text-xs mt-1">You receive jobs matching this category</p>
+            <p className="text-violet-400 text-xs font-bold uppercase tracking-wider mb-1">
+              Specialization
+            </p>
+            <p className="text-white font-semibold text-sm">
+              {profile.technicianDetails.techCategory}
+            </p>
+            <p className="text-slate-500 text-xs mt-1">
+              You receive jobs matching this category
+            </p>
           </div>
         )}
 
@@ -368,14 +843,19 @@ const TechDashboard = () => {
               key={item.id}
               onClick={() => setActiveTab(item.id as TabType)}
               className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl font-semibold transition-all duration-300 group
-                ${activeTab === item.id
-                  ? "bg-gradient-to-r from-emerald-500/20 to-teal-500/20 text-white border border-emerald-500/30"
-                  : "text-slate-400 hover:text-white hover:bg-slate-800/50"
+                ${
+                  activeTab === item.id
+                    ? "bg-gradient-to-r from-emerald-500/20 to-teal-500/20 text-white border border-emerald-500/30"
+                    : "text-slate-400 hover:text-white hover:bg-slate-800/50"
                 }`}
             >
               <item.icon
                 size={20}
-                className={activeTab === item.id ? "text-emerald-400" : "text-slate-500 group-hover:text-emerald-400"}
+                className={
+                  activeTab === item.id
+                    ? "text-emerald-400"
+                    : "text-slate-500 group-hover:text-emerald-400"
+                }
               />
               {item.label}
               {item.badge !== undefined && item.badge > 0 && (
@@ -389,9 +869,15 @@ const TechDashboard = () => {
 
         {/* Quick Stats */}
         <div className="p-4 bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 rounded-2xl mb-4">
-          <p className="text-emerald-400 text-xs font-bold uppercase tracking-wider mb-2">This Month</p>
-          <p className="text-3xl font-black text-white">₹{stats.totalEarnings.toLocaleString()}</p>
-          <p className="text-slate-500 text-sm">{stats.completedJobs} jobs completed</p>
+          <p className="text-emerald-400 text-xs font-bold uppercase tracking-wider mb-2">
+            This Month
+          </p>
+          <p className="text-3xl font-black text-white">
+            ₹{stats.totalEarnings.toLocaleString()}
+          </p>
+          <p className="text-slate-500 text-sm">
+            {stats.completedJobs} jobs completed
+          </p>
         </div>
 
         {/* Logout */}
@@ -410,37 +896,103 @@ const TechDashboard = () => {
         <header className="flex items-center justify-between mb-8">
           <div>
             <h2 className="text-3xl font-black text-white">
-              {activeTab === "dashboard" ? "Welcome back!" : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+              {activeTab === "dashboard"
+                ? "Welcome back!"
+                : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
             </h2>
-            <p className="text-slate-500 font-medium mt-1">
-              {activeTab === "dashboard" ? "Here's your activity overview" : `Manage your ${activeTab}`}
-            </p>
+            <div className="flex items-center gap-3 mt-1">
+              <p className="text-slate-500 font-medium">
+                {activeTab === "dashboard"
+                  ? "Here's your activity overview"
+                  : `Manage your ${activeTab}`}
+              </p>
+              {/* Live Status Indicator */}
+              <div className="flex items-center gap-2 px-3 py-1 bg-slate-800/50 rounded-full border border-slate-700">
+                <div
+                  className={`w-2 h-2 rounded-full ${isPolling ? "bg-emerald-500 animate-pulse" : "bg-slate-500"}`}
+                />
+                <span className="text-xs text-slate-400">
+                  {isPolling ? "Live" : "Paused"}
+                </span>
+              </div>
+            </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            {/* Manual Refresh Button */}
+            <button
+              onClick={() => {
+                if (profile?.id) {
+                  fetchBookings(profile.id);
+                  setLastRefresh(new Date());
+                }
+              }}
+              className="p-3 bg-slate-800/50 border border-slate-700 rounded-xl hover:border-cyan-500 hover:bg-cyan-500/10 transition-all group"
+              title={`Last refresh: ${lastRefresh.toLocaleTimeString()}`}
+            >
+              <RefreshCw
+                size={20}
+                className="text-slate-400 group-hover:text-cyan-400 transition-colors"
+              />
+            </button>
+
+            {/* Toggle Polling */}
+            <button
+              onClick={() => setIsPolling(!isPolling)}
+              className={`p-3 rounded-xl border transition-all ${
+                isPolling
+                  ? "bg-emerald-500/10 border-emerald-500/30 hover:bg-emerald-500/20"
+                  : "bg-slate-800/50 border-slate-700 hover:border-slate-600"
+              }`}
+              title={isPolling ? "Pause auto-refresh" : "Resume auto-refresh"}
+            >
+              {isPolling ? (
+                <Volume2 size={20} className="text-emerald-400" />
+              ) : (
+                <VolumeX size={20} className="text-slate-400" />
+              )}
+            </button>
+
             {/* Notifications */}
             <div className="relative">
               <button
                 onClick={() => setShowNotifications(!showNotifications)}
-                className="relative p-3 bg-slate-800/50 border border-slate-700 rounded-xl hover:border-emerald-500 transition-colors"
+                className={`relative p-3 border rounded-xl transition-all ${
+                  notifications.length > 0
+                    ? "bg-amber-500/10 border-amber-500/30 hover:bg-amber-500/20"
+                    : "bg-slate-800/50 border-slate-700 hover:border-emerald-500"
+                }`}
               >
-                <Bell size={20} className="text-slate-400" />
-                {stats.pendingJobs > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full text-white text-xs font-bold flex items-center justify-center animate-pulse">
-                    {stats.pendingJobs}
+                <Bell
+                  size={20}
+                  className={
+                    notifications.length > 0
+                      ? "text-amber-400"
+                      : "text-slate-400"
+                  }
+                />
+                {notifications.length > 0 && (
+                  <span className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full text-white text-xs font-bold flex items-center justify-center animate-bounce shadow-lg shadow-amber-500/50">
+                    {notifications.length}
                   </span>
                 )}
               </button>
 
               {/* Notifications Dropdown */}
               {showNotifications && (
-                <div className="absolute right-0 top-14 w-80 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl z-50 overflow-hidden">
-                  <div className="p-4 border-b border-slate-800">
-                    <h3 className="text-white font-bold">New Job Requests</h3>
+                <div className="absolute right-0 top-14 w-96 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl z-50 overflow-hidden animate-slideInUp">
+                  <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-gradient-to-r from-amber-500/10 to-orange-500/10">
+                    <div className="flex items-center gap-2">
+                      <Bell size={18} className="text-amber-400" />
+                      <h3 className="text-white font-bold">New Job Requests</h3>
+                    </div>
+                    <span className="px-2 py-1 bg-amber-500/20 text-amber-400 text-xs font-bold rounded-full">
+                      {notifications.length} pending
+                    </span>
                   </div>
-                  <div className="max-h-80 overflow-y-auto">
+                  <div className="max-h-96 overflow-y-auto">
                     {notifications.length > 0 ? (
-                      notifications.slice(0, 5).map((job) => (
+                      notifications.map((job) => (
                         <button
                           key={job.id}
                           onClick={() => {
@@ -448,17 +1000,69 @@ const TechDashboard = () => {
                             setShowJobModal(true);
                             setShowNotifications(false);
                           }}
-                          className="w-full p-4 hover:bg-slate-800/50 border-b border-slate-800 text-left transition-colors"
+                          className="w-full p-4 hover:bg-slate-800/50 border-b border-slate-800 text-left transition-colors group"
                         >
-                          <p className="text-white font-semibold">{job.subservice?.name || job.subservice_code}</p>
-                          <p className="text-slate-400 text-sm">{job.date} • {job.time_slot}</p>
-                          <p className="text-emerald-400 font-bold text-sm mt-1">₹{job.total_price}</p>
+                          <div className="flex items-start gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shrink-0">
+                              <Briefcase size={18} className="text-white" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between">
+                                <p className="text-white font-semibold truncate">
+                                  {job.service?.name || "Service"}
+                                </p>
+                                <span className="text-emerald-400 font-bold text-sm">
+                                  ₹{job.total_price?.toLocaleString()}
+                                </span>
+                              </div>
+                              <p className="text-slate-400 text-sm truncate">
+                                {job.subservice?.name || job.subservice_code}
+                              </p>
+                              <div className="flex items-center gap-2 mt-1 text-xs text-slate-500">
+                                <Calendar size={12} />
+                                <span>
+                                  {new Date(job.date).toLocaleDateString()}
+                                </span>
+                                <span>•</span>
+                                <Clock size={12} />
+                                <span>{job.time_slot}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="mt-2 flex items-center justify-between">
+                            <span className="text-xs text-slate-500 truncate max-w-[200px]">
+                              {job.address}
+                            </span>
+                            <span className="text-emerald-400 text-xs font-medium group-hover:underline">
+                              View Details →
+                            </span>
+                          </div>
                         </button>
                       ))
                     ) : (
-                      <p className="p-4 text-slate-500 text-center">No new requests</p>
+                      <div className="p-8 text-center">
+                        <div className="w-16 h-16 mx-auto bg-slate-800 rounded-full flex items-center justify-center mb-3">
+                          <CheckCircle2
+                            size={32}
+                            className="text-emerald-500"
+                          />
+                        </div>
+                        <p className="text-slate-400 font-medium">
+                          All caught up!
+                        </p>
+                        <p className="text-slate-500 text-sm mt-1">
+                          No new job requests
+                        </p>
+                      </div>
                     )}
                   </div>
+                  {notifications.length > 0 && (
+                    <div className="p-3 border-t border-slate-800 bg-slate-900/50">
+                      <p className="text-center text-xs text-slate-500">
+                        Click on a job to view details and accept
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -476,7 +1080,10 @@ const TechDashboard = () => {
             bookings={bookings}
             onViewJob={(job) => {
               setSelectedJob(job);
-              if (job.work_status === WORK_STATUS.NEW || job.work_status === WORK_STATUS.PENDING) {
+              if (
+                job.work_status === WORK_STATUS.NEW ||
+                job.work_status === WORK_STATUS.PENDING
+              ) {
                 setShowJobModal(true);
               } else {
                 setShowStatusModal(true);
@@ -499,8 +1106,15 @@ const TechDashboard = () => {
             onReject={handleRejectJob}
           />
         )}
-        {activeTab === "earnings" && <EarningsTab bookings={bookings} stats={stats} />}
-        {activeTab === "profile" && <ProfileTab profile={profile} onProfileUpdate={(updated) => setProfile(updated)} />}
+        {activeTab === "earnings" && (
+          <EarningsTab bookings={bookings} stats={stats} />
+        )}
+        {activeTab === "profile" && (
+          <ProfileTab
+            profile={profile}
+            onProfileUpdate={(updated) => setProfile(updated)}
+          />
+        )}
       </main>
 
       {/* Job Detail Modal (Accept/Reject) */}
@@ -511,8 +1125,8 @@ const TechDashboard = () => {
             setShowJobModal(false);
             setSelectedJob(null);
           }}
-          onAccept={() => handleAcceptJob(selectedJob.id)}
-          onReject={() => handleRejectJob(selectedJob.id)}
+          onAccept={() => handleAcceptJob(selectedJob.order_id)}
+          onReject={() => handleRejectJob(selectedJob.order_id)}
         />
       )}
 
@@ -526,6 +1140,221 @@ const TechDashboard = () => {
           }}
           onUpdate={updateWorkStatus}
         />
+      )}
+
+      {/* SUCCESS TOAST */}
+      {showSuccessToast && (
+        <div className="fixed top-6 right-6 z-[110] animate-slideInUp">
+          <div className="flex items-center gap-3 px-6 py-4 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-2xl shadow-2xl shadow-emerald-500/30">
+            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+              <CheckCircle2 className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <p className="text-white font-bold">Job Accepted!</p>
+              <p className="text-white/80 text-sm">
+                You can now manage this job
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ERROR TOAST */}
+      {showErrorToast && (
+        <div className="fixed top-6 right-6 z-[110] animate-slideInUp">
+          <div className="flex items-center gap-3 px-6 py-4 bg-gradient-to-r from-red-500 to-rose-500 rounded-2xl shadow-2xl shadow-red-500/30">
+            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+              <XCircle className="w-6 h-6 text-white" />
+            </div>
+            <div className="flex-1">
+              <p className="text-white font-bold">Oops!</p>
+              <p className="text-white/80 text-sm">{showErrorToast}</p>
+            </div>
+            <button
+              onClick={() => setShowErrorToast(null)}
+              className="text-white/80 hover:text-white"
+            >
+              <X size={20} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* FLOATING NEW JOBS BAR - Shows at bottom when there are new jobs */}
+      {notifications.length > 0 && !showNewJobPopup && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-slideInUp">
+          <button
+            onClick={() => {
+              if (notifications.length > 0) {
+                setNewJobAlert(notifications[0]);
+                setShowNewJobPopup(true);
+              }
+            }}
+            className="flex items-center gap-4 px-6 py-4 bg-gradient-to-r from-amber-500 to-orange-500 rounded-2xl shadow-2xl shadow-amber-500/30 hover:shadow-amber-500/50 transition-all hover:scale-105"
+          >
+            <div className="relative">
+              <Bell className="w-6 h-6 text-white animate-wiggle" />
+              <span className="absolute -top-2 -right-2 w-5 h-5 bg-white rounded-full text-amber-500 text-xs font-bold flex items-center justify-center">
+                {notifications.length}
+              </span>
+            </div>
+            <div className="text-left">
+              <p className="text-white font-bold">
+                {notifications.length} New Job
+                {notifications.length > 1 ? "s" : ""} Available!
+              </p>
+              <p className="text-white/80 text-sm">Tap to view and accept</p>
+            </div>
+            <ChevronRight className="w-5 h-5 text-white" />
+          </button>
+        </div>
+      )}
+
+      {/* NEW JOB ALERT POPUP - Auto-shows when new job arrives */}
+      {showNewJobPopup && newJobAlert && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fadeIn">
+          {/* Pulsing background effect */}
+          <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 via-transparent to-emerald-500/20 animate-pulse" />
+
+          <div className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-3xl w-full max-w-md border-2 border-emerald-500/50 shadow-2xl shadow-emerald-500/20 overflow-hidden animate-scaleIn">
+            {/* Animated top bar */}
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 via-cyan-500 to-emerald-500 animate-shimmer" />
+
+            {/* Alert Header */}
+            <div className="bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 p-6 text-center relative overflow-hidden">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(16,185,129,0.1),transparent_70%)]" />
+
+              {/* Animated bell icon */}
+              <div className="relative inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-emerald-500 to-cyan-500 mb-4 animate-bounce shadow-lg shadow-emerald-500/50">
+                <Bell className="w-10 h-10 text-white animate-wiggle" />
+                <span className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-bold animate-pulse">
+                  1
+                </span>
+              </div>
+
+              <h2 className="text-2xl font-bold text-white mb-1">
+                New Job Request!
+              </h2>
+              <p className="text-emerald-400 text-sm font-medium">
+                A customer needs your service
+              </p>
+            </div>
+
+            {/* Job Details */}
+            <div className="p-6 space-y-4">
+              {/* Service Type */}
+              <div className="bg-slate-800/50 rounded-2xl p-4 border border-slate-700">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+                    <Briefcase className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-slate-400 text-xs uppercase tracking-wider">
+                      Service
+                    </p>
+                    <p className="text-white font-bold text-lg">
+                      {newJobAlert.service?.name || "Service"}
+                    </p>
+                    <p className="text-slate-400 text-sm">
+                      {newJobAlert.subservice?.name ||
+                        newJobAlert.subservice_code}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Customer & Location */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700">
+                  <div className="flex items-center gap-2 mb-1">
+                    <User size={14} className="text-cyan-400" />
+                    <p className="text-slate-400 text-xs">Customer</p>
+                  </div>
+                  <p className="text-white font-semibold text-sm truncate">
+                    {newJobAlert.User?.name || "Customer"}
+                  </p>
+                </div>
+                <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700">
+                  <div className="flex items-center gap-2 mb-1">
+                    <DollarSign size={14} className="text-emerald-400" />
+                    <p className="text-slate-400 text-xs">Earnings</p>
+                  </div>
+                  <p className="text-emerald-400 font-bold text-sm">
+                    ₹{newJobAlert.total_price?.toLocaleString() || "0"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Schedule */}
+              <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Calendar size={14} className="text-amber-400" />
+                    <span className="text-white text-sm font-medium">
+                      {new Date(newJobAlert.date).toLocaleDateString("en-IN", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Clock size={14} className="text-amber-400" />
+                    <span className="text-white text-sm font-medium">
+                      {newJobAlert.time_slot}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Location */}
+              <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700">
+                <div className="flex items-start gap-2">
+                  <MapPin size={14} className="text-red-400 mt-0.5 shrink-0" />
+                  <p className="text-slate-300 text-sm line-clamp-2">
+                    {newJobAlert.address}
+                  </p>
+                </div>
+              </div>
+
+              {/* Urgency indicator */}
+              <div className="flex items-center justify-center gap-2 text-amber-400 bg-amber-500/10 rounded-xl py-2 border border-amber-500/30">
+                <Zap size={16} className="animate-pulse" />
+                <span className="text-sm font-medium">
+                  Accept quickly before another technician does!
+                </span>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="p-6 pt-0 flex gap-3">
+              <button
+                onClick={handleDismissPopup}
+                className="flex-1 py-4 rounded-xl bg-slate-700/50 hover:bg-slate-700 text-white font-semibold transition-all flex items-center justify-center gap-2 border border-slate-600"
+              >
+                <X size={20} />
+                Dismiss
+              </button>
+              <button
+                onClick={handleAcceptFromPopup}
+                className="flex-1 py-4 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50"
+              >
+                <Check size={20} />
+                Accept Job
+              </button>
+            </div>
+
+            {/* Order ID footer */}
+            <div className="px-6 pb-4 text-center">
+              <p className="text-slate-500 text-xs">
+                Order ID:{" "}
+                <span className="text-slate-400 font-mono">
+                  {newJobAlert.order_id}
+                </span>
+              </p>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -569,11 +1398,16 @@ const JobDetailModal = ({
                 <Briefcase size={24} className="text-emerald-400" />
               </div>
               <div>
-                <p className="text-xs text-emerald-400 font-bold uppercase tracking-wider">New Job Request</p>
+                <p className="text-xs text-emerald-400 font-bold uppercase tracking-wider">
+                  New Job Request
+                </p>
                 <p className="text-white font-bold text-lg">#{job.order_id}</p>
               </div>
             </div>
-            <button onClick={onClose} className="p-2 hover:bg-slate-800 rounded-xl transition-colors">
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-slate-800 rounded-xl transition-colors"
+            >
               <X size={20} className="text-slate-400" />
             </button>
           </div>
@@ -582,7 +1416,9 @@ const JobDetailModal = ({
           <div className="flex items-center gap-3 p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl">
             <Timer size={20} className="text-amber-400" />
             <div className="flex-1">
-              <p className="text-amber-400 text-sm font-semibold">Respond within</p>
+              <p className="text-amber-400 text-sm font-semibold">
+                Respond within
+              </p>
               <p className="text-white font-bold">{formatTime(timeLeft)}</p>
             </div>
             <div className="w-16 h-2 bg-slate-700 rounded-full overflow-hidden">
@@ -600,7 +1436,9 @@ const JobDetailModal = ({
             <h3 className="text-2xl font-bold text-white mb-1">
               {job.subservice?.name || job.subservice_code}
             </h3>
-            <p className="text-slate-400">{job.service?.name || job.service_code}</p>
+            <p className="text-slate-400">
+              {job.service?.name || job.service_code}
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -625,7 +1463,9 @@ const JobDetailModal = ({
               <MapPin size={16} />
               <span className="text-sm">Location</span>
             </div>
-            <p className="text-white">{job.address || "Address will be shared after acceptance"}</p>
+            <p className="text-white">
+              {job.address || "Address will be shared after acceptance"}
+            </p>
           </div>
 
           {job.User && (
@@ -684,7 +1524,12 @@ const UpdateStatusModal = ({
 }: {
   job: Booking;
   onClose: () => void;
-  onUpdate: (id: number, status: number, code: string, image?: File) => void;
+  onUpdate: (
+    orderId: string,
+    status: number,
+    notes?: string,
+    image?: File,
+  ) => void;
 }) => {
   const [selectedStatus, setSelectedStatus] = useState(job.work_status);
   const [note, setNote] = useState("");
@@ -728,12 +1573,27 @@ const UpdateStatusModal = ({
   ];
 
   const getColorClasses = (color: string, isSelected: boolean) => {
-    const colors: Record<string, { border: string; bg: string; text: string }> = {
-      amber: { border: "border-amber-500", bg: "bg-amber-500/10", text: "text-amber-400" },
-      blue: { border: "border-blue-500", bg: "bg-blue-500/10", text: "text-blue-400" },
-      emerald: { border: "border-emerald-500", bg: "bg-emerald-500/10", text: "text-emerald-400" },
-    };
-    return isSelected ? colors[color] : { border: "border-slate-700", bg: "", text: "text-slate-400" };
+    const colors: Record<string, { border: string; bg: string; text: string }> =
+      {
+        amber: {
+          border: "border-amber-500",
+          bg: "bg-amber-500/10",
+          text: "text-amber-400",
+        },
+        blue: {
+          border: "border-blue-500",
+          bg: "bg-blue-500/10",
+          text: "text-blue-400",
+        },
+        emerald: {
+          border: "border-emerald-500",
+          bg: "bg-emerald-500/10",
+          text: "text-emerald-400",
+        },
+      };
+    return isSelected
+      ? colors[color]
+      : { border: "border-slate-700", bg: "", text: "text-slate-400" };
   };
 
   return (
@@ -745,7 +1605,10 @@ const UpdateStatusModal = ({
             <h3 className="text-2xl font-bold text-white">Update Job Status</h3>
             <p className="text-slate-500">Order #{job.order_id}</p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-800 rounded-xl transition-colors">
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-slate-800 rounded-xl transition-colors"
+          >
             <X size={20} className="text-slate-400" />
           </button>
         </div>
@@ -767,10 +1630,18 @@ const UpdateStatusModal = ({
                   <option.icon size={24} className={colors.text} />
                   <div className="flex-1 text-left">
                     <p className="text-white font-semibold">{option.label}</p>
-                    <p className="text-slate-500 text-sm">{option.description}</p>
+                    <p className="text-slate-500 text-sm">
+                      {option.description}
+                    </p>
                   </div>
-                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${colors.border}`}>
-                    {isSelected && <div className={`w-2.5 h-2.5 rounded-full ${colors.text.replace("text", "bg")}`} />}
+                  <div
+                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${colors.border}`}
+                  >
+                    {isSelected && (
+                      <div
+                        className={`w-2.5 h-2.5 rounded-full ${colors.text.replace("text", "bg")}`}
+                      />
+                    )}
                   </div>
                 </button>
               );
@@ -779,7 +1650,9 @@ const UpdateStatusModal = ({
 
           {/* Notes */}
           <div>
-            <label className="text-slate-400 text-sm font-medium block mb-2">Add Notes (Optional)</label>
+            <label className="text-slate-400 text-sm font-medium block mb-2">
+              Add Notes (Optional)
+            </label>
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
@@ -791,10 +1664,16 @@ const UpdateStatusModal = ({
 
           {/* Image Upload */}
           <div>
-            <label className="text-slate-400 text-sm font-medium block mb-2">Upload Work Photo (Optional)</label>
+            <label className="text-slate-400 text-sm font-medium block mb-2">
+              Upload Work Photo (Optional)
+            </label>
             {imagePreview ? (
               <div className="relative">
-                <img src={imagePreview} alt="Preview" className="w-full h-48 object-cover rounded-xl" />
+                <img
+                  src={imagePreview}
+                  alt="Preview"
+                  className="w-full h-48 object-cover rounded-xl"
+                />
                 <button
                   onClick={() => {
                     setImageFile(null);
@@ -834,9 +1713,16 @@ const UpdateStatusModal = ({
           </button>
           <button
             onClick={() => {
-              const option = statusOptions.find((o) => o.status === selectedStatus);
+              const option = statusOptions.find(
+                (o) => o.status === selectedStatus,
+              );
               if (option) {
-                onUpdate(job.id, option.status, option.code, imageFile || undefined);
+                onUpdate(
+                  job.order_id,
+                  option.status,
+                  note || undefined,
+                  imageFile || undefined,
+                );
               }
             }}
             className="flex-[2] py-3 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-xl text-white font-bold hover:opacity-90 transition-opacity"
@@ -860,13 +1746,37 @@ const DashboardTab = ({
   onViewJob: (job: Booking) => void;
 }) => {
   const statCards = [
-    { label: "New Requests", value: stats.pendingJobs, icon: Bell, color: "from-amber-500 to-orange-500" },
-    { label: "Active Jobs", value: stats.activeJobs, icon: Play, color: "from-blue-500 to-cyan-500" },
-    { label: "Completed", value: stats.completedJobs, icon: CheckCircle2, color: "from-emerald-500 to-teal-500" },
-    { label: "Earnings", value: `₹${stats.totalEarnings.toLocaleString()}`, icon: Wallet, color: "from-violet-500 to-purple-500" },
+    {
+      label: "New Requests",
+      value: stats.pendingJobs,
+      icon: Bell,
+      color: "from-amber-500 to-orange-500",
+    },
+    {
+      label: "Active Jobs",
+      value: stats.activeJobs,
+      icon: Play,
+      color: "from-blue-500 to-cyan-500",
+    },
+    {
+      label: "Completed",
+      value: stats.completedJobs,
+      icon: CheckCircle2,
+      color: "from-emerald-500 to-teal-500",
+    },
+    {
+      label: "Earnings",
+      value: `₹${stats.totalEarnings.toLocaleString()}`,
+      icon: Wallet,
+      color: "from-violet-500 to-purple-500",
+    },
   ];
 
-  const activeJobs = bookings.filter((b) => b.work_status === WORK_STATUS.IN_PROGRESS || b.work_status === WORK_STATUS.PENDING);
+  const activeJobs = bookings.filter(
+    (b) =>
+      b.work_status === WORK_STATUS.IN_PROGRESS ||
+      b.work_status === WORK_STATUS.PENDING,
+  );
   const newJobs = bookings.filter((b) => b.work_status === WORK_STATUS.NEW);
 
   return (
@@ -874,8 +1784,13 @@ const DashboardTab = ({
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {statCards.map((stat, idx) => (
-          <div key={idx} className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl p-6 hover:border-slate-700 transition-all">
-            <div className={`w-12 h-12 bg-gradient-to-br ${stat.color} rounded-xl flex items-center justify-center mb-4`}>
+          <div
+            key={idx}
+            className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl p-6 hover:border-slate-700 transition-all"
+          >
+            <div
+              className={`w-12 h-12 bg-gradient-to-br ${stat.color} rounded-xl flex items-center justify-center mb-4`}
+            >
               <stat.icon size={24} className="text-white" />
             </div>
             <p className="text-slate-500 text-sm">{stat.label}</p>
@@ -893,7 +1808,9 @@ const DashboardTab = ({
             </div>
             <div>
               <h3 className="text-white font-bold">New Job Requests</h3>
-              <p className="text-slate-400 text-sm">{newJobs.length} requests waiting for your response</p>
+              <p className="text-slate-400 text-sm">
+                {newJobs.length} requests waiting for your response
+              </p>
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -904,12 +1821,20 @@ const DashboardTab = ({
                 className="p-4 bg-slate-900/50 rounded-xl text-left hover:bg-slate-900/80 transition-colors border border-transparent hover:border-amber-500/30"
               >
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-white font-semibold">{job.subservice?.name || job.subservice_code}</span>
-                  <span className="text-emerald-400 font-bold">₹{job.total_price}</span>
+                  <span className="text-white font-semibold">
+                    {job.subservice?.name || job.subservice_code}
+                  </span>
+                  <span className="text-emerald-400 font-bold">
+                    ₹{job.total_price}
+                  </span>
                 </div>
                 <div className="flex items-center gap-4 text-slate-400 text-sm">
-                  <span className="flex items-center gap-1"><Calendar size={14} /> {job.date}</span>
-                  <span className="flex items-center gap-1"><Clock size={14} /> {job.time_slot}</span>
+                  <span className="flex items-center gap-1">
+                    <Calendar size={14} /> {job.date}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Clock size={14} /> {job.time_slot}
+                  </span>
                 </div>
               </button>
             ))}
@@ -921,7 +1846,9 @@ const DashboardTab = ({
       <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl p-6">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-xl font-bold text-white">Active Jobs</h3>
-          <span className="text-slate-400 text-sm">{activeJobs.length} jobs</span>
+          <span className="text-slate-400 text-sm">
+            {activeJobs.length} jobs
+          </span>
         </div>
 
         <div className="space-y-4">
@@ -937,7 +1864,9 @@ const DashboardTab = ({
                     <Briefcase size={20} className="text-emerald-400" />
                   </div>
                   <div>
-                    <p className="text-white font-semibold">{job.subservice?.name || job.subservice_code}</p>
+                    <p className="text-white font-semibold">
+                      {job.subservice?.name || job.subservice_code}
+                    </p>
                     <p className="text-slate-500 text-sm">#{job.order_id}</p>
                   </div>
                 </div>
@@ -950,9 +1879,15 @@ const DashboardTab = ({
                 </span> */}
               </div>
               <div className="flex items-center gap-6 text-slate-400 text-sm">
-                <span className="flex items-center gap-1"><MapPin size={14} /> {job.address?.substring(0, 25)}...</span>
-                <span className="flex items-center gap-1"><Calendar size={14} /> {job.date}</span>
-                <span className="flex items-center gap-1"><Clock size={14} /> {job.time_slot}</span>
+                <span className="flex items-center gap-1">
+                  <MapPin size={14} /> {job.address?.substring(0, 25)}...
+                </span>
+                <span className="flex items-center gap-1">
+                  <Calendar size={14} /> {job.date}
+                </span>
+                <span className="flex items-center gap-1">
+                  <Clock size={14} /> {job.time_slot}
+                </span>
               </div>
             </div>
           ))}
@@ -961,7 +1896,9 @@ const DashboardTab = ({
             <div className="text-center py-12">
               <Briefcase size={48} className="text-slate-600 mx-auto mb-4" />
               <p className="text-slate-500">No active jobs</p>
-              <p className="text-slate-600 text-sm mt-1">Accept new requests to get started</p>
+              <p className="text-slate-600 text-sm mt-1">
+                Accept new requests to get started
+              </p>
             </div>
           )}
         </div>
@@ -976,7 +1913,9 @@ const DashboardTab = ({
           <div>
             <h4 className="text-white font-bold mb-1">Pro Tip</h4>
             <p className="text-slate-400 text-sm">
-              Respond to job requests quickly and maintain high ratings to get more bookings. Customers prefer technicians who respond within 5 minutes!
+              Respond to job requests quickly and maintain high ratings to get
+              more bookings. Customers prefer technicians who respond within 5
+              minutes!
             </p>
           </div>
         </div>
@@ -994,17 +1933,29 @@ const JobsTab = ({
 }: {
   bookings: Booking[];
   onViewJob: (job: Booking) => void;
-  onAccept: (id: number) => void;
-  onReject: (id: number) => void;
+  onAccept: (orderId: string) => void;
+  onReject: (orderId: string) => void;
 }) => {
-  const [filter, setFilter] = useState<"all" | "new" | "active" | "completed">("all");
+  const [filter, setFilter] = useState<"all" | "new" | "active" | "completed">(
+    "all",
+  );
 
   const filterBookings = () => {
     switch (filter) {
-      case "new": return bookings.filter((b) => b.work_status === WORK_STATUS.NEW || b.work_status === WORK_STATUS.PENDING);
-      case "active": return bookings.filter((b) => b.work_status === WORK_STATUS.IN_PROGRESS);
-      case "completed": return bookings.filter((b) => b.work_status === WORK_STATUS.COMPLETED);
-      default: return bookings.filter((b) => b.work_status !== WORK_STATUS.REJECTED);
+      case "new":
+        return bookings.filter(
+          (b) =>
+            b.work_status === WORK_STATUS.NEW ||
+            b.work_status === WORK_STATUS.PENDING,
+        );
+      case "active":
+        return bookings.filter(
+          (b) => b.work_status === WORK_STATUS.IN_PROGRESS,
+        );
+      case "completed":
+        return bookings.filter((b) => b.work_status === WORK_STATUS.COMPLETED);
+      default:
+        return bookings.filter((b) => b.work_status !== WORK_STATUS.REJECTED);
     }
   };
 
@@ -1012,11 +1963,18 @@ const JobsTab = ({
 
   const getStatusConfig = (status: number) => {
     switch (status) {
-      case WORK_STATUS.NEW: return { label: "New", color: "bg-violet-500/20 text-violet-400" };
-      case WORK_STATUS.PENDING: return { label: "Accepted", color: "bg-amber-500/20 text-amber-400" };
+      case WORK_STATUS.NEW:
+        return { label: "New", color: "bg-violet-500/20 text-violet-400" };
+      case WORK_STATUS.PENDING:
+        return { label: "Accepted", color: "bg-amber-500/20 text-amber-400" };
       // case WORK_STATUS.IN_PROGRESS: return { label: "In Progress", color: "bg-blue-500/20 text-blue-400" };
-      case WORK_STATUS.COMPLETED: return { label: "Completed", color: "bg-emerald-500/20 text-emerald-400" };
-      default: return { label: "Unknown", color: "bg-slate-500/20 text-slate-400" };
+      case WORK_STATUS.COMPLETED:
+        return {
+          label: "Completed",
+          color: "bg-emerald-500/20 text-emerald-400",
+        };
+      default:
+        return { label: "Unknown", color: "bg-slate-500/20 text-slate-400" };
     }
   };
 
@@ -1034,7 +1992,9 @@ const JobsTab = ({
             key={f.id}
             onClick={() => setFilter(f.id as any)}
             className={`px-5 py-2.5 rounded-xl font-semibold transition-all ${
-              filter === f.id ? "bg-emerald-500 text-white" : "bg-slate-800 text-slate-400 hover:text-white"
+              filter === f.id
+                ? "bg-emerald-500 text-white"
+                : "bg-slate-800 text-slate-400 hover:text-white"
             }`}
           >
             {f.label}
@@ -1056,39 +2016,55 @@ const JobsTab = ({
               }`}
             >
               <div className="flex items-start justify-between mb-4">
-                <span className={`px-3 py-1 rounded-full text-xs font-bold ${statusConfig.color}`}>
+                <span
+                  className={`px-3 py-1 rounded-full text-xs font-bold ${statusConfig.color}`}
+                >
                   {statusConfig.label}
                 </span>
-                <p className="text-slate-500 text-sm font-mono">#{job.order_id}</p>
+                <p className="text-slate-500 text-sm font-mono">
+                  #{job.order_id}
+                </p>
               </div>
 
-              <h4 className="text-xl font-bold text-white mb-2">{job.subservice?.name || job.subservice_code}</h4>
-              <p className="text-slate-500 text-sm mb-4">{job.service?.name || job.service_code}</p>
+              <h4 className="text-xl font-bold text-white mb-2">
+                {job.subservice?.name || job.subservice_code}
+              </h4>
+              <p className="text-slate-500 text-sm mb-4">
+                {job.service?.name || job.service_code}
+              </p>
 
               <div className="space-y-2 mb-4">
                 <div className="flex items-center gap-2 text-slate-400 text-sm">
                   <MapPin size={16} />
-                  <span className="truncate">{job.address || "Address not provided"}</span>
+                  <span className="truncate">
+                    {job.address || "Address not provided"}
+                  </span>
                 </div>
                 <div className="flex items-center gap-4 text-slate-400 text-sm">
-                  <span className="flex items-center gap-1"><Calendar size={16} /> {job.date}</span>
-                  <span className="flex items-center gap-1"><Clock size={16} /> {job.time_slot}</span>
+                  <span className="flex items-center gap-1">
+                    <Calendar size={16} /> {job.date}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Clock size={16} /> {job.time_slot}
+                  </span>
                 </div>
               </div>
 
               <div className="flex items-center justify-between pt-4 border-t border-slate-800">
-                <p className="text-2xl font-black text-emerald-400">₹{job.total_price?.toLocaleString() || 0}</p>
-                
+                <p className="text-2xl font-black text-emerald-400">
+                  ₹{job.total_price?.toLocaleString() || 0}
+                </p>
+
                 {isNew ? (
                   <div className="flex gap-2">
                     <button
-                      onClick={() => onReject(job.id)}
+                      onClick={() => onReject(job.order_id)}
                       className="px-4 py-2 bg-red-500/20 text-red-400 rounded-lg font-semibold hover:bg-red-500/30 transition-colors"
                     >
                       Reject
                     </button>
                     <button
-                      onClick={() => onAccept(job.id)}
+                      onClick={() => onAccept(job.order_id)}
                       className="px-4 py-2 bg-emerald-500 text-white rounded-lg font-semibold hover:bg-emerald-400 transition-colors"
                     >
                       Accept
@@ -1099,7 +2075,9 @@ const JobsTab = ({
                     onClick={() => onViewJob(job)}
                     className="px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg font-semibold hover:bg-emerald-500/30 transition-colors"
                   >
-                    {job.work_status === WORK_STATUS.COMPLETED ? "View Details" : "Update Status"}
+                    {job.work_status === WORK_STATUS.COMPLETED
+                      ? "View Details"
+                      : "Update Status"}
                   </button>
                 )}
               </div>
@@ -1119,8 +2097,16 @@ const JobsTab = ({
 };
 
 // ==================== EARNINGS TAB ====================
-const EarningsTab = ({ bookings, stats }: { bookings: Booking[]; stats: any }) => {
-  const completedJobs = bookings.filter((b) => b.work_status === WORK_STATUS.COMPLETED);
+const EarningsTab = ({
+  bookings,
+  stats,
+}: {
+  bookings: Booking[];
+  stats: any;
+}) => {
+  const completedJobs = bookings.filter(
+    (b) => b.work_status === WORK_STATUS.COMPLETED,
+  );
   const commission = Math.round(stats.totalEarnings * 0.1); // 10% platform commission
   const netEarnings = stats.totalEarnings - commission;
 
@@ -1129,20 +2115,36 @@ const EarningsTab = ({ bookings, stats }: { bookings: Booking[]; stats: any }) =
       {/* Earnings Summary */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-500/30 rounded-2xl p-6">
-          <p className="text-emerald-400 text-sm font-medium mb-2">Total Earnings</p>
-          <p className="text-4xl font-black text-white">₹{stats.totalEarnings.toLocaleString()}</p>
+          <p className="text-emerald-400 text-sm font-medium mb-2">
+            Total Earnings
+          </p>
+          <p className="text-4xl font-black text-white">
+            ₹{stats.totalEarnings.toLocaleString()}
+          </p>
         </div>
         <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6">
-          <p className="text-slate-400 text-sm font-medium mb-2">Platform Fee (10%)</p>
-          <p className="text-4xl font-black text-red-400">-₹{commission.toLocaleString()}</p>
+          <p className="text-slate-400 text-sm font-medium mb-2">
+            Platform Fee (10%)
+          </p>
+          <p className="text-4xl font-black text-red-400">
+            -₹{commission.toLocaleString()}
+          </p>
         </div>
         <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6">
-          <p className="text-slate-400 text-sm font-medium mb-2">Net Earnings</p>
-          <p className="text-4xl font-black text-emerald-400">₹{netEarnings.toLocaleString()}</p>
+          <p className="text-slate-400 text-sm font-medium mb-2">
+            Net Earnings
+          </p>
+          <p className="text-4xl font-black text-emerald-400">
+            ₹{netEarnings.toLocaleString()}
+          </p>
         </div>
         <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6">
-          <p className="text-slate-400 text-sm font-medium mb-2">Jobs Completed</p>
-          <p className="text-4xl font-black text-white">{stats.completedJobs}</p>
+          <p className="text-slate-400 text-sm font-medium mb-2">
+            Jobs Completed
+          </p>
+          <p className="text-4xl font-black text-white">
+            {stats.completedJobs}
+          </p>
         </div>
       </div>
 
@@ -1157,7 +2159,9 @@ const EarningsTab = ({ bookings, stats }: { bookings: Booking[]; stats: any }) =
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="p-4 bg-slate-800/50 rounded-xl">
             <p className="text-slate-400 text-sm mb-1">Pending Payout</p>
-            <p className="text-2xl font-bold text-white">₹{netEarnings.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-white">
+              ₹{netEarnings.toLocaleString()}
+            </p>
           </div>
           <div className="p-4 bg-slate-800/50 rounded-xl">
             <p className="text-slate-400 text-sm mb-1">Last Payout</p>
@@ -1165,7 +2169,9 @@ const EarningsTab = ({ bookings, stats }: { bookings: Booking[]; stats: any }) =
           </div>
           <div className="p-4 bg-slate-800/50 rounded-xl">
             <p className="text-slate-400 text-sm mb-1">Lifetime Earnings</p>
-            <p className="text-2xl font-bold text-violet-400">₹{netEarnings.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-violet-400">
+              ₹{netEarnings.toLocaleString()}
+            </p>
           </div>
         </div>
       </div>
@@ -1180,25 +2186,34 @@ const EarningsTab = ({ bookings, stats }: { bookings: Booking[]; stats: any }) =
         </div>
         <div className="divide-y divide-slate-800">
           {completedJobs.map((job) => (
-            <div key={job.id} className="p-4 flex items-center justify-between hover:bg-slate-800/30 transition-colors">
+            <div
+              key={job.id}
+              className="p-4 flex items-center justify-between hover:bg-slate-800/30 transition-colors"
+            >
               <div className="flex items-center gap-4">
                 <div className="w-10 h-10 bg-emerald-500/20 rounded-lg flex items-center justify-center">
                   <DollarSign size={20} className="text-emerald-400" />
                 </div>
                 <div>
-                  <p className="text-white font-semibold">{job.subservice?.name || job.subservice_code}</p>
+                  <p className="text-white font-semibold">
+                    {job.subservice?.name || job.subservice_code}
+                  </p>
                   <p className="text-slate-500 text-sm">#{job.order_id}</p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-emerald-400 font-bold">+₹{job.total_price?.toLocaleString() || 0}</p>
+                <p className="text-emerald-400 font-bold">
+                  +₹{job.total_price?.toLocaleString() || 0}
+                </p>
                 <p className="text-slate-500 text-sm">{job.date}</p>
               </div>
             </div>
           ))}
 
           {completedJobs.length === 0 && (
-            <div className="p-8 text-center text-slate-500">No completed jobs yet</div>
+            <div className="p-8 text-center text-slate-500">
+              No completed jobs yet
+            </div>
           )}
         </div>
       </div>
@@ -1207,7 +2222,13 @@ const EarningsTab = ({ bookings, stats }: { bookings: Booking[]; stats: any }) =
 };
 
 // ==================== PROFILE TAB ====================
-const ProfileTab = ({ profile, onProfileUpdate }: { profile: TechnicianProfile | null; onProfileUpdate?: (updatedProfile: TechnicianProfile) => void }) => {
+const ProfileTab = ({
+  profile,
+  onProfileUpdate,
+}: {
+  profile: TechnicianProfile | null;
+  onProfileUpdate?: (updatedProfile: TechnicianProfile) => void;
+}) => {
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editData, setEditData] = useState({
@@ -1238,7 +2259,8 @@ const ProfileTab = ({ profile, onProfileUpdate }: { profile: TechnicianProfile |
         ifscNo: profile.technicianDetails?.ifscNo || "",
         branchName: profile.technicianDetails?.branchName || "",
         timeDuration: profile.technicianDetails?.timeDuration || "",
-        emergencyAvailable: profile.technicianDetails?.emergencyAvailable || false,
+        emergencyAvailable:
+          profile.technicianDetails?.emergencyAvailable || false,
         techCategory: profile.technicianDetails?.techCategory || "",
       });
     }
@@ -1263,7 +2285,10 @@ const ProfileTab = ({ profile, onProfileUpdate }: { profile: TechnicianProfile |
       formData.append("ifscNo", editData.ifscNo);
       formData.append("branchName", editData.branchName);
       formData.append("timeDuration", editData.timeDuration);
-      formData.append("emergencyAvailable", String(editData.emergencyAvailable));
+      formData.append(
+        "emergencyAvailable",
+        String(editData.emergencyAvailable),
+      );
       formData.append("techCategory", editData.techCategory);
 
       const token = sessionStorage.getItem("accessToken");
@@ -1295,7 +2320,7 @@ const ProfileTab = ({ profile, onProfileUpdate }: { profile: TechnicianProfile |
             techCategory: editData.techCategory,
           },
         };
-        
+
         sessionStorage.setItem("user", JSON.stringify(updatedProfile));
         onProfileUpdate?.(updatedProfile);
         setIsEditing(false);
@@ -1312,7 +2337,10 @@ const ProfileTab = ({ profile, onProfileUpdate }: { profile: TechnicianProfile |
     }
   };
 
-  const handleInputChange = (field: string, value: string | number | boolean) => {
+  const handleInputChange = (
+    field: string,
+    value: string | number | boolean,
+  ) => {
     setEditData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -1334,16 +2362,24 @@ const ProfileTab = ({ profile, onProfileUpdate }: { profile: TechnicianProfile |
                   className="text-2xl font-bold text-white bg-slate-800 border border-slate-700 rounded-lg px-3 py-1 focus:outline-none focus:border-emerald-500"
                 />
               ) : (
-                <h3 className="text-2xl font-bold text-white">{profile.name}</h3>
+                <h3 className="text-2xl font-bold text-white">
+                  {profile.name}
+                </h3>
               )}
-              <span className="px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded-full text-sm font-bold">Verified</span>
+              <span className="px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded-full text-sm font-bold">
+                Verified
+              </span>
             </div>
             <p className="text-slate-400 mb-4">@{profile.username}</p>
             <div className="flex items-center gap-6 flex-wrap">
               <div className="flex items-center gap-2">
                 <Star className="text-amber-400 fill-amber-400" size={18} />
-                <span className="text-white font-semibold">{tech?.rating?.avg_rating || "0.0"}</span>
-                <span className="text-slate-500">({tech?.rating?.rating_count || 0} reviews)</span>
+                <span className="text-white font-semibold">
+                  {tech?.rating?.avg_rating || "0.0"}
+                </span>
+                <span className="text-slate-500">
+                  ({tech?.rating?.rating_count || 0} reviews)
+                </span>
               </div>
               <div className="flex items-center gap-2 text-slate-400">
                 <Award size={18} />
@@ -1352,7 +2388,12 @@ const ProfileTab = ({ profile, onProfileUpdate }: { profile: TechnicianProfile |
                     <input
                       type="number"
                       value={editData.experience}
-                      onChange={(e) => handleInputChange("experience", parseInt(e.target.value) || 0)}
+                      onChange={(e) =>
+                        handleInputChange(
+                          "experience",
+                          parseInt(e.target.value) || 0,
+                        )
+                      }
                       className="w-16 bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-white focus:outline-none focus:border-emerald-500"
                       min="0"
                     />
@@ -1363,19 +2404,33 @@ const ProfileTab = ({ profile, onProfileUpdate }: { profile: TechnicianProfile |
                 )}
               </div>
               <div className="flex items-center gap-2">
-                <Zap size={18} className={editData.emergencyAvailable ? "text-amber-400" : "text-slate-500"} />
+                <Zap
+                  size={18}
+                  className={
+                    editData.emergencyAvailable
+                      ? "text-amber-400"
+                      : "text-slate-500"
+                  }
+                />
                 {isEditing ? (
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={editData.emergencyAvailable}
-                      onChange={(e) => handleInputChange("emergencyAvailable", e.target.checked)}
+                      onChange={(e) =>
+                        handleInputChange(
+                          "emergencyAvailable",
+                          e.target.checked,
+                        )
+                      }
                       className="w-4 h-4 accent-emerald-500"
                     />
                     <span className="text-white">Emergency Available</span>
                   </label>
                 ) : (
-                  tech?.emergencyAvailable && <span className="text-amber-400">Emergency Available</span>
+                  tech?.emergencyAvailable && (
+                    <span className="text-amber-400">Emergency Available</span>
+                  )
                 )}
               </div>
             </div>
@@ -1429,7 +2484,8 @@ const ProfileTab = ({ profile, onProfileUpdate }: { profile: TechnicianProfile |
                   ifscNo: profile.technicianDetails?.ifscNo || "",
                   branchName: profile.technicianDetails?.branchName || "",
                   timeDuration: profile.technicianDetails?.timeDuration || "",
-                  emergencyAvailable: profile.technicianDetails?.emergencyAvailable || false,
+                  emergencyAvailable:
+                    profile.technicianDetails?.emergencyAvailable || false,
                   techCategory: profile.technicianDetails?.techCategory || "",
                 });
               }}
@@ -1445,7 +2501,9 @@ const ProfileTab = ({ profile, onProfileUpdate }: { profile: TechnicianProfile |
       {/* Contact & Skills */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl p-6">
-          <h4 className="text-lg font-bold text-white mb-4">Contact Information</h4>
+          <h4 className="text-lg font-bold text-white mb-4">
+            Contact Information
+          </h4>
           <div className="space-y-4">
             <div className="flex items-center gap-3">
               <Mail size={18} className="text-slate-500" />
@@ -1458,7 +2516,9 @@ const ProfileTab = ({ profile, onProfileUpdate }: { profile: TechnicianProfile |
                   className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
                 />
               ) : (
-                <span className="text-white">{profile.email || "Not provided"}</span>
+                <span className="text-white">
+                  {profile.email || "Not provided"}
+                </span>
               )}
             </div>
             <div className="flex items-center gap-3">
@@ -1472,7 +2532,9 @@ const ProfileTab = ({ profile, onProfileUpdate }: { profile: TechnicianProfile |
                   className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
                 />
               ) : (
-                <span className="text-white">{profile.mobile || "Not provided"}</span>
+                <span className="text-white">
+                  {profile.mobile || "Not provided"}
+                </span>
               )}
             </div>
             <div className="flex items-center gap-3">
@@ -1486,14 +2548,18 @@ const ProfileTab = ({ profile, onProfileUpdate }: { profile: TechnicianProfile |
                   className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
                 />
               ) : (
-                <span className="text-white">{profile.address || "Not provided"}</span>
+                <span className="text-white">
+                  {profile.address || "Not provided"}
+                </span>
               )}
             </div>
           </div>
         </div>
 
         <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl p-6">
-          <h4 className="text-lg font-bold text-white mb-4">Skills & Expertise</h4>
+          <h4 className="text-lg font-bold text-white mb-4">
+            Skills & Expertise
+          </h4>
           <div className="space-y-4">
             <div>
               <p className="text-slate-500 text-sm mb-1">Primary Skill</p>
@@ -1517,12 +2583,16 @@ const ProfileTab = ({ profile, onProfileUpdate }: { profile: TechnicianProfile |
                 <input
                   type="text"
                   value={editData.techCategory}
-                  onChange={(e) => handleInputChange("techCategory", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("techCategory", e.target.value)
+                  }
                   placeholder="e.g., Home Services"
                   className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
                 />
               ) : (
-                <span className="text-white">{tech?.techCategory || "All Services"}</span>
+                <span className="text-white">
+                  {tech?.techCategory || "All Services"}
+                </span>
               )}
             </div>
             <div>
@@ -1531,12 +2601,16 @@ const ProfileTab = ({ profile, onProfileUpdate }: { profile: TechnicianProfile |
                 <input
                   type="text"
                   value={editData.timeDuration}
-                  onChange={(e) => handleInputChange("timeDuration", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("timeDuration", e.target.value)
+                  }
                   placeholder="e.g., Full Time, Part Time"
                   className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
                 />
               ) : (
-                <span className="text-white">{tech?.timeDuration || "Full Time"}</span>
+                <span className="text-white">
+                  {tech?.timeDuration || "Full Time"}
+                </span>
               )}
             </div>
           </div>
@@ -1546,7 +2620,9 @@ const ProfileTab = ({ profile, onProfileUpdate }: { profile: TechnicianProfile |
       {/* Bank Details */}
       <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl p-6">
         <div className="flex items-center justify-between mb-4">
-          <h4 className="text-lg font-bold text-white">Bank Details (For Payouts)</h4>
+          <h4 className="text-lg font-bold text-white">
+            Bank Details (For Payouts)
+          </h4>
           {isEditing && (
             <span className="text-amber-400 text-sm flex items-center gap-1">
               <AlertCircle size={14} />
@@ -1566,7 +2642,9 @@ const ProfileTab = ({ profile, onProfileUpdate }: { profile: TechnicianProfile |
                 className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
               />
             ) : (
-              <p className="text-white font-medium">{tech?.bankName || "Not provided"}</p>
+              <p className="text-white font-medium">
+                {tech?.bankName || "Not provided"}
+              </p>
             )}
           </div>
           <div className="p-4 bg-slate-800/50 rounded-xl">
@@ -1575,12 +2653,16 @@ const ProfileTab = ({ profile, onProfileUpdate }: { profile: TechnicianProfile |
               <input
                 type="text"
                 value={editData.ifscNo}
-                onChange={(e) => handleInputChange("ifscNo", e.target.value.toUpperCase())}
+                onChange={(e) =>
+                  handleInputChange("ifscNo", e.target.value.toUpperCase())
+                }
                 placeholder="e.g., SBIN0001234"
                 className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white uppercase focus:outline-none focus:border-emerald-500"
               />
             ) : (
-              <p className="text-white font-medium">{tech?.ifscNo || "Not provided"}</p>
+              <p className="text-white font-medium">
+                {tech?.ifscNo || "Not provided"}
+              </p>
             )}
           </div>
           <div className="p-4 bg-slate-800/50 rounded-xl">
@@ -1589,12 +2671,16 @@ const ProfileTab = ({ profile, onProfileUpdate }: { profile: TechnicianProfile |
               <input
                 type="text"
                 value={editData.branchName}
-                onChange={(e) => handleInputChange("branchName", e.target.value)}
+                onChange={(e) =>
+                  handleInputChange("branchName", e.target.value)
+                }
                 placeholder="Enter branch name"
                 className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
               />
             ) : (
-              <p className="text-white font-medium">{tech?.branchName || "Not provided"}</p>
+              <p className="text-white font-medium">
+                {tech?.branchName || "Not provided"}
+              </p>
             )}
           </div>
         </div>
@@ -1602,7 +2688,9 @@ const ProfileTab = ({ profile, onProfileUpdate }: { profile: TechnicianProfile |
 
       {/* Documents */}
       <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl p-6">
-        <h4 className="text-lg font-bold text-white mb-4">Verified Documents</h4>
+        <h4 className="text-lg font-bold text-white mb-4">
+          Verified Documents
+        </h4>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
             { name: "Aadhar Card", value: tech?.aadharCardNo },
@@ -1610,11 +2698,23 @@ const ProfileTab = ({ profile, onProfileUpdate }: { profile: TechnicianProfile |
             { name: "Bank Passbook", value: tech?.bankName },
             { name: "Experience Certificate", value: "Uploaded" },
           ].map((doc) => (
-            <div key={doc.name} className="p-4 bg-slate-800/50 rounded-xl flex items-center gap-3">
-              <FileText size={20} className={doc.value ? "text-emerald-400" : "text-slate-600"} />
+            <div
+              key={doc.name}
+              className="p-4 bg-slate-800/50 rounded-xl flex items-center gap-3"
+            >
+              <FileText
+                size={20}
+                className={doc.value ? "text-emerald-400" : "text-slate-600"}
+              />
               <div>
                 <p className="text-white text-sm font-medium">{doc.name}</p>
-                <p className={doc.value ? "text-emerald-400 text-xs" : "text-slate-500 text-xs"}>
+                <p
+                  className={
+                    doc.value
+                      ? "text-emerald-400 text-xs"
+                      : "text-slate-500 text-xs"
+                  }
+                >
                   {doc.value ? "Verified" : "Not uploaded"}
                 </p>
               </div>
