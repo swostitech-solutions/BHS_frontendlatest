@@ -137,7 +137,7 @@ const WORK_STATUS = {
 const categoryMatchesService = (
   techCategory: string,
   serviceName: string,
-  serviceCode?: string,
+  serviceCode?: string
 ): boolean => {
   if (!techCategory) return false;
   if (!serviceName && !serviceCode) return false;
@@ -343,7 +343,7 @@ const TechDashboard = () => {
 
       // Check for NEW jobs (not seen before)
       const newUnseenJobs = relevantBookings.filter(
-        (b) => !b.technician_allocated && !seenJobIds.has(b.order_id),
+        (b) => !b.technician_allocated && !seenJobIds.has(b.order_id)
       );
 
       if (newUnseenJobs.length > 0) {
@@ -371,9 +371,8 @@ const TechDashboard = () => {
   const playNotificationSound = () => {
     try {
       // Create a simple beep sound using Web Audio API
-      const audioContext = new (
-        window.AudioContext || (window as any).webkitAudioContext
-      )();
+      const audioContext = new (window.AudioContext ||
+        (window as any).webkitAudioContext)();
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
 
@@ -392,9 +391,8 @@ const TechDashboard = () => {
 
       // Second beep
       setTimeout(() => {
-        const audioContext2 = new (
-          window.AudioContext || (window as any).webkitAudioContext
-        )();
+        const audioContext2 = new (window.AudioContext ||
+          (window as any).webkitAudioContext)();
         const oscillator2 = audioContext2.createOscillator();
         const gainNode2 = audioContext2.createGain();
 
@@ -426,7 +424,7 @@ const TechDashboard = () => {
     if (profile?.id) {
       localStorage.setItem(
         `seenJobs_${profile.id}`,
-        JSON.stringify([...newSeenIds]),
+        JSON.stringify([...newSeenIds])
       );
     }
   };
@@ -441,11 +439,20 @@ const TechDashboard = () => {
     setNewJobAlert(null);
   };
 
-  // NEW: Handle rejecting/dismissing job from popup
+  // NEW: Handle rejecting job from popup (calls API)
+  const handleRejectFromPopup = async () => {
+    if (!newJobAlert) return;
+
+    markJobAsSeen(newJobAlert.order_id);
+    await handleRejectJob(newJobAlert.order_id);
+    setShowNewJobPopup(false);
+    setNewJobAlert(null);
+  };
+
+  // NEW: Handle dismissing popup (just hides, doesn't reject - job stays available)
   const handleDismissPopup = () => {
-    if (newJobAlert) {
-      markJobAsSeen(newJobAlert.order_id);
-    }
+    // Just close popup without marking as seen or rejecting
+    // Job will show up again on next poll
     setShowNewJobPopup(false);
     setNewJobAlert(null);
   };
@@ -493,7 +500,7 @@ const TechDashboard = () => {
 
       // New bookings = unassigned ones that match category (for notifications)
       setNotifications(
-        relevantBookings.filter((b: Booking) => !b.technician_allocated),
+        relevantBookings.filter((b: Booking) => !b.technician_allocated)
       );
     } catch (error) {
       console.error("Error fetching bookings:", error);
@@ -534,7 +541,7 @@ const TechDashboard = () => {
             technician_id: profile.id, // USER ID
             opinion: 1, // 1 = Accept
           }),
-        },
+        }
       );
 
       const data = await res.json();
@@ -546,7 +553,7 @@ const TechDashboard = () => {
           data.message?.includes("already allocated")
         ) {
           setShowErrorToast(
-            "This job has already been accepted by another technician. Refreshing...",
+            "This job has already been accepted by another technician. Refreshing..."
           );
           // Mark as seen so it doesn't show again
           markJobAsSeen(orderId);
@@ -597,7 +604,7 @@ const TechDashboard = () => {
             technician_id: profile.id, // USER ID
             opinion: 2, // 2 = Reject
           }),
-        },
+        }
       );
 
       if (!res.ok) {
@@ -619,7 +626,7 @@ const TechDashboard = () => {
     orderId: string,
     status: number,
     notes?: string,
-    imageFile?: File,
+    imageFile?: File
   ) => {
     try {
       const token = sessionStorage.getItem("accessToken");
@@ -642,7 +649,7 @@ const TechDashboard = () => {
             Authorization: `Bearer ${token}`,
           },
           body: formData,
-        },
+        }
       );
 
       if (!res.ok) {
@@ -679,15 +686,15 @@ const TechDashboard = () => {
   const stats = {
     totalJobs: bookings.length,
     completedJobs: bookings.filter(
-      (b) => b.work_status === WORK_STATUS.COMPLETED,
+      (b) => b.work_status === WORK_STATUS.COMPLETED
     ).length,
     activeJobs: bookings.filter(
-      (b) => b.work_status === WORK_STATUS.IN_PROGRESS,
+      (b) => b.work_status === WORK_STATUS.IN_PROGRESS
     ).length,
     pendingJobs: bookings.filter(
       (b) =>
         b.work_status === WORK_STATUS.PENDING ||
-        b.work_status === WORK_STATUS.NEW,
+        b.work_status === WORK_STATUS.NEW
     ).length,
     // totalEarnings: bookings
     //   .filter((b) => b.work_status === WORK_STATUS.COMPLETED)
@@ -909,7 +916,9 @@ const TechDashboard = () => {
               {/* Live Status Indicator */}
               <div className="flex items-center gap-2 px-3 py-1 bg-slate-800/50 rounded-full border border-slate-700">
                 <div
-                  className={`w-2 h-2 rounded-full ${isPolling ? "bg-emerald-500 animate-pulse" : "bg-slate-500"}`}
+                  className={`w-2 h-2 rounded-full ${
+                    isPolling ? "bg-emerald-500 animate-pulse" : "bg-slate-500"
+                  }`}
                 />
                 <span className="text-xs text-slate-400">
                   {isPolling ? "Live" : "Paused"}
@@ -1327,20 +1336,29 @@ const TechDashboard = () => {
             </div>
 
             {/* Action Buttons */}
-            <div className="p-6 pt-0 flex gap-3">
+            <div className="p-6 pt-0 space-y-3">
+              <div className="flex gap-3">
+                <button
+                  onClick={handleRejectFromPopup}
+                  className="flex-1 py-4 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 font-bold transition-all flex items-center justify-center gap-2 border border-red-500/30"
+                >
+                  <ThumbsDown size={20} />
+                  Reject
+                </button>
+                <button
+                  onClick={handleAcceptFromPopup}
+                  className="flex-1 py-4 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50"
+                >
+                  <Check size={20} />
+                  Accept Job
+                </button>
+              </div>
               <button
                 onClick={handleDismissPopup}
-                className="flex-1 py-4 rounded-xl bg-slate-700/50 hover:bg-slate-700 text-white font-semibold transition-all flex items-center justify-center gap-2 border border-slate-600"
+                className="w-full py-3 rounded-xl bg-slate-800/50 hover:bg-slate-800 text-slate-400 font-medium transition-all flex items-center justify-center gap-2 border border-slate-700"
               >
-                <X size={20} />
-                Dismiss
-              </button>
-              <button
-                onClick={handleAcceptFromPopup}
-                className="flex-1 py-4 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50"
-              >
-                <Check size={20} />
-                Accept Job
+                <Clock size={16} />
+                Decide Later
               </button>
             </div>
 
@@ -1528,7 +1546,7 @@ const UpdateStatusModal = ({
     orderId: string,
     status: number,
     notes?: string,
-    image?: File,
+    image?: File
   ) => void;
 }) => {
   const [selectedStatus, setSelectedStatus] = useState(job.work_status);
@@ -1625,7 +1643,9 @@ const UpdateStatusModal = ({
                 <button
                   key={option.status}
                   onClick={() => setSelectedStatus(option.status)}
-                  className={`w-full p-4 rounded-xl border-2 flex items-center gap-4 transition-all ${colors.border} ${isSelected ? colors.bg : "hover:border-slate-600"}`}
+                  className={`w-full p-4 rounded-xl border-2 flex items-center gap-4 transition-all ${
+                    colors.border
+                  } ${isSelected ? colors.bg : "hover:border-slate-600"}`}
                 >
                   <option.icon size={24} className={colors.text} />
                   <div className="flex-1 text-left">
@@ -1639,7 +1659,10 @@ const UpdateStatusModal = ({
                   >
                     {isSelected && (
                       <div
-                        className={`w-2.5 h-2.5 rounded-full ${colors.text.replace("text", "bg")}`}
+                        className={`w-2.5 h-2.5 rounded-full ${colors.text.replace(
+                          "text",
+                          "bg"
+                        )}`}
                       />
                     )}
                   </div>
@@ -1714,14 +1737,14 @@ const UpdateStatusModal = ({
           <button
             onClick={() => {
               const option = statusOptions.find(
-                (o) => o.status === selectedStatus,
+                (o) => o.status === selectedStatus
               );
               if (option) {
                 onUpdate(
                   job.order_id,
                   option.status,
                   note || undefined,
-                  imageFile || undefined,
+                  imageFile || undefined
                 );
               }
             }}
@@ -1775,7 +1798,7 @@ const DashboardTab = ({
   const activeJobs = bookings.filter(
     (b) =>
       b.work_status === WORK_STATUS.IN_PROGRESS ||
-      b.work_status === WORK_STATUS.PENDING,
+      b.work_status === WORK_STATUS.PENDING
   );
   const newJobs = bookings.filter((b) => b.work_status === WORK_STATUS.NEW);
 
@@ -1937,7 +1960,7 @@ const JobsTab = ({
   onReject: (orderId: string) => void;
 }) => {
   const [filter, setFilter] = useState<"all" | "new" | "active" | "completed">(
-    "all",
+    "all"
   );
 
   const filterBookings = () => {
@@ -1946,11 +1969,11 @@ const JobsTab = ({
         return bookings.filter(
           (b) =>
             b.work_status === WORK_STATUS.NEW ||
-            b.work_status === WORK_STATUS.PENDING,
+            b.work_status === WORK_STATUS.PENDING
         );
       case "active":
         return bookings.filter(
-          (b) => b.work_status === WORK_STATUS.IN_PROGRESS,
+          (b) => b.work_status === WORK_STATUS.IN_PROGRESS
         );
       case "completed":
         return bookings.filter((b) => b.work_status === WORK_STATUS.COMPLETED);
@@ -2105,7 +2128,7 @@ const EarningsTab = ({
   stats: any;
 }) => {
   const completedJobs = bookings.filter(
-    (b) => b.work_status === WORK_STATUS.COMPLETED,
+    (b) => b.work_status === WORK_STATUS.COMPLETED
   );
   const commission = Math.round(stats.totalEarnings * 0.1); // 10% platform commission
   const netEarnings = stats.totalEarnings - commission;
@@ -2287,7 +2310,7 @@ const ProfileTab = ({
       formData.append("timeDuration", editData.timeDuration);
       formData.append(
         "emergencyAvailable",
-        String(editData.emergencyAvailable),
+        String(editData.emergencyAvailable)
       );
       formData.append("techCategory", editData.techCategory);
 
@@ -2339,7 +2362,7 @@ const ProfileTab = ({
 
   const handleInputChange = (
     field: string,
-    value: string | number | boolean,
+    value: string | number | boolean
   ) => {
     setEditData((prev) => ({ ...prev, [field]: value }));
   };
@@ -2391,7 +2414,7 @@ const ProfileTab = ({
                       onChange={(e) =>
                         handleInputChange(
                           "experience",
-                          parseInt(e.target.value) || 0,
+                          parseInt(e.target.value) || 0
                         )
                       }
                       className="w-16 bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-white focus:outline-none focus:border-emerald-500"
@@ -2420,7 +2443,7 @@ const ProfileTab = ({
                       onChange={(e) =>
                         handleInputChange(
                           "emergencyAvailable",
-                          e.target.checked,
+                          e.target.checked
                         )
                       }
                       className="w-4 h-4 accent-emerald-500"

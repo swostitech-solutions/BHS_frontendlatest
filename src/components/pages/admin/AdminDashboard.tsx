@@ -111,7 +111,7 @@ interface Booking {
   technician_id?: number;
   user_id: number;
   User?: { id: number; name: string; email: string; mobile: string };
-  service?: { name: string };
+  service?: { name: string; service_code?: string };
   subservice?: { name: string; price: number };
   technician?: any;
   createdAt: string;
@@ -467,7 +467,12 @@ const AdminDashboard = () => {
             stats={stats}
             users={users}
             services={services}
+            bookings={bookings}
+            subServices={subServices}
             onViewTechnicians={() => setActiveTab("technicians")}
+            onAddService={() => setActiveTab("services")}
+            onViewSettings={() => setActiveTab("settings")}
+            onViewBookings={() => setActiveTab("bookings")}
           />
         )}
         {activeTab === "bookings" && (
@@ -512,13 +517,24 @@ const OverviewTab = ({
   stats,
   users,
   services,
+  bookings,
+  subServices,
   onViewTechnicians,
+  onAddService,
+  onViewSettings,
+  onViewBookings,
 }: {
   stats: any;
   users: User[];
   services: Service[];
+  bookings: Booking[];
+  subServices: SubService[];
   onViewTechnicians: () => void;
+  onAddService: () => void;
+  onViewSettings: () => void;
+  onViewBookings: () => void;
 }) => {
+  const [showAnalytics, setShowAnalytics] = useState(false);
   const statCards = [
     {
       label: "Total Clients",
@@ -680,7 +696,10 @@ const OverviewTab = ({
         <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl p-6">
           <h3 className="text-xl font-bold text-white mb-6">Quick Actions</h3>
           <div className="space-y-3">
-            <button className="w-full flex items-center gap-4 p-4 bg-gradient-to-r from-violet-500/20 to-fuchsia-500/20 border border-violet-500/30 rounded-xl text-white font-semibold hover:from-violet-500/30 hover:to-fuchsia-500/30 transition-all">
+            <button
+              onClick={onAddService}
+              className="w-full flex items-center gap-4 p-4 bg-gradient-to-r from-violet-500/20 to-fuchsia-500/20 border border-violet-500/30 rounded-xl text-white font-semibold hover:from-violet-500/30 hover:to-fuchsia-500/30 transition-all"
+            >
               <Plus size={20} className="text-violet-400" />
               Add New Service
             </button>
@@ -691,11 +710,17 @@ const OverviewTab = ({
               <UserCog size={20} className="text-slate-400" />
               Manage Technicians
             </button>
-            <button className="w-full flex items-center gap-4 p-4 bg-slate-800/50 border border-slate-700 rounded-xl text-white font-semibold hover:border-slate-600 transition-all">
+            <button
+              onClick={() => setShowAnalytics(true)}
+              className="w-full flex items-center gap-4 p-4 bg-slate-800/50 border border-slate-700 rounded-xl text-white font-semibold hover:border-slate-600 transition-all"
+            >
               <TrendingUp size={20} className="text-slate-400" />
               View Analytics
             </button>
-            <button className="w-full flex items-center gap-4 p-4 bg-slate-800/50 border border-slate-700 rounded-xl text-white font-semibold hover:border-slate-600 transition-all">
+            <button
+              onClick={onViewSettings}
+              className="w-full flex items-center gap-4 p-4 bg-slate-800/50 border border-slate-700 rounded-xl text-white font-semibold hover:border-slate-600 transition-all"
+            >
               <Settings size={20} className="text-slate-400" />
               System Settings
             </button>
@@ -707,7 +732,10 @@ const OverviewTab = ({
       <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl p-6">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-xl font-bold text-white">Service Categories</h3>
-          <button className="text-violet-400 text-sm font-semibold hover:text-violet-300 flex items-center gap-1">
+          <button
+            onClick={onAddService}
+            className="text-violet-400 text-sm font-semibold hover:text-violet-300 flex items-center gap-1"
+          >
             Manage Services <ChevronRight size={16} />
           </button>
         </div>
@@ -737,6 +765,214 @@ const OverviewTab = ({
           )}
         </div>
       </div>
+
+      {/* Analytics Modal */}
+      {showAnalytics && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-5xl max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="p-6 border-b border-slate-800 flex items-center justify-between sticky top-0 bg-slate-900 z-10 rounded-t-3xl">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-fuchsia-500 rounded-xl flex items-center justify-center">
+                  <TrendingUp size={20} className="text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">Platform Analytics</h3>
+                  <p className="text-slate-500 text-sm">Overview of key metrics & performance</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowAnalytics(false)}
+                className="p-2 hover:bg-slate-800 rounded-xl transition-colors"
+              >
+                <X size={20} className="text-slate-400" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Key Metrics */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[
+                  { label: "Total Revenue", value: `₹${bookings.filter(b => b.work_status === 3).reduce((sum, b) => sum + (b.total_price || 0), 0).toLocaleString()}`, icon: DollarSign, color: "from-emerald-500 to-teal-500" },
+                  { label: "Total Bookings", value: bookings.length, icon: Calendar, color: "from-blue-500 to-cyan-500" },
+                  { label: "Completion Rate", value: bookings.length > 0 ? `${Math.round((bookings.filter(b => b.work_status === 3).length / bookings.length) * 100)}%` : "0%", icon: CheckCircle2, color: "from-violet-500 to-fuchsia-500" },
+                  { label: "Avg. Order Value", value: bookings.filter(b => b.work_status === 3).length > 0 ? `₹${Math.round(bookings.filter(b => b.work_status === 3).reduce((sum, b) => sum + (b.total_price || 0), 0) / bookings.filter(b => b.work_status === 3).length).toLocaleString()}` : "₹0", icon: CreditCard, color: "from-amber-500 to-orange-500" },
+                ].map((metric, idx) => (
+                  <div key={idx} className="bg-slate-800/50 border border-slate-700 rounded-xl p-4">
+                    <div className={`w-10 h-10 bg-gradient-to-br ${metric.color} rounded-lg flex items-center justify-center mb-3`}>
+                      <metric.icon size={18} className="text-white" />
+                    </div>
+                    <p className="text-slate-500 text-xs font-medium">{metric.label}</p>
+                    <p className="text-2xl font-bold text-white mt-1">{metric.value}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Booking Status Breakdown */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-5">
+                  <h4 className="text-white font-bold mb-4 flex items-center gap-2">
+                    <Calendar size={18} className="text-violet-400" />
+                    Booking Status Breakdown
+                  </h4>
+                  <div className="space-y-3">
+                    {[
+                      { label: "Unassigned", count: bookings.filter(b => !b.technician_allocated).length, color: "bg-red-500", textColor: "text-red-400" },
+                      { label: "Assigned / Accepted", count: bookings.filter(b => b.technician_allocated && b.work_status === 1).length, color: "bg-amber-500", textColor: "text-amber-400" },
+                      { label: "In Progress", count: bookings.filter(b => b.work_status === 2).length, color: "bg-violet-500", textColor: "text-violet-400" },
+                      { label: "Completed", count: bookings.filter(b => b.work_status === 3).length, color: "bg-emerald-500", textColor: "text-emerald-400" },
+                    ].map((item, idx) => (
+                      <div key={idx} className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-3 h-3 rounded-full ${item.color}`} />
+                          <span className="text-slate-300 text-sm">{item.label}</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-32 h-2 bg-slate-700 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full ${item.color} rounded-full transition-all`}
+                              style={{ width: bookings.length > 0 ? `${(item.count / bookings.length) * 100}%` : '0%' }}
+                            />
+                          </div>
+                          <span className={`font-bold text-sm ${item.textColor} min-w-[2rem] text-right`}>{item.count}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* User Distribution */}
+                <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-5">
+                  <h4 className="text-white font-bold mb-4 flex items-center gap-2">
+                    <Users size={18} className="text-blue-400" />
+                    User Distribution
+                  </h4>
+                  <div className="space-y-3">
+                    {[
+                      { label: "Clients", count: stats.totalUsers, color: "bg-blue-500", textColor: "text-blue-400" },
+                      { label: "Active Technicians", count: stats.activeTechnicians, color: "bg-emerald-500", textColor: "text-emerald-400" },
+                      { label: "Pending Technicians", count: stats.pendingTechnicians, color: "bg-amber-500", textColor: "text-amber-400" },
+                      { label: "Rejected Technicians", count: users.filter(u => u.roleId === 3 && u.technician?.status === "REJECT").length, color: "bg-red-500", textColor: "text-red-400" },
+                    ].map((item, idx) => {
+                      const totalUsers = stats.totalUsers + stats.activeTechnicians + stats.pendingTechnicians + users.filter(u => u.roleId === 3 && u.technician?.status === "REJECT").length;
+                      return (
+                        <div key={idx} className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-3 h-3 rounded-full ${item.color}`} />
+                            <span className="text-slate-300 text-sm">{item.label}</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="w-32 h-2 bg-slate-700 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full ${item.color} rounded-full transition-all`}
+                                style={{ width: totalUsers > 0 ? `${(item.count / totalUsers) * 100}%` : '0%' }}
+                              />
+                            </div>
+                            <span className={`font-bold text-sm ${item.textColor} min-w-[2rem] text-right`}>{item.count}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Service Performance */}
+              <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-5">
+                <h4 className="text-white font-bold mb-4 flex items-center gap-2">
+                  <Package size={18} className="text-fuchsia-400" />
+                  Service Performance
+                </h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-slate-700">
+                        <th className="text-left py-3 px-4 text-slate-400 text-sm font-semibold">Service</th>
+                        <th className="text-left py-3 px-4 text-slate-400 text-sm font-semibold">Sub-Services</th>
+                        <th className="text-left py-3 px-4 text-slate-400 text-sm font-semibold">Bookings</th>
+                        <th className="text-left py-3 px-4 text-slate-400 text-sm font-semibold">Revenue</th>
+                        <th className="text-left py-3 px-4 text-slate-400 text-sm font-semibold">Completed</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {services.map(service => {
+                        const serviceBookings = bookings.filter(b => b.service_code === service.service_code);
+                        const completedBookings = serviceBookings.filter(b => b.work_status === 3);
+                        const revenue = completedBookings.reduce((sum, b) => sum + (b.total_price || 0), 0);
+                        const subCount = subServices.filter(s => s.service_id === service.id).length;
+                        return (
+                          <tr key={service.id} className="border-b border-slate-700/50 hover:bg-slate-700/20 transition-colors">
+                            <td className="py-3 px-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 rounded-lg flex items-center justify-center">
+                                  <Wrench size={14} className="text-violet-400" />
+                                </div>
+                                <div>
+                                  <p className="text-white font-medium text-sm">{service.name}</p>
+                                  <p className="text-slate-500 text-xs font-mono">{service.service_code}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-3 px-4 text-slate-300 text-sm">{subCount}</td>
+                            <td className="py-3 px-4 text-slate-300 text-sm">{serviceBookings.length}</td>
+                            <td className="py-3 px-4 text-emerald-400 font-semibold text-sm">₹{revenue.toLocaleString()}</td>
+                            <td className="py-3 px-4">
+                              <span className="text-emerald-400 text-sm font-medium">{completedBookings.length}</span>
+                              <span className="text-slate-500 text-sm"> / {serviceBookings.length}</span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {services.length === 0 && (
+                        <tr>
+                          <td colSpan={5} className="py-8 text-center text-slate-500">No services to analyze</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Quick Stats Footer */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-slate-800/30 rounded-xl p-4 text-center">
+                  <p className="text-slate-500 text-xs">Total Services</p>
+                  <p className="text-white text-xl font-bold">{services.length}</p>
+                </div>
+                <div className="bg-slate-800/30 rounded-xl p-4 text-center">
+                  <p className="text-slate-500 text-xs">Total Sub-Services</p>
+                  <p className="text-white text-xl font-bold">{subServices.length}</p>
+                </div>
+                <div className="bg-slate-800/30 rounded-xl p-4 text-center">
+                  <p className="text-slate-500 text-xs">Payment Methods</p>
+                  <p className="text-white text-xl font-bold">{[...new Set(bookings.map(b => b.payment_method).filter(Boolean))].length || 0}</p>
+                </div>
+                <div className="bg-slate-800/30 rounded-xl p-4 text-center">
+                  <p className="text-slate-500 text-xs">GST Collected</p>
+                  <p className="text-white text-xl font-bold">₹{bookings.filter(b => b.work_status === 3).reduce((sum, b) => sum + (b.gst || 0), 0).toLocaleString()}</p>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  onClick={onViewBookings}
+                  className="px-5 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white font-semibold hover:border-violet-500 transition-colors flex items-center gap-2"
+                >
+                  <Calendar size={16} />
+                  View All Bookings
+                </button>
+                <button
+                  onClick={() => setShowAnalytics(false)}
+                  className="px-5 py-2.5 bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-xl text-white font-semibold hover:opacity-90 transition-opacity"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -773,6 +1009,13 @@ const ServicesTab = ({
     service_code: "", // Changed from service_id to service_code
   });
   const [subServiceImage, setSubServiceImage] = useState<File | null>(null);
+  const [editingSubService, setEditingSubService] = useState<SubService | null>(null);
+  const [showEditSubModal, setShowEditSubModal] = useState(false);
+  const [editSubFormData, setEditSubFormData] = useState({
+    description: "",
+    price: "",
+  });
+  const [editSubServiceImage, setEditSubServiceImage] = useState<File | null>(null);
 
   const filteredServices = services.filter(
     (s) =>
@@ -794,7 +1037,7 @@ const ServicesTab = ({
 
     setSaving(true);
     try {
-      const method = editingService ? "PUT" : "POST";
+      const method = editingService ? "PATCH" : "POST";
       const url = editingService
         ? `${API_BASE}/api/services/${editingService.id}`
         : `${API_BASE}/api/services`;
@@ -897,6 +1140,60 @@ const ServicesTab = ({
       onRefresh();
     } catch (error) {
       console.error("Error deleting service:", error);
+    }
+  };
+
+  const handleSubEdit = async () => {
+    if (!editingSubService) return;
+    if (!editSubFormData.price) {
+      alert("Price is required");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const submitData = new FormData();
+      submitData.append("price", editSubFormData.price);
+      submitData.append("description", editSubFormData.description);
+      if (editSubServiceImage) submitData.append("image", editSubServiceImage);
+
+      const res = await fetch(`${API_BASE}/api/subservices/${editingSubService.id}`, {
+        method: "PUT",
+        body: submitData,
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to update sub-service");
+      }
+
+      setShowEditSubModal(false);
+      setEditingSubService(null);
+      setEditSubFormData({ description: "", price: "" });
+      setEditSubServiceImage(null);
+      showSuccess("Sub-service updated successfully!");
+      await onRefresh();
+    } catch (error: any) {
+      console.error("Error updating subservice:", error);
+      alert(error.message || "Failed to update sub-service");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSubDelete = async (id: number) => {
+    if (!confirm("Are you sure you want to delete this sub-service?")) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/subservices/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to delete sub-service");
+      }
+      showSuccess("Sub-service deleted successfully!");
+      await onRefresh();
+    } catch (error: any) {
+      console.error("Error deleting subservice:", error);
+      alert(error.message || "Failed to delete sub-service");
     }
   };
 
@@ -1089,10 +1386,26 @@ const ServicesTab = ({
                   </td>
                   <td className="p-4">
                     <div className="flex gap-2">
-                      <button className="p-2 hover:bg-slate-800 rounded-lg">
+                      <button
+                        onClick={() => {
+                          setEditingSubService(sub);
+                          setEditSubFormData({
+                            description: sub.description || "",
+                            price: String(sub.price),
+                          });
+                          setEditSubServiceImage(null);
+                          setShowEditSubModal(true);
+                        }}
+                        className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+                        title="Edit sub-service"
+                      >
                         <Edit3 size={16} className="text-slate-400" />
                       </button>
-                      <button className="p-2 hover:bg-red-500/20 rounded-lg">
+                      <button
+                        onClick={() => handleSubDelete(sub.id)}
+                        className="p-2 hover:bg-red-500/20 rounded-lg transition-colors"
+                        title="Delete sub-service"
+                      >
                         <Trash2 size={16} className="text-red-400" />
                       </button>
                     </div>
@@ -1169,17 +1482,28 @@ const ServicesTab = ({
               </div>
               <div>
                 <label className="text-slate-400 text-sm font-medium block mb-2">
-                  Service Name *
+                  Service Name {!editingService && '*'}
                 </label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  placeholder="e.g., AC Repair"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-violet-500"
-                />
+                {editingService ? (
+                  <div className="w-full bg-slate-800/60 border border-slate-700/50 rounded-xl px-4 py-3 text-slate-300 flex items-center justify-between">
+                    <span>{formData.name}</span>
+                    {formData.service_code && (
+                      <span className="text-xs bg-violet-500/20 text-violet-400 px-2 py-0.5 rounded-full">
+                        {formData.service_code}
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
+                    placeholder="e.g., AC Repair"
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-violet-500"
+                  />
+                )}
               </div>
               <div>
                 <label className="text-slate-400 text-sm font-medium block mb-2">
@@ -1368,6 +1692,155 @@ const ServicesTab = ({
                     </>
                   ) : (
                     "Add Sub-Service"
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Sub-Service Modal */}
+      {showEditSubModal && editingSubService && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 w-full max-w-lg mx-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-2xl font-bold text-white">Edit Sub-Service</h3>
+              <button
+                onClick={() => {
+                  setShowEditSubModal(false);
+                  setEditingSubService(null);
+                  setEditSubServiceImage(null);
+                }}
+                className="p-2 hover:bg-slate-800 rounded-xl transition-colors"
+              >
+                <X size={20} className="text-slate-400" />
+              </button>
+            </div>
+            <div className="space-y-5">
+              {/* Service Name (Read-only) */}
+              <div>
+                <label className="text-slate-400 text-sm font-medium block mb-2">
+                  Service Name
+                </label>
+                <div className="w-full bg-slate-800/60 border border-slate-700/50 rounded-xl px-4 py-3 text-slate-300 flex items-center justify-between">
+                  <span className="font-medium">{editingSubService.name}</span>
+                  <span className="text-xs bg-slate-700 text-slate-400 px-2 py-0.5 rounded-md font-mono">
+                    {editingSubService.subservice_code}
+                  </span>
+                </div>
+                <p className="text-slate-600 text-xs mt-1">Name cannot be changed</p>
+              </div>
+
+              {/* Category (Read-only) */}
+              <div>
+                <label className="text-slate-400 text-sm font-medium block mb-2">
+                  Category
+                </label>
+                <div className="w-full bg-slate-800/60 border border-slate-700/50 rounded-xl px-4 py-3 text-slate-300">
+                  <span className="px-3 py-1 bg-violet-500/20 text-violet-400 rounded-lg text-sm font-medium">
+                    {editingSubService.Service?.name || "Uncategorized"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Image Upload */}
+              <div>
+                <label className="text-slate-400 text-sm font-medium block mb-2">
+                  Service Image
+                </label>
+                <div className="flex items-center gap-4">
+                  <div className="w-20 h-20 bg-slate-800 border-2 border-dashed border-slate-600 rounded-xl flex items-center justify-center overflow-hidden">
+                    {editSubServiceImage ? (
+                      <img
+                        src={URL.createObjectURL(editSubServiceImage)}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <Wrench size={24} className="text-slate-500" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) =>
+                        setEditSubServiceImage(e.target.files?.[0] || null)
+                      }
+                      className="hidden"
+                      id="edit-subservice-image"
+                    />
+                    <label
+                      htmlFor="edit-subservice-image"
+                      className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-300 hover:border-violet-500 transition-colors"
+                    >
+                      <Plus size={16} />
+                      {editSubServiceImage ? "Change Image" : "Upload New Image"}
+                    </label>
+                    <p className="text-slate-500 text-xs mt-1">JPG, PNG up to 2MB</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Price (Editable) */}
+              <div>
+                <label className="text-slate-400 text-sm font-medium block mb-2">
+                  Price (₹) *
+                </label>
+                <input
+                  type="number"
+                  value={editSubFormData.price}
+                  onChange={(e) =>
+                    setEditSubFormData({ ...editSubFormData, price: e.target.value })
+                  }
+                  placeholder="e.g., 1500"
+                  min="0"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-violet-500"
+                />
+              </div>
+
+              {/* Description (Editable) */}
+              <div>
+                <label className="text-slate-400 text-sm font-medium block mb-2">
+                  Description
+                </label>
+                <textarea
+                  value={editSubFormData.description}
+                  onChange={(e) =>
+                    setEditSubFormData({ ...editSubFormData, description: e.target.value })
+                  }
+                  placeholder="Service description..."
+                  rows={3}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-violet-500 resize-none"
+                />
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-4 pt-4">
+                <button
+                  onClick={() => {
+                    setShowEditSubModal(false);
+                    setEditingSubService(null);
+                    setEditSubServiceImage(null);
+                  }}
+                  disabled={saving}
+                  className="flex-1 py-3 border border-slate-700 rounded-xl text-white font-semibold hover:bg-slate-800 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSubEdit}
+                  disabled={saving}
+                  className="flex-1 py-3 bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-xl text-white font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {saving ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Changes"
                   )}
                 </button>
               </div>

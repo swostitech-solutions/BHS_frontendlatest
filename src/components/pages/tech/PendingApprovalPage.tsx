@@ -1,4 +1,12 @@
-import { Clock, Shield, CheckCircle2, FileText, Phone, Mail, ArrowLeft } from "lucide-react";
+import {
+  Clock,
+  Shield,
+  CheckCircle2,
+  FileText,
+  Phone,
+  Mail,
+  ArrowLeft,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface PendingApprovalPageProps {
@@ -71,16 +79,22 @@ const PendingApprovalPage = ({ user }: PendingApprovalPageProps) => {
 
             {/* Status Steps */}
             <div className="space-y-4 mb-8">
-              <h3 className="text-white font-semibold mb-4">Application Status</h3>
-              
+              <h3 className="text-white font-semibold mb-4">
+                Application Status
+              </h3>
+
               {/* Step 1 - Completed */}
               <div className="flex items-start gap-4">
                 <div className="w-10 h-10 bg-emerald-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
                   <CheckCircle2 size={20} className="text-emerald-400" />
                 </div>
                 <div>
-                  <p className="text-white font-medium">Application Submitted</p>
-                  <p className="text-slate-500 text-sm">Your application has been received</p>
+                  <p className="text-white font-medium">
+                    Application Submitted
+                  </p>
+                  <p className="text-slate-500 text-sm">
+                    Your application has been received
+                  </p>
                 </div>
               </div>
 
@@ -90,8 +104,12 @@ const PendingApprovalPage = ({ user }: PendingApprovalPageProps) => {
                   <FileText size={20} className="text-amber-400" />
                 </div>
                 <div>
-                  <p className="text-white font-medium">Document Verification</p>
-                  <p className="text-slate-500 text-sm">Admin is reviewing your documents</p>
+                  <p className="text-white font-medium">
+                    Document Verification
+                  </p>
+                  <p className="text-slate-500 text-sm">
+                    Admin is reviewing your documents
+                  </p>
                 </div>
               </div>
 
@@ -101,8 +119,12 @@ const PendingApprovalPage = ({ user }: PendingApprovalPageProps) => {
                   <Shield size={20} className="text-slate-500" />
                 </div>
                 <div>
-                  <p className="text-slate-400 font-medium">Account Activation</p>
-                  <p className="text-slate-600 text-sm">Your account will be activated after approval</p>
+                  <p className="text-slate-400 font-medium">
+                    Account Activation
+                  </p>
+                  <p className="text-slate-600 text-sm">
+                    Your account will be activated after approval
+                  </p>
                 </div>
               </div>
             </div>
@@ -122,7 +144,10 @@ const PendingApprovalPage = ({ user }: PendingApprovalPageProps) => {
             {/* Contact Info */}
             <div className="text-center text-slate-500 text-sm mb-6">
               <p>Need help? Contact support at</p>
-              <a href="mailto:support@bhs.com" className="text-violet-400 hover:text-violet-300">
+              <a
+                href="mailto:support@bhs.com"
+                className="text-violet-400 hover:text-violet-300"
+              >
                 support@bhs.com
               </a>
             </div>
