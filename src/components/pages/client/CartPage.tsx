@@ -310,7 +310,7 @@
 //             </button>
 //           </div>
 //         </div>
-//       )}
+//       )}/cart/
 //     </div>
 //   );
 // };
@@ -403,7 +403,7 @@ const CartPage = () => {
           name: item.SubService?.name || item.Service?.name,
           price: Number(item.SubService?.price || item.price),
           quantity: item.quantity,
-          image: item.SubService?.imageUrl || item.Service?.imageUrl,
+          image: item.SubService?.image || item.Service?.image,
         }));
 
         setCart(cartItems);

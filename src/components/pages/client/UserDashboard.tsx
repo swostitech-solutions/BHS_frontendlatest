@@ -887,9 +887,30 @@ const UserDashboard = () => {
               >
                 <div className="flex flex-col lg:flex-row lg:items-center gap-6">
                   {/* Service Image */}
-                  <div className="w-full lg:w-32 h-32 bg-gradient-to-br from-indigo-100 to-violet-100 rounded-2xl flex items-center justify-center flex-shrink-0">
+                  {/* <div className="w-full lg:w-32 h-32 bg-gradient-to-br from-indigo-100 to-violet-100 rounded-2xl flex items-center justify-center flex-shrink-0">
                     <Package size={48} className="text-indigo-400" />
-                  </div>
+                  </div> */}
+                  {/* Service Image */}
+<div className="w-full lg:w-32 h-32 rounded-2xl overflow-hidden flex-shrink-0 bg-slate-100">
+  {booking.subservice?.image ? (
+    <img
+      src={booking.subservice.image}
+      alt={booking.subservice?.name}
+      className="w-full h-full object-cover"
+    />
+  ) : booking.service?.image ? (
+    <img
+      src={booking.service.image}
+      alt={booking.service?.name}
+      className="w-full h-full object-cover"
+    />
+  ) : (
+    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-100 to-violet-100">
+      <Package size={48} className="text-indigo-400" />
+    </div>
+  )}
+</div>
+
 
                   {/* Booking Details */}
                   <div className="flex-1 min-w-0">

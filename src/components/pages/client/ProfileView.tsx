@@ -29,6 +29,7 @@ interface UserProfile {
   username: string;
   roleId: number;
   roleName: string;
+  profileImage?: string;
 }
 
 const ProfileView = () => {
@@ -41,11 +42,20 @@ const ProfileView = () => {
     mobile: "",
     address: "",
   });
+  // const [bookingStats, setBookingStats] = useState({
+  //   total: 0,
+  //   completed: 0,
+  //   totalSpent: 0,
+  // });
+
   const [bookingStats, setBookingStats] = useState({
-    total: 0,
-    completed: 0,
-    totalSpent: 0,
-  });
+  total: 0,
+  completed: 0,
+  totalSpent: 0,
+});
+const [profileImage, setProfileImage] = useState<File | null>(null);
+
+
 
   useEffect(() => {
     const userData = sessionStorage.getItem("user");
@@ -62,22 +72,53 @@ const ProfileView = () => {
     }
   }, []);
 
+  // const fetchBookingStats = async (userId: number) => {
+  //   try {
+  //     const res = await fetch(`${API_BASE}/api/service-on-booking/user/${userId}`);
+  //     const data = await res.json();
+  //     const bookings = data.data || [];
+  //     setBookingStats({
+  //       total: bookings.length,
+  //       completed: bookings.filter((b: any) => b.work_status === 3).length,
+  //       totalSpent: bookings
+  //         .filter((b: any) => b.work_status === 3)
+  //         .reduce((sum: number, b: any) => sum + (b.total_price || 0), 0),
+  //     });
+  //   } catch (error) {
+  //     console.error("Error fetching stats:", error);
+  //   }
+  // };
+
   const fetchBookingStats = async (userId: number) => {
-    try {
-      const res = await fetch(`${API_BASE}/api/service-on-booking/user/${userId}`);
-      const data = await res.json();
-      const bookings = data.data || [];
-      setBookingStats({
-        total: bookings.length,
-        completed: bookings.filter((b: any) => b.work_status === 3).length,
-        totalSpent: bookings
-          .filter((b: any) => b.work_status === 3)
-          .reduce((sum: number, b: any) => sum + (b.total_price || 0), 0),
-      });
-    } catch (error) {
-      console.error("Error fetching stats:", error);
-    }
-  };
+  try {
+    const res = await fetch(
+      `${API_BASE}/api/service-on-booking/user/${userId}`
+    );
+
+    const data = await res.json();
+    const bookings = data.bookings || [];
+
+    const stats = {
+      total: bookings.length,
+
+      active: bookings.filter((b: any) => b.work_status < 3).length,
+
+      completed: bookings.filter((b: any) => b.work_status === 3).length,
+
+      totalSpent: bookings
+        .filter((b: any) => b.work_status === 3)
+        .reduce((sum: number, b: any) => {
+          const price = Number(b.total_price);
+          return sum + (isNaN(price) ? 0 : price);
+        }, 0),
+    };
+
+    setBookingStats(stats);
+  } catch (error) {
+    console.error("Error fetching stats:", error);
+  }
+};
+
 
   const handleLogout = () => {
     sessionStorage.clear();
@@ -85,13 +126,116 @@ const ProfileView = () => {
     window.location.reload();
   };
 
-  const handleSave = async () => {
-    // In a real app, this would make an API call to update the user
-    const updatedUser = { ...user, ...editData };
+
+
+//   const handleSave = async () => {
+//   if (!user) return;
+
+//   try {
+//     const formData = new FormData();
+//     formData.append("userId", String(user.id));
+//     formData.append("name", editData.name);
+//     formData.append("mobile", editData.mobile);
+//     formData.append("address", editData.address);
+
+//     if (profileImage) {
+//       formData.append("profileImage", profileImage);
+//     }
+
+//     const response = await fetch(
+//       `${API_BASE}/api/auth/client/profile`,
+//       {
+//         method: "PUT",
+//         body: formData,
+//       }
+//     );
+
+//     const data = await response.json();
+
+//     if (!response.ok) {
+//       throw new Error(data.message || "Failed to update profile");
+//     }
+
+//     // Update session storage with new values
+//     const updatedUser = {
+//       ...user,
+//       ...editData,
+//       profileImage: data.profileImage || user?.profileImage,
+//     };
+
+//     sessionStorage.setItem("user", JSON.stringify(updatedUser));
+//     setUser(updatedUser as UserProfile);
+//     setIsEditing(false);
+
+//   } catch (error) {
+//     console.error("Profile update failed:", error);
+//     alert("Failed to update profile");
+//   }
+// };
+
+
+
+
+const handleSave = async () => {
+  if (!user) return;
+
+  try {
+    const formData = new FormData();
+    formData.append("userId", String(user.id));
+    formData.append("name", editData.name);
+    formData.append("mobile", editData.mobile);
+    formData.append("address", editData.address);
+
+    if (profileImage) {
+      formData.append("profileImage", profileImage);
+    }
+
+    const response = await fetch(
+      `${API_BASE}/api/auth/client/profile`,
+      {
+        method: "PUT",
+        body: formData,
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Failed to update profile");
+    }
+
+    // ✅ Get existing session user
+    const existingUser = JSON.parse(
+      sessionStorage.getItem("user") || "{}"
+    );
+
+    // ✅ Only update modified fields
+    const updatedUser = {
+      ...existingUser,
+      name: editData.name,
+      mobile: editData.mobile,
+      address: editData.address,
+      ...(data.user?.profileImage && {
+        profileImage: data.user.profileImage,
+      }),
+    };
+
+    // ✅ Save back to sessionStorage
     sessionStorage.setItem("user", JSON.stringify(updatedUser));
-    setUser(updatedUser as UserProfile);
+
+    // ✅ Update local state
+    setUser(updatedUser);
+
+    setProfileImage(null);
     setIsEditing(false);
-  };
+
+  } catch (error) {
+    console.error("Profile update failed:", error);
+    alert("Failed to update profile");
+  }
+};
+
+
 
   if (!user) {
     return (
@@ -118,12 +262,40 @@ const ProfileView = () => {
             <div className="flex flex-col md:flex-row md:items-end gap-6">
               {/* Avatar */}
               <div className="relative">
-                <div className="w-32 h-32 bg-gradient-to-br from-indigo-500 to-violet-500 rounded-3xl border-4 border-white shadow-xl flex items-center justify-center text-white text-5xl font-black">
+                {/* <div className="w-32 h-32 bg-gradient-to-br from-indigo-500 to-violet-500 rounded-3xl border-4 border-white shadow-xl flex items-center justify-center text-white text-5xl font-black">
                   {user.name?.charAt(0) || "U"}
-                </div>
-                <button className="absolute -bottom-2 -right-2 w-10 h-10 bg-white rounded-xl shadow-lg flex items-center justify-center hover:bg-slate-50 transition-colors">
+                </div> */}
+                <div className="w-32 h-32 rounded-3xl border-4 border-white shadow-xl overflow-hidden bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center">
+  {user.profileImage ? (
+    <img
+      src={user.profileImage}
+      alt={user.name}
+      className="w-full h-full object-cover"
+    />
+  ) : (
+    <span className="text-white text-5xl font-black">
+      {user.name?.charAt(0) || "U"}
+    </span>
+  )}
+</div>
+
+                {/* <button className="absolute -bottom-2 -right-2 w-10 h-10 bg-white rounded-xl shadow-lg flex items-center justify-center hover:bg-slate-50 transition-colors">
                   <Camera size={18} className="text-slate-600" />
-                </button>
+                </button> */}
+                <label className="absolute -bottom-2 -right-2 w-10 h-10 bg-white rounded-xl shadow-lg flex items-center justify-center hover:bg-slate-50 transition-colors cursor-pointer">
+  <Camera size={18} className="text-slate-600" />
+  <input
+    type="file"
+    accept="image/*"
+    hidden
+    onChange={(e) => {
+      if (e.target.files && e.target.files[0]) {
+        setProfileImage(e.target.files[0]);
+      }
+    }}
+  />
+</label>
+
               </div>
 
               {/* Name & Role */}
