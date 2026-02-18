@@ -2478,6 +2478,111 @@ const DocumentPreview = ({ url, label }: { url: string; label: string }) => {
 };
 
 // ==================== CLIENTS TAB ====================
+// const ClientsTab = ({
+//   users,
+//   searchQuery,
+// }: {
+//   users: User[];
+//   searchQuery: string;
+// }) => {
+//   const filteredUsers = users.filter(
+//     (u) =>
+//       u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+//       u.email?.toLowerCase().includes(searchQuery.toLowerCase()),
+//   );
+
+//   return (
+//     <div className="space-y-6">
+//       {/* Stats */}
+//       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+//         <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
+//           <p className="text-slate-500 text-sm">Total Clients</p>
+//           <p className="text-2xl font-bold text-white">{users.length}</p>
+//         </div>
+//         <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
+//           <p className="text-slate-500 text-sm">Active This Month</p>
+//           <p className="text-2xl font-bold text-emerald-400">{users.length}</p>
+//         </div>
+//         <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
+//           <p className="text-slate-500 text-sm">New This Week</p>
+//           <p className="text-2xl font-bold text-violet-400">
+//             {Math.min(users.length, 3)}
+//           </p>
+//         </div>
+//       </div>
+
+//       {/* Clients Table */}
+//       <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl overflow-hidden">
+//         <div className="overflow-x-auto">
+//           <table className="w-full">
+//             <thead className="bg-slate-800/50">
+//               <tr>
+//                 <th className="text-left p-4 text-slate-400 font-semibold text-sm">
+//                   Client
+//                 </th>
+//                 <th className="text-left p-4 text-slate-400 font-semibold text-sm">
+//                   Email
+//                 </th>
+//                 <th className="text-left p-4 text-slate-400 font-semibold text-sm">
+//                   Phone
+//                 </th>
+//                 <th className="text-left p-4 text-slate-400 font-semibold text-sm">
+//                   Address
+//                 </th>
+//                 <th className="text-left p-4 text-slate-400 font-semibold text-sm">
+//                   Actions
+//                 </th>
+//               </tr>
+//             </thead>
+//             <tbody>
+//               {filteredUsers.map((client) => (
+//                 <tr
+//                   key={client.userId}
+//                   className="border-t border-slate-800 hover:bg-slate-800/30 transition-colors"
+//                 >
+//                   <td className="p-4">
+//                     <div className="flex items-center gap-3">
+//                       <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center text-white font-bold">
+//                         {client.name.charAt(0)}
+//                       </div>
+//                       <div>
+//                         <p className="text-white font-semibold">
+//                           {client.name}
+//                         </p>
+//                         <p className="text-slate-500 text-sm">
+//                           @{client.username}
+//                         </p>
+//                       </div>
+//                     </div>
+//                   </td>
+//                   <td className="p-4 text-white">{client.email || "N/A"}</td>
+//                   <td className="p-4 text-white">{client.mobile || "N/A"}</td>
+//                   <td className="p-4 text-slate-400 max-w-xs truncate">
+//                     {client.address || "N/A"}
+//                   </td>
+//                   <td className="p-4">
+//                     <button className="p-2 hover:bg-slate-800 rounded-lg">
+//                       <Eye size={16} className="text-slate-400" />
+//                     </button>
+//                   </td>
+//                 </tr>
+//               ))}
+//               {filteredUsers.length === 0 && (
+//                 <tr>
+//                   <td colSpan={5} className="p-8 text-center text-slate-500">
+//                     No clients found
+//                   </td>
+//                 </tr>
+//               )}
+//             </tbody>
+//           </table>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// };
+
+// ==================== CLIENTS TAB ====================
 const ClientsTab = ({
   users,
   searchQuery,
@@ -2485,11 +2590,19 @@ const ClientsTab = ({
   users: User[];
   searchQuery: string;
 }) => {
+  const [selectedClient, setSelectedClient] = useState<User | null>(null);
+  const [showClientModal, setShowClientModal] = useState(false);
+
   const filteredUsers = users.filter(
     (u) =>
       u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       u.email?.toLowerCase().includes(searchQuery.toLowerCase()),
   );
+
+  const openClientDetail = (client: User) => {
+    setSelectedClient(client);
+    setShowClientModal(true);
+  };
 
   return (
     <div className="space-y-6">
@@ -2561,7 +2674,10 @@ const ClientsTab = ({
                     {client.address || "N/A"}
                   </td>
                   <td className="p-4">
-                    <button className="p-2 hover:bg-slate-800 rounded-lg">
+                    <button
+                      onClick={() => openClientDetail(client)}
+                      className="p-2 hover:bg-slate-800 rounded-lg"
+                    >
                       <Eye size={16} className="text-slate-400" />
                     </button>
                   </td>
@@ -2578,9 +2694,73 @@ const ClientsTab = ({
           </table>
         </div>
       </div>
+
+      {/* Client Detail Modal */}
+      {showClientModal && selectedClient && (
+        <ClientDetailModal
+          client={selectedClient}
+          onClose={() => setShowClientModal(false)}
+        />
+      )}
     </div>
   );
 };
+
+
+
+
+
+
+
+
+// ==================== CLIENT DETAIL MODAL ====================
+const ClientDetailModal = ({
+  client,
+  onClose,
+}: {
+  client: User;
+  onClose: () => void;
+}) => {
+  return (
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-2xl animate-in zoom-in-95 duration-200">
+        {/* Header */}
+        <div className="p-6 border-b border-slate-800 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center text-white font-bold text-xl">
+              {client.name.charAt(0)}
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-white">
+                {client.name}
+              </h2>
+              <p className="text-slate-400">@{client.username}</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-slate-800 rounded-xl transition-colors"
+          >
+            <X size={22} className="text-slate-400" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 space-y-4">
+          <div className="bg-slate-800/50 rounded-xl p-4 space-y-3">
+            <InfoRow label="Full Name" value={client.name} />
+            <InfoRow label="Username" value={client.username} />
+            <InfoRow label="Email" value={client.email} />
+            <InfoRow label="Phone" value={client.mobile} />
+            <InfoRow label="Address" value={client.address} />
+            <InfoRow label="Role" value={client.roleName} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 
 // ==================== BOOKINGS TAB ====================
 const BookingsTab = ({

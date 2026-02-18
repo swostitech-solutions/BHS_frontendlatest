@@ -268,6 +268,16 @@ const TechDashboard = () => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+ /// added new state ///
+  const seenJobIdsRef = useRef<Set<string>>(new Set());
+
+
+  useEffect(() => {
+  seenJobIdsRef.current = seenJobIds;
+}, [seenJobIds]);
+
+ 
+
   // Inject custom styles
   useEffect(() => {
     const styleEl = document.createElement("style");
@@ -287,6 +297,9 @@ const TechDashboard = () => {
       // Use the user.id (userId) to fetch available bookings matching technician's category
       fetchBookings(user.id);
 
+       // 🔥 NEW: Fetch latest rating from API
+       fetchTechnicianRating(user.id);
+
       // Initialize seen job IDs from localStorage
       const savedSeenIds = localStorage.getItem(`seenJobs_${user.id}`);
       if (savedSeenIds) {
@@ -298,20 +311,88 @@ const TechDashboard = () => {
   }, []);
 
   // NEW: Polling for new jobs every 10 seconds
+  // useEffect(() => {
+  //   if (!profile?.id || !isPolling) return;
+
+  //   pollingIntervalRef.current = setInterval(() => {
+  //     fetchBookingsWithNotification(profile.id);
+  //     setLastRefresh(new Date());
+  //   }, 10000); // Poll every 10 seconds
+
+  //   return () => {
+  //     if (pollingIntervalRef.current) {
+  //       clearInterval(pollingIntervalRef.current);
+  //     }
+  //   };
+  // }, [profile?.id, isPolling, seenJobIds]);
+
+
+
   useEffect(() => {
-    if (!profile?.id || !isPolling) return;
+  if (!profile?.id || !isPolling) return;
 
-    pollingIntervalRef.current = setInterval(() => {
-      fetchBookingsWithNotification(profile.id);
-      setLastRefresh(new Date());
-    }, 10000); // Poll every 10 seconds
+  if (pollingIntervalRef.current) {
+    clearInterval(pollingIntervalRef.current);
+  }
 
-    return () => {
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
+  pollingIntervalRef.current = setInterval(() => {
+    fetchBookingsWithNotification(profile.id);
+  }, 10000);
+
+  return () => {
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+  };
+}, [profile?.id, isPolling]);
+
+
+
+
+
+
+const fetchTechnicianRating = async (userId: number) => {
+  try {
+    const token = sessionStorage.getItem("accessToken");
+
+    const res = await fetch(
+      `${API_BASE}/api/auth/users/${userId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       }
-    };
-  }, [profile?.id, isPolling, seenJobIds]);
+    );
+
+    if (!res.ok) return;
+
+    const data = await res.json();
+
+    const ratingData =
+      data?.user?.technicianDetails?.rating;
+
+    if (ratingData) {
+      setProfile((prev) => {
+        if (!prev) return prev;
+
+        return {
+          ...prev,
+          technicianDetails: {
+            ...prev.technicianDetails,
+            rating: ratingData,
+          },
+        };
+      });
+    }
+  } catch (error) {
+    console.error("Error fetching rating:", error);
+  }
+};
+
+
+
+
 
   // NEW: Fetch bookings and check for new jobs
   const fetchBookingsWithNotification = async (techUserId: number) => {
@@ -346,19 +427,38 @@ const TechDashboard = () => {
         (b) => !b.technician_allocated && !seenJobIds.has(b.order_id)
       );
 
+      // if (newUnseenJobs.length > 0) {
+      //   // Show popup for the first new job
+      //   setNewJobAlert(newUnseenJobs[0]);
+      //   setShowNewJobPopup(true);
+
+      //   // Play notification sound
+      //   playNotificationSound();
+
+      //   // Vibrate if supported
+      //   if (navigator.vibrate) {
+      //     navigator.vibrate([200, 100, 200]);
+      //   }
+      // }
+
+
+
       if (newUnseenJobs.length > 0) {
-        // Show popup for the first new job
-        setNewJobAlert(newUnseenJobs[0]);
-        setShowNewJobPopup(true);
+  const nextJob = newUnseenJobs[0];
 
-        // Play notification sound
-        playNotificationSound();
+  // ✅ Check using REF (not state)
+  if (!seenJobIdsRef.current.has(nextJob.order_id)) {
+    setNewJobAlert(nextJob);
+    setShowNewJobPopup(true);
 
-        // Vibrate if supported
-        if (navigator.vibrate) {
-          navigator.vibrate([200, 100, 200]);
-        }
-      }
+    playNotificationSound();
+
+    if (navigator.vibrate) {
+      navigator.vibrate([200, 100, 200]);
+    }
+  }
+}
+
 
       setBookings(relevantBookings);
       setNotifications(relevantBookings.filter((b) => !b.technician_allocated));
@@ -450,12 +550,22 @@ const TechDashboard = () => {
   };
 
   // NEW: Handle dismissing popup (just hides, doesn't reject - job stays available)
+  // const handleDismissPopup = () => {
+  //   // Just close popup without marking as seen or rejecting
+  //   // Job will show up again on next poll
+  //   setShowNewJobPopup(false);
+  //   setNewJobAlert(null);
+  // };
+
   const handleDismissPopup = () => {
-    // Just close popup without marking as seen or rejecting
-    // Job will show up again on next poll
-    setShowNewJobPopup(false);
-    setNewJobAlert(null);
-  };
+  if (!newJobAlert) return;
+
+  markJobAsSeen(newJobAlert.order_id);
+
+  setShowNewJobPopup(false);
+  setNewJobAlert(null);
+};
+
 
   // Fetch bookings for technician:
   // 1. All bookings assigned to this technician
