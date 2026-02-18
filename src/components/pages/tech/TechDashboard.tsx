@@ -409,7 +409,7 @@ const fetchWalletTransactions = async (userId: number) => {
     const token = sessionStorage.getItem("accessToken");
 
     const res = await fetch(
-      `http://localhost:4000/api/wallet/${userId}/transactions`,
+      `${API_BASE}/api/wallet/${userId}/transactions`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -462,7 +462,7 @@ const handleWalletRecharge = async () => {
       mobile: user.mobile,
     };
 
-    const res = await fetch(`http://localhost:4000/api/wallet/topup`, {
+    const res = await fetch(`${API_BASE}/api/wallet/topup`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
