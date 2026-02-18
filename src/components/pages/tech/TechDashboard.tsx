@@ -121,7 +121,7 @@ interface TechnicianProfile {
   };
 }
 
-type TabType = "dashboard" | "jobs" | "earnings" | "profile";
+type TabType = "dashboard" | "jobs" | "earnings" | "wallet" | "profile";
 
 // Work Status Constants
 const WORK_STATUS = {
@@ -272,6 +272,14 @@ const TechDashboard = () => {
   const seenJobIdsRef = useRef<Set<string>>(new Set());
 
 
+  // WALLET STATES
+const [walletBalance, setWalletBalance] = useState<number>(0);
+const [rechargeAmount, setRechargeAmount] = useState<string>("");
+const [walletLoading, setWalletLoading] = useState(false);
+const [walletTransactions, setWalletTransactions] = useState<any[]>([]);
+
+
+
   useEffect(() => {
   seenJobIdsRef.current = seenJobIds;
 }, [seenJobIds]);
@@ -300,6 +308,13 @@ const TechDashboard = () => {
        // 🔥 NEW: Fetch latest rating from API
        fetchTechnicianRating(user.id);
 
+
+         // ✅ ADD THIS
+       fetchWalletDetails(user.id);
+
+         // ✅ ADD THIS
+      //  fetchWalletTransactions(user.id);
+
       // Initialize seen job IDs from localStorage
       const savedSeenIds = localStorage.getItem(`seenJobs_${user.id}`);
       if (savedSeenIds) {
@@ -309,6 +324,18 @@ const TechDashboard = () => {
       setLoading(false);
     }
   }, []);
+
+
+  useEffect(() => {
+  if (activeTab === "wallet") {
+    const userData = sessionStorage.getItem("user");
+    if (userData) {
+      const user = JSON.parse(userData);
+      fetchWalletTransactions(user.id);
+    }
+  }
+}, [activeTab]);
+
 
   // NEW: Polling for new jobs every 10 seconds
   // useEffect(() => {
@@ -346,6 +373,127 @@ const TechDashboard = () => {
     }
   };
 }, [profile?.id, isPolling]);
+
+
+
+
+
+
+const fetchWalletDetails = async (userId: number) => {
+  try {
+    const token = sessionStorage.getItem("accessToken");
+
+    const res = await fetch(
+      `${API_BASE}/api/wallet/${userId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!res.ok) return;
+
+    const data = await res.json();
+
+    setWalletBalance(Number(data.balance || 0));
+    setWalletTransactions(data.transactions || []);
+  } catch (error) {
+    console.error("Wallet fetch error:", error);
+  }
+};
+
+
+const fetchWalletTransactions = async (userId: number) => {
+  try {
+    const token = sessionStorage.getItem("accessToken");
+
+    const res = await fetch(
+      `http://localhost:4000/api/wallet/${userId}/transactions`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!res.ok) {
+      console.error("Failed to fetch transactions");
+      return;
+    }
+
+    const data = await res.json();
+
+    setWalletTransactions(data || []);
+  } catch (error) {
+    console.error("Transaction fetch error:", error);
+  }
+};
+
+
+
+
+const handleWalletRecharge = async () => {
+
+  const amountNumber = Number(rechargeAmount);
+
+  if (!rechargeAmount || rechargeAmount <= 0) {
+    setShowErrorToast("Please enter valid amount");
+    return;
+  }
+
+  try {
+    setWalletLoading(true);
+
+    const token = sessionStorage.getItem("accessToken");
+    const userData = sessionStorage.getItem("user");
+
+    if (!userData) {
+      setShowErrorToast("User session expired. Please login again.");
+      return;
+    }
+
+    const user = JSON.parse(userData);
+
+    const payload = {
+      technician_id: user.id,
+      amount: amountNumber,
+      email: user.email,
+      mobile: user.mobile,
+    };
+
+    const res = await fetch(`http://localhost:4000/api/wallet/topup`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      setShowErrorToast(data.message || "Recharge failed");
+      return;
+    }
+
+    // ✅ Redirect to HDFC Payment Page
+    const paymentUrl = data?.payment_urls?.web;
+
+    if (paymentUrl) {
+      window.location.href = paymentUrl;
+    } else {
+      setShowErrorToast("Payment URL not received");
+    }
+
+  } catch (error) {
+    console.error("Wallet recharge error:", error);
+    setShowErrorToast("Recharge failed. Try again.");
+  } finally {
+    setWalletLoading(false);
+  }
+};
 
 
 
@@ -822,6 +970,12 @@ const fetchTechnicianRating = async (userId: number) => {
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
     { id: "jobs", label: "My Jobs", icon: Briefcase, badge: stats.pendingJobs },
     { id: "earnings", label: "Earnings", icon: Wallet },
+    {
+  id: "wallet",
+  label: "Wallet",
+  icon: Wallet,
+},
+
     { id: "profile", label: "Profile", icon: User },
   ];
 
@@ -1228,6 +1382,141 @@ const fetchTechnicianRating = async (userId: number) => {
         {activeTab === "earnings" && (
           <EarningsTab bookings={bookings} stats={stats} />
         )}
+
+
+        {activeTab === "wallet" && (
+  <div className="space-y-6 animate-fadeIn">
+
+    {/* Balance Card */}
+    <div className="bg-slate-800/40 border border-slate-700 rounded-3xl p-8">
+      <h2 className="text-2xl font-bold text-white mb-4">
+        Wallet Balance
+      </h2>
+
+      <p className="text-5xl font-black bg-gradient-to-r from-violet-400 to-purple-500 bg-clip-text text-transparent">
+        ₹{walletBalance.toLocaleString()}
+      </p>
+    </div>
+
+    {/* Recharge Card */}
+    <div className="bg-slate-800/40 border border-slate-700 rounded-3xl p-8">
+      <h3 className="text-xl font-bold text-white mb-4">
+        Recharge Wallet
+      </h3>
+
+      <div className="flex gap-4">
+        {/* <input
+          type="number"
+          placeholder="Enter amount"
+          value={rechargeAmount}
+          onChange={(e) => setRechargeAmount(Number(e.target.value))}
+          className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+        /> */}
+
+      <input
+        type="number"
+        placeholder="Enter amount"
+        value={rechargeAmount}
+        onChange={(e) => {
+          // Remove leading zeros automatically
+          const value = e.target.value.replace(/^0+(?=\d)/, "");
+          setRechargeAmount(value);
+        }}
+        className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+      />
+
+
+        <button
+          onClick={handleWalletRecharge}
+          disabled={walletLoading}
+          className="px-6 py-3 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white font-bold transition-all shadow-lg shadow-violet-500/30"
+        >
+          {walletLoading ? "Processing..." : "Recharge"}
+        </button>
+      </div>
+    </div>
+
+    {/* Transactions */}
+    {/* <div className="bg-slate-800/40 border border-slate-700 rounded-3xl p-8">
+      <h3 className="text-xl font-bold text-white mb-4">
+        Recent Transactions
+      </h3>
+
+      {walletTransactions.length === 0 ? (
+        <p className="text-slate-400">No transactions yet.</p>
+      ) : (
+        walletTransactions.map((txn: any, index: number) => (
+          <div
+            key={index}
+            className="flex justify-between py-3 border-b border-slate-700"
+          >
+            <span className="text-slate-300">{txn.type}</span>
+            <span className="text-emerald-400 font-semibold">
+              ₹{txn.amount}
+            </span>
+          </div>
+        ))
+      )}
+    </div> */}
+
+    {/* Transactions */}
+<div className="bg-slate-800/40 border border-slate-700 rounded-3xl p-8">
+  <h3 className="text-xl font-bold text-white mb-6">
+    Recent Transactions
+  </h3>
+
+  {walletTransactions.length === 0 ? (
+    <p className="text-slate-400">No transactions yet.</p>
+  ) : (
+    walletTransactions.map((txn: any) => (
+      <div
+        key={txn.id}
+        className="flex justify-between items-center py-4 border-b border-slate-700"
+      >
+        {/* Left Section */}
+        <div>
+          <p className="text-white font-semibold">
+            {txn.source}
+          </p>
+
+          <p className="text-slate-400 text-sm">
+            {new Date(txn.createdAt).toLocaleString()}
+          </p>
+
+          <p
+            className={`text-xs font-bold mt-1 ${
+              txn.status === "SUCCESS"
+                ? "text-emerald-400"
+                : txn.status === "PENDING"
+                ? "text-yellow-400"
+                : "text-red-400"
+            }`}
+          >
+            {txn.status}
+          </p>
+        </div>
+
+        {/* Right Section */}
+        <div
+          className={`text-lg font-bold ${
+            txn.type === "CREDIT"
+              ? "text-emerald-400"
+              : "text-red-400"
+          }`}
+        >
+          {txn.type === "CREDIT" ? "+" : "-"}₹
+          {Number(txn.amount).toLocaleString()}
+        </div>
+      </div>
+    ))
+  )}
+</div>
+
+  </div>
+)}
+
+
+
         {activeTab === "profile" && (
           <ProfileTab
             profile={profile}
