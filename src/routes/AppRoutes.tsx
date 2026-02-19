@@ -13,6 +13,7 @@ import CartPage from "../components/pages/client/CartPage";
 import ChangePassword from "../components/pages/client/ChangePassword";
 import PaymentSuccess from "../components/pages/client/PaymentSuccess";
 import PaymentFailed from "../components/pages/client/PaymentFailed";
+import ThankYouPage from "../components/pages/client/ThankYoupage";
 
 const AppRoutes = ({ currentUser, setCurrentUser }: any) => {
   return (
@@ -38,6 +39,9 @@ const AppRoutes = ({ currentUser, setCurrentUser }: any) => {
       <Route path="/admin" element={<AdminDashboard />} />
       <Route path="/tech" element={<TechDashboard />} />
       <Route path="/tech/pending" element={<PendingApprovalPage user={currentUser} />} />
+
+      <Route path="/thank-you" element={<ThankYouPage />} />
+
 
     </Routes>
   );

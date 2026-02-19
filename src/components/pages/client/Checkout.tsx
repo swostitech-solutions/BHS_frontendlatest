@@ -47,29 +47,67 @@ const Checkout: React.FC = () => {
   const [paymentMethod, setPaymentMethod] = useState<"COD" | "ONLINE">("ONLINE");
 
   // Load user, cart, and booking data from session
+  // useEffect(() => {
+  //   const userData = sessionStorage.getItem("user");
+  //   const cartData = sessionStorage.getItem("cart");
+  //   const bookingInfo = sessionStorage.getItem("bookingData");
+
+  //   if (!userData) {
+  //     navigate("/login");
+  //     return;
+  //   }
+
+  //   const parsedUser = JSON.parse(userData);
+  //   setUser(parsedUser);
+
+  //   if (cartData) {
+  //     setCart(JSON.parse(cartData));
+  //   }
+
+  //   if (bookingInfo) {
+  //     setBookingData(JSON.parse(bookingInfo));
+  //   }
+
+  //   setLoading(false);
+  // }, [navigate]);
+
+
+
   useEffect(() => {
-    const userData = sessionStorage.getItem("user");
-    const cartData = sessionStorage.getItem("cart");
-    const bookingInfo = sessionStorage.getItem("bookingData");
+  const params = new URLSearchParams(window.location.search);
+  const orderId = params.get("order_id");
 
-    if (!userData) {
-      navigate("/login");
-      return;
-    }
+  console.log("Checking order_id in URL:", orderId);
 
-    const parsedUser = JSON.parse(userData);
-    setUser(parsedUser);
+  if (orderId) {
+    console.log("Payment success detected, redirecting to thank-you page");
+    navigate(`/thank-you?order_id=${orderId}`);
+    return;
+  }
 
-    if (cartData) {
-      setCart(JSON.parse(cartData));
-    }
+  const userData = sessionStorage.getItem("user");
+  const cartData = sessionStorage.getItem("cart");
+  const bookingInfo = sessionStorage.getItem("bookingData");
 
-    if (bookingInfo) {
-      setBookingData(JSON.parse(bookingInfo));
-    }
+  if (!userData) {
+    navigate("/login");
+    return;
+  }
 
-    setLoading(false);
-  }, [navigate]);
+  const parsedUser = JSON.parse(userData);
+  setUser(parsedUser);
+
+  if (cartData) {
+    setCart(JSON.parse(cartData));
+  }
+
+  if (bookingInfo) {
+    setBookingData(JSON.parse(bookingInfo));
+  }
+
+  setLoading(false);
+}, [navigate]);
+
 
   // Calculate totals
   const subtotal = cart.reduce(
