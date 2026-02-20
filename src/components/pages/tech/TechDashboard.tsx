@@ -279,6 +279,15 @@ const [walletLoading, setWalletLoading] = useState(false);
 const [walletTransactions, setWalletTransactions] = useState<any[]>([]);
 
 
+  // WITHDRAWAL STATES
+const [withdrawAmount, setWithdrawAmount] = useState("");
+const [withdrawLoading, setWithdrawLoading] = useState(false);
+const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+const [withdrawSuccess, setWithdrawSuccess] = useState(false);
+const [remainingBalance, setRemainingBalance] = useState(0);
+const [withdrawDisplayAmount, setWithdrawDisplayAmount] = useState(0);
+
+
 
   useEffect(() => {
   seenJobIdsRef.current = seenJobIds;
@@ -495,6 +504,75 @@ const handleWalletRecharge = async () => {
   }
 };
 
+
+
+
+
+
+
+const handleWithdraw = async () => {
+  const amountNumber = Number(withdrawAmount);
+
+  if (!withdrawAmount || amountNumber <= 0) {
+    setShowErrorToast("Enter valid withdrawal amount");
+    return;
+  }
+
+  try {
+    setWithdrawLoading(true);
+
+    const token = sessionStorage.getItem("accessToken");
+    const userData = sessionStorage.getItem("user");
+
+    if (!userData) {
+      setShowErrorToast("User not found");
+      return;
+    }
+
+    const user = JSON.parse(userData);
+
+    const payload = {
+      technician_id: user.id,
+      amount: amountNumber,
+    };
+
+    const res = await fetch(`${API_BASE}/api/wallet/withdraw`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      setShowErrorToast(data.message || "Withdrawal failed");
+      return;
+    }
+
+
+    setWithdrawDisplayAmount(amountNumber); // store entered amount
+    setRemainingBalance(data.remainingBalance);
+    setWithdrawSuccess(true);
+    setShowWithdrawModal(true);
+
+    setWithdrawAmount("");
+
+    // Refresh wallet
+    fetchWalletDetails(user.id);
+
+    // ✅ Refresh Transactions (THIS IS WHAT YOU NEED)
+    fetchWalletTransactions(user.id);
+
+  } catch (error) {
+    console.error(error);
+    setShowErrorToast("Withdrawal failed");
+  } finally {
+    setWithdrawLoading(false);
+  }
+};
 
 
 
@@ -1436,6 +1514,31 @@ const fetchTechnicianRating = async (userId: number) => {
       </div>
     </div>
 
+    {/* Withdrawal  */}
+    <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 mt-6">
+  <h3 className="text-white text-xl font-bold mb-4">
+    Withdraw Amount
+  </h3>
+
+  <div className="flex gap-3">
+    <input
+      type="number"
+      placeholder="Enter amount"
+      value={withdrawAmount}
+      onChange={(e) => setWithdrawAmount(e.target.value)}
+      className="flex-1 bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 text-white"
+    />
+
+    <button
+      onClick={handleWithdraw}
+      disabled={withdrawLoading}
+      className="px-6 py-3 bg-red-500 hover:bg-red-600 rounded-xl text-white font-bold"
+    >
+      {withdrawLoading ? "Processing..." : "Withdraw"}
+    </button>
+  </div>
+</div>
+
     {/* Transactions */}
     {/* <div className="bg-slate-800/40 border border-slate-700 rounded-3xl p-8">
       <h3 className="text-xl font-bold text-white mb-4">
@@ -1468,47 +1571,49 @@ const fetchTechnicianRating = async (userId: number) => {
   {walletTransactions.length === 0 ? (
     <p className="text-slate-400">No transactions yet.</p>
   ) : (
-    walletTransactions.map((txn: any) => (
-      <div
-        key={txn.id}
-        className="flex justify-between items-center py-4 border-b border-slate-700"
-      >
-        {/* Left Section */}
-        <div>
-          <p className="text-white font-semibold">
-            {txn.source}
-          </p>
+    <div className="max-h-[500px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800">
+      {walletTransactions.map((txn: any) => (
+        <div
+          key={txn.id}
+          className="flex justify-between items-center py-4 border-b border-slate-700"
+        >
+          {/* Left Section */}
+          <div>
+            <p className="text-white font-semibold">
+              {txn.source}
+            </p>
 
-          <p className="text-slate-400 text-sm">
-            {new Date(txn.createdAt).toLocaleString()}
-          </p>
+            <p className="text-slate-400 text-sm">
+              {new Date(txn.createdAt).toLocaleString()}
+            </p>
 
-          <p
-            className={`text-xs font-bold mt-1 ${
-              txn.status === "SUCCESS"
+            <p
+              className={`text-xs font-bold mt-1 ${
+                txn.status === "SUCCESS"
+                  ? "text-emerald-400"
+                  : txn.status === "PENDING"
+                  ? "text-yellow-400"
+                  : "text-red-400"
+              }`}
+            >
+              {txn.status}
+            </p>
+          </div>
+
+          {/* Right Section */}
+          <div
+            className={`text-lg font-bold ${
+              txn.type === "CREDIT"
                 ? "text-emerald-400"
-                : txn.status === "PENDING"
-                ? "text-yellow-400"
                 : "text-red-400"
             }`}
           >
-            {txn.status}
-          </p>
+            {txn.type === "CREDIT" ? "+" : "-"}₹
+            {Number(txn.amount).toLocaleString()}
+          </div>
         </div>
-
-        {/* Right Section */}
-        <div
-          className={`text-lg font-bold ${
-            txn.type === "CREDIT"
-              ? "text-emerald-400"
-              : "text-red-400"
-          }`}
-        >
-          {txn.type === "CREDIT" ? "+" : "-"}₹
-          {Number(txn.amount).toLocaleString()}
-        </div>
-      </div>
-    ))
+      ))}
+    </div>
   )}
 </div>
 
@@ -1773,6 +1878,49 @@ const fetchTechnicianRating = async (userId: number) => {
           </div>
         </div>
       )}
+
+
+
+      {showWithdrawModal && (
+  <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+    <div className="bg-slate-900 p-8 rounded-2xl border border-slate-700 w-96 text-center animate-scaleIn">
+
+      <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+        <CheckCircle2 className="text-white" size={32} />
+      </div>
+
+      <h2 className="text-2xl font-bold text-white mb-2">
+        Withdrawal Initiated
+      </h2>
+
+      <p className="text-slate-400 mb-4">
+        Your withdrawal request has been initiated.
+      </p>
+
+      <div className="bg-slate-800 p-4 rounded-xl mb-4">
+        <p className="text-slate-400 text-sm">Amount</p>
+        <p className="text-red-400 font-bold text-xl">
+          {/* ₹{withdrawAmount} */}
+          ₹{withdrawDisplayAmount}
+        </p>
+      </div>
+
+      <div className="bg-slate-800 p-4 rounded-xl mb-6">
+        <p className="text-slate-400 text-sm">Remaining Balance</p>
+        <p className="text-green-400 font-bold text-xl">
+          ₹{remainingBalance}
+        </p>
+      </div>
+
+      <button
+        onClick={() => setShowWithdrawModal(false)}
+        className="w-full py-3 bg-emerald-500 rounded-xl text-white font-bold"
+      >
+        OK
+      </button>
+    </div>
+  </div>
+)}
     </div>
   );
 };

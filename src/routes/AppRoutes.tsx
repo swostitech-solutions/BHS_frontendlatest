@@ -14,6 +14,8 @@ import ChangePassword from "../components/pages/client/ChangePassword";
 import PaymentSuccess from "../components/pages/client/PaymentSuccess";
 import PaymentFailed from "../components/pages/client/PaymentFailed";
 import ThankYouPage from "../components/pages/client/ThankYoupage";
+import WalletSuccess from "../components/pages/tech/WalletSuccess";
+
 
 const AppRoutes = ({ currentUser, setCurrentUser }: any) => {
   return (
@@ -41,6 +43,7 @@ const AppRoutes = ({ currentUser, setCurrentUser }: any) => {
       <Route path="/tech/pending" element={<PendingApprovalPage user={currentUser} />} />
 
       <Route path="/thank-you" element={<ThankYouPage />} />
+      <Route path="/wallet-success" element={<WalletSuccess />} />
 
 
     </Routes>
