@@ -387,13 +387,50 @@ const [withdrawDisplayAmount, setWithdrawDisplayAmount] = useState(0);
 
 
 
+/// current ///
+// const fetchWalletDetails = async (userId: number) => {
+//   try {
+//     const token = sessionStorage.getItem("accessToken");
 
-const fetchWalletDetails = async (userId: number) => {
+//     const res = await fetch(
+//       `${API_BASE}/api/wallet/${userId}`,
+//       {
+//         headers: {
+//           Authorization: `Bearer ${token}`,
+//         },
+//       }
+//     );
+
+//     if (!res.ok) return;
+
+//     const data = await res.json();
+
+//     setWalletBalance(Number(data.balance || 0));
+//     setWalletTransactions(data.transactions || []);
+//   } catch (error) {
+//     console.error("Wallet fetch error:", error);
+//   }
+// };
+
+
+
+const fetchWalletDetails = async () => {
   try {
     const token = sessionStorage.getItem("accessToken");
+    const userData = sessionStorage.getItem("user");
+
+    if (!userData) return;
+
+    const user = JSON.parse(userData);
+    const technicianId = user?.technicianDetails?.technician_id;
+
+    if (!technicianId) {
+      console.error("Technician ID not found");
+      return;
+    }
 
     const res = await fetch(
-      `${API_BASE}/api/wallet/${userId}`,
+      `${API_BASE}/api/wallet/${technicianId}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -412,13 +449,53 @@ const fetchWalletDetails = async (userId: number) => {
   }
 };
 
+//// current ////
+// const fetchWalletTransactions = async (userId: number) => {
+//   try {
+//     const token = sessionStorage.getItem("accessToken");
 
-const fetchWalletTransactions = async (userId: number) => {
+//     const res = await fetch(
+//       `${API_BASE}/api/wallet/${userId}/transactions`,
+//       {
+//         headers: {
+//           Authorization: `Bearer ${token}`,
+//         },
+//       }
+//     );
+
+//     if (!res.ok) {
+//       console.error("Failed to fetch transactions");
+//       return;
+//     }
+
+//     const data = await res.json();
+
+//     setWalletTransactions(data || []);
+//   } catch (error) {
+//     console.error("Transaction fetch error:", error);
+//   }
+// };
+
+
+
+
+const fetchWalletTransactions = async () => {
   try {
     const token = sessionStorage.getItem("accessToken");
+    const userData = sessionStorage.getItem("user");
+
+    if (!userData) return;
+
+    const user = JSON.parse(userData);
+    const technicianId = user?.technicianDetails?.technician_id;
+
+    if (!technicianId) {
+      console.error("Technician ID not found");
+      return;
+    }
 
     const res = await fetch(
-      `${API_BASE}/api/wallet/${userId}/transactions`,
+      `${API_BASE}/api/wallet/${technicianId}/transactions`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -438,7 +515,6 @@ const fetchWalletTransactions = async (userId: number) => {
     console.error("Transaction fetch error:", error);
   }
 };
-
 
 
 
@@ -464,8 +540,18 @@ const handleWalletRecharge = async () => {
 
     const user = JSON.parse(userData);
 
+        // ✅ Get technician_id correctly
+    const technicianId = user?.technicianDetails?.technician_id;
+
+    if (!technicianId) {
+      setShowErrorToast("Technician ID not found");
+      return;
+    }
+
+
     const payload = {
-      technician_id: user.id,
+      // technician_id: user.id,
+      technician_id:technicianId,
       amount: amountNumber,
       email: user.email,
       mobile: user.mobile,
@@ -509,6 +595,72 @@ const handleWalletRecharge = async () => {
 
 
 
+/// current ////
+// const handleWithdraw = async () => {
+//   const amountNumber = Number(withdrawAmount);
+
+//   if (!withdrawAmount || amountNumber <= 0) {
+//     setShowErrorToast("Enter valid withdrawal amount");
+//     return;
+//   }
+
+//   try {
+//     setWithdrawLoading(true);
+
+//     const token = sessionStorage.getItem("accessToken");
+//     const userData = sessionStorage.getItem("user");
+
+//     if (!userData) {
+//       setShowErrorToast("User not found");
+//       return;
+//     }
+
+//     const user = JSON.parse(userData);
+
+//     const payload = {
+//       technician_id: user.id,
+//       amount: amountNumber,
+//     };
+
+//     const res = await fetch(`${API_BASE}/api/wallet/withdraw`, {
+//       method: "POST",
+//       headers: {
+//         "Content-Type": "application/json",
+//         Authorization: `Bearer ${token}`,
+//       },
+//       body: JSON.stringify(payload),
+//     });
+
+//     const data = await res.json();
+
+//     if (!res.ok || !data.success) {
+//       setShowErrorToast(data.message || "Withdrawal failed");
+//       return;
+//     }
+
+
+//     setWithdrawDisplayAmount(amountNumber); // store entered amount
+//     setRemainingBalance(data.remainingBalance);
+//     setWithdrawSuccess(true);
+//     setShowWithdrawModal(true);
+
+//     setWithdrawAmount("");
+
+//     // Refresh wallet
+//     fetchWalletDetails(user.id);
+
+//     // ✅ Refresh Transactions (THIS IS WHAT YOU NEED)
+//     fetchWalletTransactions(user.id);
+
+//   } catch (error) {
+//     console.error(error);
+//     setShowErrorToast("Withdrawal failed");
+//   } finally {
+//     setWithdrawLoading(false);
+//   }
+// };
+
+
 
 const handleWithdraw = async () => {
   const amountNumber = Number(withdrawAmount);
@@ -531,8 +683,16 @@ const handleWithdraw = async () => {
 
     const user = JSON.parse(userData);
 
+    // ✅ Get technician_id correctly
+    const technicianId = user?.technicianDetails?.technician_id;
+
+    if (!technicianId) {
+      setShowErrorToast("Technician ID not found");
+      return;
+    }
+
     const payload = {
-      technician_id: user.id,
+      technician_id: technicianId, // ✅ FIXED
       amount: amountNumber,
     };
 
@@ -552,19 +712,18 @@ const handleWithdraw = async () => {
       return;
     }
 
-
-    setWithdrawDisplayAmount(amountNumber); // store entered amount
+    setWithdrawDisplayAmount(amountNumber);
     setRemainingBalance(data.remainingBalance);
     setWithdrawSuccess(true);
     setShowWithdrawModal(true);
 
     setWithdrawAmount("");
 
-    // Refresh wallet
-    fetchWalletDetails(user.id);
+    // ✅ Refresh wallet with technicianId
+    fetchWalletDetails(technicianId);
 
-    // ✅ Refresh Transactions (THIS IS WHAT YOU NEED)
-    fetchWalletTransactions(user.id);
+    // ✅ Refresh transactions with technicianId
+    fetchWalletTransactions(technicianId);
 
   } catch (error) {
     console.error(error);
@@ -573,7 +732,6 @@ const handleWithdraw = async () => {
     setWithdrawLoading(false);
   }
 };
-
 
 
 
