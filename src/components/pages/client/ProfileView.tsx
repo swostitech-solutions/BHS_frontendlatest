@@ -473,20 +473,20 @@ const handleSave = async () => {
                 href: "/bookings",
                 color: "text-indigo-600 bg-indigo-100",
               },
-              {
-                icon: CreditCard,
-                label: "Payment Methods",
-                desc: "Manage your payment options",
-                href: "#",
-                color: "text-emerald-600 bg-emerald-100",
-              },
-              {
-                icon: Bell,
-                label: "Notifications",
-                desc: "Manage notification preferences",
-                href: "#",
-                color: "text-amber-600 bg-amber-100",
-              },
+              // {
+              //   icon: CreditCard,
+              //   label: "Payment Methods",
+              //   desc: "Manage your payment options",
+              //   href: "#",
+              //   color: "text-emerald-600 bg-emerald-100",
+              // },
+              // {
+              //   icon: Bell,
+              //   label: "Notifications",
+              //   desc: "Manage notification preferences",
+              //   href: "#",
+              //   color: "text-amber-600 bg-amber-100",
+              // },
               {
                 icon: Lock,
                 label: "Change Password",
@@ -494,13 +494,13 @@ const handleSave = async () => {
                 href: "/change-password",
                 color: "text-violet-600 bg-violet-100",
               },
-              {
-                icon: Shield,
-                label: "Privacy Settings",
-                desc: "Control your data and privacy",
-                href: "#",
-                color: "text-blue-600 bg-blue-100",
-              },
+              // {
+              //   icon: Shield,
+              //   label: "Privacy Settings",
+              //   desc: "Control your data and privacy",
+              //   href: "#",
+              //   color: "text-blue-600 bg-blue-100",
+              // },
             ].map((item, idx) => (
               <a
                 key={idx}

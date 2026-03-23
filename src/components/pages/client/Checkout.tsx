@@ -110,12 +110,40 @@ const Checkout: React.FC = () => {
 
 
   // Calculate totals
-  const subtotal = cart.reduce(
-    (sum, item) => sum + (item.emergencyPrice ?? item.price) * item.quantity,
-    0
-  );
-  const gst = subtotal * 0.18;
-  const total = subtotal + gst;
+  // const subtotal = cart.reduce(
+  //   (sum, item) => sum + (item.emergencyPrice ?? item.price) * item.quantity,
+  //   0
+  // );
+  // const gst = subtotal * 0.18;
+  // const total = subtotal + gst;
+
+
+
+
+  // Base subtotal (for GST calculation only)
+const baseSubtotal = cart.reduce(
+  (sum, item) => sum + item.price * item.quantity,
+  0
+);
+
+// Subtotal including emergency pricing
+const subtotal = cart.reduce(
+  (sum, item) =>
+    sum + (item.emergencyPrice ?? item.price) * item.quantity,
+  0
+);
+
+// GST only on base price
+const gst = baseSubtotal * 0.18;
+
+// Final total
+const total = subtotal + gst;
+
+
+
+
+
+
 
   // Create booking for each cart item
   // const handleConfirmBooking = async () => {
@@ -235,152 +263,337 @@ const Checkout: React.FC = () => {
   //   }
   // };
 
-  const handleConfirmBooking = async () => {
-    if (!user?.id) {
-      setError("Please login to continue");
-      return;
-    }
-
-    if (cart.length === 0) {
-      setError("Your cart is empty");
-      return;
-    }
-
-    setStep("PROCESSING");
-    setError("");
-
-    try {
-      const bookings = [];
-
-      // If ONLINE payment, use Juspay
-      if (paymentMethod === "ONLINE") {
-        // For online payment, we'll process the first item (or combine all)
-        const firstItem = cart[0];
-
-        const response = await fetch(
-          `${API_BASE}/api/payment/juspay/initiate`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              amount: total,
-              customerId: user.id,
-              email: user.email || "",
-              mobile: user.mobile || "",
-              service_code: firstItem.service_code || "",
-              subservice_code:
-                firstItem.subservice_code ||
-                firstItem.subservice_id?.toString() ||
-                "",
-              address: bookingData?.address || user.address || "Not specified",
-              date: bookingData?.date || new Date().toISOString().split("T")[0],
-              time_slot: bookingData?.time_slot || "10:00 AM - 12:00 PM",
-              gst: gst.toFixed(2),
-              emergency_price: firstItem.emergencyPrice
-                ? firstItem.emergencyPrice - firstItem.price
-                : 0,
-              quantity: firstItem.quantity,
-            }),
-          },
-        );
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.message || "Payment initiation failed");
-        }
-
-        // Redirect to Juspay payment page
-        if (data.payment_urls?.web) {
-          // Clear cart before redirect
-          sessionStorage.removeItem("cart");
-          sessionStorage.removeItem("bookingData");
-
-//           if (user.id) {
-//             await fetch(`${API_BASE}/api/cart/item/${user.id}`
-//               , {
-//               method: "DELETE",
-//             }).catch(() => {});
-//           }
-
-              // Clear cart items from database using cartId
-              for (const item of cart) {
-                await fetch(`${API_BASE}/api/cart/item/${item.id}`, {
-                  method: "DELETE",
-                }).catch(() => {});
-              }
 
 
-          // Redirect to payment gateway
-          window.location.href = data.payment_urls.web;
-          return;
-        } else {
-          throw new Error("Payment URL not received");
-        }
-      }
 
-      // COD flow - create bookings directly
-      for (const item of cart) {
-        // Create booking for each cart item
-        const response = await fetch(`${API_BASE}/api/service-on-booking`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            user_id: user.id,
-            service_code: item.service_code || "",
-            subservice_code:
-              item.subservice_code || item.subservice_id?.toString() || "",
-            address: bookingData?.address || user.address || "Not specified",
-            date: bookingData?.date || new Date().toISOString().split("T")[0],
-            time_slot: bookingData?.time_slot || "10:00 AM - 12:00 PM",
-            gst: (item.price * 0.18).toFixed(2),
-            emergency_price: item.emergencyPrice
-              ? item.emergencyPrice - item.price
-              : 0,
-            quantity: item.quantity,
-            price: item.price,
-          }),
-        });
 
-        const data = await response.json();
+  /////// current code .//////
+//   const handleConfirmBooking = async () => {
+//     if (!user?.id) {
+//       setError("Please login to continue");
+//       return;
+//     }
 
-        if (!response.ok) {
-          throw new Error(data.message || "Failed to create booking");
-        }
+//     if (cart.length === 0) {
+//       setError("Your cart is empty");
+//       return;
+//     }
 
-        bookings.push(data.booking);
-      }
+//     setStep("PROCESSING");
+//     setError("");
 
-      setCreatedBookings(bookings);
+//     try {
+//       const bookings = [];
 
-      // Clear cart after successful booking
-      sessionStorage.removeItem("cart");
-      sessionStorage.removeItem("bookingData");
+//       // If ONLINE payment, use Juspay
+//       if (paymentMethod === "ONLINE") {
+//         // For online payment, we'll process the first item (or combine all)
+//         const firstItem = cart[0];
 
-      // Clear cart from database
-//       if (user.id) {
-//         await fetch(`${API_BASE}/api/cart/item/${user.id}`, {
-//           method: "DELETE",
-//         }).catch(() => {}); // Ignore errors
+//         const response = await fetch(
+//           `${API_BASE}/api/payment/juspay/initiate`,
+//           {
+//             method: "POST",
+//             headers: { "Content-Type": "application/json" },
+//             body: JSON.stringify({
+//               amount: total,
+//               customerId: user.id,
+//               email: user.email || "",
+//               mobile: user.mobile || "",
+//               service_code: firstItem.service_code || "",
+//               subservice_code:
+//                 firstItem.subservice_code ||
+//                 firstItem.subservice_id?.toString() ||
+//                 "",
+//               address: bookingData?.address || user.address || "Not specified",
+//               date: bookingData?.date || new Date().toISOString().split("T")[0],
+//               time_slot: bookingData?.time_slot || "10:00 AM - 12:00 PM",
+//               gst: gst.toFixed(2),
+//               emergency_price: firstItem.emergencyPrice
+//                 ? firstItem.emergencyPrice - firstItem.price
+//                 : 0,
+//               quantity: firstItem.quantity,
+//             }),
+//           },
+//         );
+
+//         const data = await response.json();
+
+//         if (!response.ok) {
+//           throw new Error(data.message || "Payment initiation failed");
+//         }
+
+//         // Redirect to Juspay payment page
+//         if (data.payment_urls?.web) {
+//           // Clear cart before redirect
+//           sessionStorage.removeItem("cart");
+//           sessionStorage.removeItem("bookingData");
+
+// //           if (user.id) {
+// //             await fetch(`${API_BASE}/api/cart/item/${user.id}`
+// //               , {
+// //               method: "DELETE",
+// //             }).catch(() => {});
+// //           }
+
+//               // Clear cart items from database using cartId
+//               for (const item of cart) {
+//                 await fetch(`${API_BASE}/api/cart/item/${item.id}`, {
+//                   method: "DELETE",
+//                 }).catch(() => {});
+//               }
+
+
+//           // Redirect to payment gateway
+//           window.location.href = data.payment_urls.web;
+//           return;
+//         } else {
+//           throw new Error("Payment URL not received");
+//         }
 //       }
 
+//       // COD flow - create bookings directly
+//       for (const item of cart) {
+//         // Create booking for each cart item
+//         const response = await fetch(`${API_BASE}/api/service-on-booking`, {
+//           method: "POST",
+//           headers: { "Content-Type": "application/json" },
+//           body: JSON.stringify({
+//             user_id: user.id,
+//             service_code: item.service_code || "",
+//             subservice_code:
+//               item.subservice_code || item.subservice_id?.toString() || "",
+//             address: bookingData?.address || user.address || "Not specified",
+//             date: bookingData?.date || new Date().toISOString().split("T")[0],
+//             time_slot: bookingData?.time_slot || "10:00 AM - 12:00 PM",
+//             gst: (item.price * 0.18).toFixed(2),
+//             emergency_price: item.emergencyPrice
+//               ? item.emergencyPrice - item.price
+//               : 0,
+//             quantity: item.quantity,
+//             price: item.price,
+//               // price: total,
+//           }),
+//         });
+
+//         const data = await response.json();
+
+//         if (!response.ok) {
+//           throw new Error(data.message || "Failed to create booking");
+//         }
+
+//         bookings.push(data.booking);
+//       }
+
+//       setCreatedBookings(bookings);
+
+//       // Clear cart after successful booking
+//       sessionStorage.removeItem("cart");
+//       sessionStorage.removeItem("bookingData");
+
+//       // Clear cart from database
+// //       if (user.id) {
+// //         await fetch(`${API_BASE}/api/cart/item/${user.id}`, {
+// //           method: "DELETE",
+// //         }).catch(() => {}); // Ignore errors
+// //       }
 
 
-          // Clear cart items from database using cartId
-          for (const item of cart) {
-            await fetch(`${API_BASE}/api/cart/item/${item.id}`, {
-              method: "DELETE",
-            }).catch(() => {});
-          }
+
+//           // Clear cart items from database using cartId
+//           for (const item of cart) {
+//             await fetch(`${API_BASE}/api/cart/item/${item.id}`, {
+//               method: "DELETE",
+//             }).catch(() => {});
+//           }
 
 
-      setStep("SUCCESS");
-    } catch (err: any) {
-      console.error("Booking error:", err);
-      setError(err.message || "Failed to create booking. Please try again.");
-      setStep("ERROR");
-    }
-  };
+//       setStep("SUCCESS");
+//     } catch (err: any) {
+//       console.error("Booking error:", err);
+//       setError(err.message || "Failed to create booking. Please try again.");
+//       setStep("ERROR");
+//     }
+//   };
+
+
+
+
+
+
+
+
+
+const handleConfirmBooking = async () => {
+  if (!user?.id) {
+    setError("Please login to continue");
+    return;
+  }
+
+  if (cart.length === 0) {
+    setError("Your cart is empty");
+    return;
+  }
+
+  setStep("PROCESSING");
+  setError("");
+
+  try {
+    const bookings = [];
+
+    /* ================= ONLINE PAYMENT ================= */
+
+    if (paymentMethod === "ONLINE") {
+      const firstItem = cart[0];
+
+      const basePrice = firstItem.price * firstItem.quantity;
+
+      const emergencyExtra = firstItem.emergencyPrice
+        ? (firstItem.emergencyPrice - firstItem.price) * firstItem.quantity
+        : 0;
+
+      const gstAmount = basePrice * 0.18;
+
+      const totalAmount = basePrice + emergencyExtra + gstAmount;
+
+      const response = await fetch(
+        `${API_BASE}/api/payment/juspay/initiate`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            amount: totalAmount,
+
+            customerId: user.id,
+            email: user.email || "",
+            mobile: user.mobile || "",
+
+            service_code: firstItem.service_code || "",
+            subservice_code:
+              firstItem.subservice_code ||
+              firstItem.subservice_id?.toString() ||
+              "",
+
+            address:
+              bookingData?.address || user.address || "Not specified",
+
+            date:
+              bookingData?.date ||
+              new Date().toISOString().split("T")[0],
+
+            time_slot:
+              bookingData?.time_slot || "10:00 AM - 12:00 PM",
+
+            gst: gstAmount.toFixed(2),
+            emergency_price: emergencyExtra.toFixed(2),
+
+            quantity: firstItem.quantity,
+            price: firstItem.price,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Payment initiation failed");
+      }
+
+      if (data.payment_urls?.web) {
+        sessionStorage.removeItem("cart");
+        sessionStorage.removeItem("bookingData");
+
+        /* DELETE CART ITEMS */
+        for (const item of cart) {
+          await fetch(`${API_BASE}/api/cart/item/${item.id}`, {
+            method: "DELETE",
+          }).catch(() => {});
+        }
+
+        window.location.href = data.payment_urls.web;
+        return;
+      } else {
+        throw new Error("Payment URL not received");
+      }
+    }
+
+    /* ================= COD BOOKING ================= */
+
+    for (const item of cart) {
+      const basePrice = item.price * item.quantity;
+
+      const emergencyExtra = item.emergencyPrice
+        ? (item.emergencyPrice - item.price) * item.quantity
+        : 0;
+
+      const gstAmount = basePrice * 0.18;
+
+      const totalPrice = basePrice + emergencyExtra + gstAmount;
+
+      const response = await fetch(
+        `${API_BASE}/api/service-on-booking`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_id: user.id,
+
+            service_code: item.service_code || "",
+            subservice_code:
+              item.subservice_code ||
+              item.subservice_id?.toString() ||
+              "",
+
+            address:
+              bookingData?.address || user.address || "Not specified",
+
+            date:
+              bookingData?.date ||
+              new Date().toISOString().split("T")[0],
+
+            time_slot:
+              bookingData?.time_slot || "10:00 AM - 12:00 PM",
+
+            price: item.price,
+            quantity: item.quantity,
+
+            gst: gstAmount.toFixed(2),
+            emergency_price: emergencyExtra.toFixed(2),
+            total_price: totalPrice.toFixed(2),
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to create booking");
+      }
+
+      bookings.push(data.booking);
+    }
+
+    setCreatedBookings(bookings);
+
+    /* CLEAR SESSION CART */
+    sessionStorage.removeItem("cart");
+    sessionStorage.removeItem("bookingData");
+
+    /* DELETE CART FROM DATABASE */
+    for (const item of cart) {
+      await fetch(`${API_BASE}/api/cart/item/${item.id}`, {
+        method: "DELETE",
+      }).catch(() => {});
+    }
+
+    setStep("SUCCESS");
+
+  } catch (err: any) {
+    console.error("Booking error:", err);
+    setError(err.message || "Failed to create booking. Please try again.");
+    setStep("ERROR");
+  }
+};
 
 
   if (loading) {

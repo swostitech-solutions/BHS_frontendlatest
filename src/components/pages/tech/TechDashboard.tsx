@@ -44,6 +44,8 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE } from "../../../config/api";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 // Custom CSS animations for the notification popup
 const notificationStyles = `
@@ -1576,9 +1578,9 @@ const fetchTechnicianRating = async (userId: number) => {
               )}
             </div>
 
-            <button className="p-3 bg-slate-800/50 border border-slate-700 rounded-xl hover:border-emerald-500 transition-colors">
+            {/* <button className="p-3 bg-slate-800/50 border border-slate-700 rounded-xl hover:border-emerald-500 transition-colors">
               <Settings size={20} className="text-slate-400" />
-            </button>
+            </button> */}
           </div>
         </header>
 
@@ -2579,57 +2581,51 @@ const DashboardTab = ({
           </span>
         </div>
 
-        <div className="space-y-4">
-          {activeJobs.map((job) => (
-            <div
-              key={job.id}
-              onClick={() => onViewJob(job)}
-              className="p-4 bg-slate-800/30 rounded-xl hover:bg-slate-800/50 transition-colors cursor-pointer group"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-emerald-500/20 rounded-lg flex items-center justify-center">
-                    <Briefcase size={20} className="text-emerald-400" />
-                  </div>
-                  <div>
-                    <p className="text-white font-semibold">
-                      {job.subservice?.name || job.subservice_code}
-                    </p>
-                    <p className="text-slate-500 text-sm">#{job.order_id}</p>
-                  </div>
-                </div>
-                {/* <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                  job.work_status === WORK_STATUS.IN_PROGRESS
-                    ? "bg-blue-500/20 text-blue-400"
-                    : "bg-amber-500/20 text-amber-400"
-                }`}>
-                  {job.work_status === WORK_STATUS.IN_PROGRESS ? "In Progress" : "Pending"}
-                </span> */}
-              </div>
-              <div className="flex items-center gap-6 text-slate-400 text-sm">
-                <span className="flex items-center gap-1">
-                  <MapPin size={14} /> {job.address?.substring(0, 25)}...
-                </span>
-                <span className="flex items-center gap-1">
-                  <Calendar size={14} /> {job.date}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Clock size={14} /> {job.time_slot}
-                </span>
-              </div>
-            </div>
-          ))}
-
-          {activeJobs.length === 0 && (
-            <div className="text-center py-12">
-              <Briefcase size={48} className="text-slate-600 mx-auto mb-4" />
-              <p className="text-slate-500">No active jobs</p>
-              <p className="text-slate-600 text-sm mt-1">
-                Accept new requests to get started
-              </p>
-            </div>
-          )}
+       <div className="space-y-4 max-h-[720px] overflow-y-auto pr-2">
+  {activeJobs.map((job) => (
+    <div
+      key={job.id}
+      onClick={() => onViewJob(job)}
+      className="p-4 bg-slate-800/30 rounded-xl hover:bg-slate-800/50 transition-colors cursor-pointer group"
+    >
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-emerald-500/20 rounded-lg flex items-center justify-center">
+            <Briefcase size={20} className="text-emerald-400" />
+          </div>
+          <div>
+            <p className="text-white font-semibold">
+              {job.subservice?.name || job.subservice_code}
+            </p>
+            <p className="text-slate-500 text-sm">#{job.order_id}</p>
+          </div>
         </div>
+      </div>
+
+      <div className="flex items-center gap-6 text-slate-400 text-sm">
+        <span className="flex items-center gap-1">
+          <MapPin size={14} /> {job.address?.substring(0, 25)}...
+        </span>
+        <span className="flex items-center gap-1">
+          <Calendar size={14} /> {job.date}
+        </span>
+        <span className="flex items-center gap-1">
+          <Clock size={14} /> {job.time_slot}
+        </span>
+      </div>
+    </div>
+  ))}
+
+  {activeJobs.length === 0 && (
+    <div className="text-center py-12">
+      <Briefcase size={48} className="text-slate-600 mx-auto mb-4" />
+      <p className="text-slate-500">No active jobs</p>
+      <p className="text-slate-600 text-sm mt-1">
+        Accept new requests to get started
+      </p>
+    </div>
+  )}
+</div>
       </div>
 
       {/* Tips */}
@@ -2838,6 +2834,32 @@ const EarningsTab = ({
   const commission = Math.round(stats.totalEarnings * 0.1); // 10% platform commission
   const netEarnings = stats.totalEarnings - commission;
 
+
+  const downloadReport = () => {
+  const doc = new jsPDF();
+
+  doc.setFontSize(18);
+  doc.text("Technician Earnings Report", 14, 20);
+
+  doc.setFontSize(11);
+  doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
+
+  const tableData = completedJobs.map((job) => [
+    job.order_id,
+    job.subservice?.name || job.subservice_code,
+    job.date,
+    `₹${Number(job.total_price).toLocaleString()}`
+  ]);
+
+  autoTable(doc, {
+    startY: 35,
+    head: [["Order ID", "Service", "Date", "Amount"]],
+    body: tableData,
+  });
+
+  doc.save("transaction_history.pdf");
+};
+
   return (
     <div className="space-y-6">
       {/* Earnings Summary */}
@@ -2908,9 +2930,16 @@ const EarningsTab = ({
       <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl overflow-hidden">
         <div className="p-6 border-b border-slate-800 flex items-center justify-between">
           <h3 className="text-xl font-bold text-white">Transaction History</h3>
-          <button className="text-emerald-400 text-sm font-semibold hover:text-emerald-300">
+          {/* <button className="text-emerald-400 text-sm font-semibold hover:text-emerald-300">
             Download Report
-          </button>
+          </button> */}
+
+          <button
+  onClick={downloadReport}
+  className="text-emerald-400 text-sm font-semibold hover:text-emerald-300"
+>
+  Download Report
+</button>
         </div>
         <div className="divide-y divide-slate-800">
           {completedJobs.map((job) => (

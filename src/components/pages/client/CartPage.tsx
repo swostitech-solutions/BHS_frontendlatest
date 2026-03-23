@@ -450,30 +450,68 @@ const CartPage = () => {
       .catch((err) => console.error(err));
   };
 
+
+  // Base subtotal (used only for GST calculation)
+const baseSubtotal = cart.reduce(
+  (sum, item) => sum + item.price * item.quantity,
+  0
+);
+
+// Subtotal including emergency pricing (for display)
+const subtotal = cart.reduce(
+  (sum, item) =>
+    sum +
+    (item.emergencyPrice !== undefined ? item.emergencyPrice : item.price) *
+      item.quantity,
+  0
+);
+
   /* ================= FETCH GST ================= */
-  useEffect(() => {
-    const subtotal = cart.reduce(
-      (sum, item) =>
-        sum +
-        (item.emergencyPrice !== undefined ? item.emergencyPrice : item.price) *
-          item.quantity,
-      0,
-    );
+  // useEffect(() => {
+  //   const subtotal = cart.reduce(
+  //     (sum, item) =>
+  //       sum +
+  //       (item.emergencyPrice !== undefined ? item.emergencyPrice : item.price) *
+  //         item.quantity,
+  //     0,
+  //   );
 
-    if (subtotal === 0) {
-      setGstData(null);
-      return;
-    }
+  //   if (subtotal === 0) {
+  //     setGstData(null);
+  //     return;
+  //   }
 
-    fetch(`${API_BASE}/api/gst/calculate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ base_amount: subtotal, is_inter_state: false }),
-    })
-      .then((res) => res.json())
-      .then((res) => setGstData(res.data))
-      .catch((err) => console.error(err));
-  }, [cart]);
+  //   fetch(`${API_BASE}/api/gst/calculate`, {
+  //     method: "POST",
+  //     headers: { "Content-Type": "application/json" },
+  //     body: JSON.stringify({ base_amount: subtotal, is_inter_state: false }),
+  //   })
+  //     .then((res) => res.json())
+  //     .then((res) => setGstData(res.data))
+  //     .catch((err) => console.error(err));
+  // }, [cart]);
+
+
+  /* ================= FETCH GST ================= */
+/* ================= FETCH GST ================= */
+useEffect(() => {
+  if (baseSubtotal === 0) {
+    setGstData(null);
+    return;
+  }
+
+  fetch(`${API_BASE}/api/gst/calculate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      base_amount: baseSubtotal,
+      is_inter_state: false,
+    }),
+  })
+    .then((res) => res.json())
+    .then((res) => setGstData(res.data))
+    .catch((err) => console.error(err));
+}, [baseSubtotal]);
 
   /* ================= FETCH EMERGENCY OPTIONS ================= */
   const handleFetchEmergency = (cartItemId: number) => {
@@ -515,13 +553,21 @@ const CartPage = () => {
       .catch(console.error);
   };
 
-  const subtotal = cart.reduce(
-    (sum, item) =>
-      sum +
-      (item.emergencyPrice !== undefined ? item.emergencyPrice : item.price) *
-        item.quantity,
-    0,
-  );
+  // const subtotal = cart.reduce(
+  //   (sum, item) =>
+  //     sum +
+  //     (item.emergencyPrice !== undefined ? item.emergencyPrice : item.price) *
+  //       item.quantity,
+  //   0,
+  // );
+
+
+    //   const baseSubtotal = cart.reduce(
+    //   (sum, item) => sum + item.price * item.quantity,
+    //   0,
+    // );
+
+
 
   const handleGetCurrentLocation = () => {
     if (!("geolocation" in navigator)) return;
@@ -564,6 +610,32 @@ const CartPage = () => {
       </div>
     );
   }
+
+
+
+
+
+
+//   // Base subtotal (for GST calculation only)
+// const baseSubtotal = cart.reduce(
+//   (sum, item) => sum + item.price * item.quantity,
+//   0
+// );
+
+// // Subtotal including emergency pricing (for UI)
+// const subtotal = cart.reduce(
+//   (sum, item) =>
+//     sum +
+//     (item.emergencyPrice !== undefined ? item.emergencyPrice : item.price) *
+//       item.quantity,
+//   0
+// );
+
+
+
+
+
+
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-10 space-y-8">
@@ -755,7 +827,10 @@ const CartPage = () => {
                 </div>
                 <div className="flex justify-between font-black text-lg">
                   <span>Grand Total</span>
-                  <span>₹{gstData.grand_total}</span>
+                  {/* <span>₹{gstData.grand_total}</span> */}
+                   <span>
+    ₹{(subtotal + Number(gstData.total_gst)).toFixed(2)}
+  </span>
                 </div>
               </>
             )}

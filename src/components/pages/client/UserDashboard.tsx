@@ -992,37 +992,58 @@ const UserDashboard = () => {
                       </div>
                     </div>
 
-                    {/* Technician Info */}
-                    {booking.technician_allocated && booking.technician && (
-                      <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center text-white font-bold">
-                            {booking.technician.user?.name?.charAt(0) || "T"}
-                          </div>
-                          <div>
-                            <p className="font-bold text-slate-900">
-                              {booking.technician.user?.name || "Technician Assigned"}
-                            </p>
-                            <p className="text-slate-500 text-sm">
-                              {booking.technician.skill || "Service Expert"}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          {booking.technician.user?.mobile && (
-                            <a
-                              href={`tel:${booking.technician.user.mobile}`}
-                              className="p-3 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow"
-                            >
-                              <Phone size={18} className="text-indigo-600" />
-                            </a>
-                          )}
-                          <button className="p-3 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow">
-                            <MessageSquare size={18} className="text-indigo-600" />
-                          </button>
-                        </div>
-                      </div>
-                    )}
+               {/* Technician Info */}
+{booking.technician_allocated && booking.technician && (
+  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
+    
+    <div className="flex items-center gap-4">
+      
+      <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center text-white font-bold">
+        {booking.technician.name?.charAt(0) || "T"}
+      </div>
+
+      <div>
+        <p className="font-bold text-slate-900">
+          {booking.technician.name || "Technician Assigned"}
+        </p>
+
+        <p className="text-slate-500 text-sm">
+          {booking.technician.technicianDetails?.skill || "Service Expert"}
+        </p>
+
+        {booking.technician.mobile && (
+          <p className="text-slate-400 text-xs">
+            📞 {booking.technician.mobile}
+          </p>
+        )}
+      </div>
+
+    </div>
+
+    <div className="flex gap-2">
+
+      {booking.technician.mobile && (
+        <a
+          href={`tel:${booking.technician.mobile}`}
+          className="p-3 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow"
+        >
+          <Phone size={18} className="text-indigo-600" />
+        </a>
+      )}
+
+      {booking.technician.mobile && (
+        <a
+          href={`https://wa.me/91${booking.technician.mobile}`}
+          className="p-3 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow"
+        >
+          <MessageSquare size={18} className="text-green-600" />
+        </a>
+      )}
+
+    </div>
+
+  </div>
+)}
 
                     {/* Actions */}
                     {booking.work_status === 3 && (

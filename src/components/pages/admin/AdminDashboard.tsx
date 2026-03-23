@@ -435,7 +435,7 @@ const AdminDashboard = () => {
 
           <div className="flex items-center gap-4">
             {/* Search */}
-            <div className="relative">
+            {/* <div className="relative">
               <Search
                 size={18}
                 className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"
@@ -447,17 +447,17 @@ const AdminDashboard = () => {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="bg-slate-800/50 border border-slate-700 rounded-xl pl-12 pr-4 py-3 text-white placeholder-slate-500 w-64 focus:outline-none focus:border-violet-500 transition-colors"
               />
-            </div>
+            </div> */}
 
             {/* Notifications */}
-            <button className="relative p-3 bg-slate-800/50 border border-slate-700 rounded-xl hover:border-violet-500 transition-colors">
+            {/* <button className="relative p-3 bg-slate-800/50 border border-slate-700 rounded-xl hover:border-violet-500 transition-colors">
               <Bell size={20} className="text-slate-400" />
               {stats.pendingTechnicians > 0 && (
                 <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-white text-xs font-bold flex items-center justify-center animate-pulse">
                   {stats.pendingTechnicians}
                 </span>
               )}
-            </button>
+            </button> */}
           </div>
         </header>
 

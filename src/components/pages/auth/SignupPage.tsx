@@ -24,6 +24,9 @@ const SignupPage = () => {
   const [success, setSuccess] = useState(false);
   const [serviceCategories, setServiceCategories] = useState<ServiceCategory[]>([]);
 
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   // Fetch service categories for technician signup
   useEffect(() => {
     const fetchServices = async () => {
@@ -79,18 +82,81 @@ const SignupPage = () => {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value, type } = e.target;
-    if (type === "checkbox") {
-      setFormData({ ...formData, [name]: (e.target as HTMLInputElement).checked });
-    } else {
-      setFormData({ ...formData, [name]: value });
-    }
-    // Clear error when user types
-    if (errors[name]) {
-      setErrors({ ...errors, [name]: "" });
-    }
-  };
+  // const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  //   const { name, value, type } = e.target;
+  //   if (type === "checkbox") {
+  //     setFormData({ ...formData, [name]: (e.target as HTMLInputElement).checked });
+  //   } else {
+  //     setFormData({ ...formData, [name]: value });
+  //   }
+  //   // Clear error when user types
+  //   if (errors[name]) {
+  //     setErrors({ ...errors, [name]: "" });
+  //   }
+  // };
+
+
+//   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+//   const { name, value, type } = e.target;
+
+//   // Phone number restriction
+//   if (name === "mobile") {
+//     const numericValue = value.replace(/\D/g, ""); // remove non-numbers
+//     if (numericValue.length > 10) return;
+
+//     setFormData({ ...formData, mobile: numericValue });
+//   } 
+//   else if (type === "checkbox") {
+//     setFormData({ ...formData, [name]: (e.target as HTMLInputElement).checked });
+//   } 
+//   else {
+//     setFormData({ ...formData, [name]: value });
+//   }
+
+//   if (errors[name]) {
+//     setErrors({ ...errors, [name]: "" });
+//   }
+// };
+
+
+
+
+const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  const { name, value, type } = e.target;
+
+  // Phone number restriction
+  if (name === "mobile") {
+    const numericValue = value.replace(/\D/g, "");
+    if (numericValue.length > 10) return;
+    setFormData({ ...formData, mobile: numericValue });
+  }
+
+  // IFSC code restriction
+  else if (name === "ifscNo") {
+    const formatted = value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (formatted.length > 11) return;
+
+    setFormData({ ...formData, ifscNo: formatted });
+  }
+
+  else if (type === "checkbox") {
+    setFormData({ ...formData, [name]: (e.target as HTMLInputElement).checked });
+  }
+
+
+  else if (name === "bankName") {
+  const formatted = value.replace(/[^a-zA-Z\s]/g, "");
+  setFormData({ ...formData, bankName: formatted });
+}
+
+  else {
+    setFormData({ ...formData, [name]: value });
+  }
+
+  if (errors[name]) {
+    setErrors({ ...errors, [name]: "" });
+  }
+};
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>, fieldName: string) => {
     const file = e.target.files?.[0];
@@ -132,8 +198,21 @@ const SignupPage = () => {
       if (!formData.mobile.trim()) newErrors.mobile = "Phone number is required";
       else if (!/^\d{10}$/.test(formData.mobile)) newErrors.mobile = "Enter valid 10-digit number";
       if (!formData.username.trim()) newErrors.username = "Username is required";
-      if (!formData.password) newErrors.password = "Password is required";
-      else if (formData.password.length < 6) newErrors.password = "Password must be at least 6 characters";
+      // if (!formData.password) newErrors.password = "Password is required";
+      // else if (formData.password.length < 6) newErrors.password = "Password must be at least 6 characters";
+
+
+      if (!formData.password) {
+        newErrors.password = "Password is required";
+      } else if (
+        !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/.test(formData.password)
+      ) {
+        newErrors.password =
+          "Password must be 8+ chars with uppercase, lowercase, number & special character";
+      }
+
+
+
       if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = "Passwords do not match";
     }
 
@@ -154,10 +233,21 @@ const SignupPage = () => {
     }
 
     if (role === "TECHNICIAN" && currentStep === 5) {
-      if (!formData.bankName.trim()) newErrors.bankName = "Bank name is required";
+      // if (!formData.bankName.trim()) newErrors.bankName = "Bank name is required";
+
+            if (!formData.bankName.trim()) {
+        newErrors.bankName = "Bank name is required";
+      } else if (!/^[A-Za-z\s]+$/.test(formData.bankName)) {
+        newErrors.bankName = "Bank name should contain only alphabets";
+      }
+
       if (!formData.ifscNo.trim()) newErrors.ifscNo = "IFSC code is required";
-      else if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(formData.ifscNo.toUpperCase())) 
-        newErrors.ifscNo = "Enter valid IFSC code";
+      // else if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(formData.ifscNo.toUpperCase())) 
+      //   newErrors.ifscNo = "Enter valid IFSC code";
+      else if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(formData.ifscNo)) {
+  newErrors.ifscNo =
+    "Invalid IFSC. Format: 4 letters + 0 + 6 characters (Example: SBIN0001234)";
+}
       if (!formData.branchName.trim()) newErrors.branchName = "Branch name is required";
     }
 
@@ -414,7 +504,7 @@ const SignupPage = () => {
                   placeholder="Your full address"
                 />
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <InputField
                     label="Password"
                     name="password"
@@ -433,7 +523,58 @@ const SignupPage = () => {
                     error={errors.confirmPassword}
                     placeholder="••••••••"
                   />
-                </div>
+                </div> */}
+
+
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+  {/* Password */}
+  <div className="relative">
+    <InputField
+      label="Password"
+      name="password"
+      type={showPassword ? "text" : "password"}
+      value={formData.password}
+      onChange={handleChange}
+      error={errors.password}
+      placeholder="••••••••"
+    />
+
+    <button
+      type="button"
+      onClick={() => setShowPassword(!showPassword)}
+      className="absolute right-4 top-[42px] text-slate-400 hover:text-white"
+    >
+      <Eye size={20} />
+    </button>
+  </div>
+
+  {/* Confirm Password */}
+  <div className="relative">
+    <InputField
+      label="Confirm Password"
+      name="confirmPassword"
+      type={showConfirmPassword ? "text" : "password"}
+      value={formData.confirmPassword}
+      onChange={handleChange}
+      error={errors.confirmPassword}
+      placeholder="••••••••"
+    />
+
+    <button
+      type="button"
+      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+      className="absolute right-4 top-[42px] text-slate-400 hover:text-white"
+    >
+      <Eye size={20} />
+    </button>
+  </div>
+
+</div>
+
+
+
               </div>
 
               <div className="flex gap-4 mt-8">
@@ -471,7 +612,7 @@ const SignupPage = () => {
                     error={errors.skill}
                     placeholder="e.g., Plumbing, Electrical"
                   />
-                  <InputField
+                  {/* <InputField
                     label="Experience (Years)"
                     name="experience"
                     type="number"
@@ -479,7 +620,18 @@ const SignupPage = () => {
                     onChange={handleChange}
                     error={errors.experience}
                     placeholder="e.g., 5"
-                  />
+                  /> */}
+
+                  <InputField
+  label="Experience (Years)"
+  name="experience"
+  type="number"
+  value={formData.experience}
+  onChange={handleChange}
+  error={errors.experience}
+  placeholder="e.g., 5"
+  onWheel={(e) => (e.target as HTMLInputElement).blur()}
+/>
                 </div>
 
                 <div>
@@ -706,7 +858,7 @@ const SignupPage = () => {
                     />
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <InputField
+                      {/* <InputField
                         label="IFSC Code"
                         name="ifscNo"
                         value={formData.ifscNo}
@@ -714,7 +866,20 @@ const SignupPage = () => {
                         error={errors.ifscNo}
                         placeholder="e.g., SBIN0001234"
                         style={{ textTransform: "uppercase" }}
+                      /> */}
+
+                      <InputField
+                        label="IFSC Code"
+                        name="ifscNo"
+                        value={formData.ifscNo}
+                        onChange={handleChange}
+                        error={errors.ifscNo}
+                        placeholder="e.g., SBIN0001234"
+                        maxLength={11}
+                        style={{ textTransform: "uppercase" }}
                       />
+
+
                       <InputField
                         label="Branch Name"
                         name="branchName"
@@ -868,6 +1033,19 @@ const SignupPage = () => {
 
 // ==================== HELPER COMPONENTS ====================
 
+// interface InputFieldProps {
+//   label: string;
+//   name: string;
+//   value: string;
+//   onChange: (e: ChangeEvent<HTMLInputElement>) => void;
+//   error?: string;
+//   type?: string;
+//   placeholder?: string;
+//   maxLength?: number;
+//   style?: React.CSSProperties;
+// }
+
+
 interface InputFieldProps {
   label: string;
   name: string;
@@ -878,12 +1056,14 @@ interface InputFieldProps {
   placeholder?: string;
   maxLength?: number;
   style?: React.CSSProperties;
+  onWheel?: (e: React.WheelEvent<HTMLInputElement>) => void;
 }
 
-const InputField = ({ label, name, value, onChange, error, type = "text", placeholder, maxLength, style }: InputFieldProps) => (
+// const InputField = ({ label, name, value, onChange, error, type = "text", placeholder, maxLength, style }: InputFieldProps) => (
+  const InputField = ({ label, name, value, onChange, error, type = "text", placeholder, maxLength, style, onWheel }: InputFieldProps) => (
   <div>
     <label className="text-slate-300 text-sm font-medium block mb-2">{label}</label>
-    <input
+    {/* <input
       type={type}
       name={name}
       value={value}
@@ -894,7 +1074,21 @@ const InputField = ({ label, name, value, onChange, error, type = "text", placeh
       className={`w-full bg-slate-700/50 border rounded-xl px-4 py-3.5 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors ${
         error ? "border-red-500" : "border-slate-600"
       }`}
-    />
+    /> */}
+
+    <input
+  type={type}
+  name={name}
+  value={value}
+  onChange={onChange}
+  onWheel={onWheel}
+  placeholder={placeholder}
+  maxLength={maxLength}
+  style={style}
+  className={`w-full bg-slate-700/50 border rounded-xl px-4 py-3.5 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors ${
+    error ? "border-red-500" : "border-slate-600"
+  }`}
+/>
     {error && <p className="text-red-400 text-xs mt-1">{error}</p>}
   </div>
 );
