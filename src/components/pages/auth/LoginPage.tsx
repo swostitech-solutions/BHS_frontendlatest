@@ -754,7 +754,7 @@ const LoginPage = () => {
         </p>
 
         {/* Demo Credentials */}
-        <div className="mt-8 p-4 bg-slate-800/30 border border-slate-700 rounded-xl">
+        {/* <div className="mt-8 p-4 bg-slate-800/30 border border-slate-700 rounded-xl">
           <p className="text-slate-400 text-xs font-medium mb-2 text-center">Demo Credentials</p>
           <div className="grid grid-cols-3 gap-2 text-xs">
             <div className="text-center">
@@ -770,7 +770,7 @@ const LoginPage = () => {
               <p className="text-slate-500">admin / admin123</p>
             </div>
           </div>
-        </div>
+        </div> */}
       </div>
 
   {/* for forgot password modal and all  */}
