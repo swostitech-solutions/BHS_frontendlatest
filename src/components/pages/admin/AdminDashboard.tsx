@@ -791,7 +791,7 @@ const OverviewTab = ({
 
             <div className="p-6 space-y-6">
               {/* Key Metrics */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {/* <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[
                   { label: "Total Revenue", value: `₹${bookings.filter(b => b.work_status === 3).reduce((sum, b) => sum + (b.total_price || 0), 0).toLocaleString()}`, icon: DollarSign, color: "from-emerald-500 to-teal-500" },
                   { label: "Total Bookings", value: bookings.length, icon: Calendar, color: "from-blue-500 to-cyan-500" },
@@ -806,7 +806,80 @@ const OverviewTab = ({
                     <p className="text-2xl font-bold text-white mt-1">{metric.value}</p>
                   </div>
                 ))}
-              </div>
+              </div> */}
+
+              {/* Key Metrics */}
+<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+  {(() => {
+    const completedBookings = bookings.filter(b => b.work_status === 3);
+
+    const totalRevenue = completedBookings.reduce(
+      (sum, b) => sum + (Number(b.total_price) || 0),
+      0
+    );
+
+    const totalBookings = bookings.length;
+
+    const completionRate =
+      totalBookings > 0
+        ? Math.round((completedBookings.length / totalBookings) * 100)
+        : 0;
+
+    const avgOrderValue =
+      completedBookings.length > 0
+        ? Math.round(totalRevenue / completedBookings.length)
+        : 0;
+
+    const metrics = [
+      {
+        label: "Total Revenue",
+        value: `₹${totalRevenue.toLocaleString("en-IN")}`,
+        icon: DollarSign,
+        color: "from-emerald-500 to-teal-500",
+      },
+      {
+        label: "Total Bookings",
+        value: totalBookings.toLocaleString("en-IN"),
+        icon: Calendar,
+        color: "from-blue-500 to-cyan-500",
+      },
+      {
+        label: "Completion Rate",
+        value: `${completionRate}%`,
+        icon: CheckCircle2,
+        color: "from-violet-500 to-fuchsia-500",
+      },
+      {
+        label: "Avg. Order Value",
+        value: `₹${avgOrderValue.toLocaleString("en-IN")}`,
+        icon: CreditCard,
+        color: "from-amber-500 to-orange-500",
+      },
+    ];
+
+    return metrics.map((metric, idx) => (
+      <div
+        key={idx}
+        className="bg-slate-800/50 border border-slate-700 rounded-xl p-4"
+      >
+        <div
+          className={`w-10 h-10 bg-gradient-to-br ${metric.color} rounded-lg flex items-center justify-center mb-3`}
+        >
+          <metric.icon size={18} className="text-white" />
+        </div>
+
+        <p className="text-slate-500 text-xs font-medium">
+          {metric.label}
+        </p>
+
+        {/* 🔥 FIX: prevent overflow */}
+        <p className="text-xl md:text-2xl font-bold text-white mt-1 break-words">
+          {metric.value}
+        </p>
+      </div>
+    ));
+  })()}
+</div>
 
               {/* Booking Status Breakdown */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -896,10 +969,23 @@ const OverviewTab = ({
                     </thead>
                     <tbody>
                       {services.map(service => {
-                        const serviceBookings = bookings.filter(b => b.service_code === service.service_code);
-                        const completedBookings = serviceBookings.filter(b => b.work_status === 3);
-                        const revenue = completedBookings.reduce((sum, b) => sum + (b.total_price || 0), 0);
-                        const subCount = subServices.filter(s => s.service_id === service.id).length;
+                        // const serviceBookings = bookings.filter(b => b.service_code === service.service_code);
+                        const serviceBookings = bookings.filter(
+  (b) => b.service_code === service.service_code
+);
+                        // const completedBookings = serviceBookings.filter(b => b.work_status === 3);
+                        const completedBookings = serviceBookings.filter(
+  (b) => b.work_status === 3
+);  
+                        // const revenue = completedBookings.reduce((sum, b) => sum + (b.total_price || 0), 0);
+                        const revenue = completedBookings.reduce(
+  (sum, b) => sum + (Number(b.total_price) || 0),
+  0
+);
+                        // const subCount = subServices.filter(s => s.service_id === service.id).length;
+                        const subCount = subServices.filter(
+  (s) => s.service_id === service.id
+).length;
                         return (
                           <tr key={service.id} className="border-b border-slate-700/50 hover:bg-slate-700/20 transition-colors">
                             <td className="py-3 px-4">
@@ -915,7 +1001,10 @@ const OverviewTab = ({
                             </td>
                             <td className="py-3 px-4 text-slate-300 text-sm">{subCount}</td>
                             <td className="py-3 px-4 text-slate-300 text-sm">{serviceBookings.length}</td>
-                            <td className="py-3 px-4 text-emerald-400 font-semibold text-sm">₹{revenue.toLocaleString()}</td>
+                            {/* <td className="py-3 px-4 text-emerald-400 font-semibold text-sm">₹{revenue.toLocaleString()}</td> */}
+                            <td className="py-3 px-4 text-emerald-400 font-semibold text-sm break-words">
+  ₹{revenue.toLocaleString("en-IN")}
+</td>
                             <td className="py-3 px-4">
                               <span className="text-emerald-400 text-sm font-medium">{completedBookings.length}</span>
                               <span className="text-slate-500 text-sm"> / {serviceBookings.length}</span>
@@ -937,19 +1026,28 @@ const OverviewTab = ({
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-slate-800/30 rounded-xl p-4 text-center">
                   <p className="text-slate-500 text-xs">Total Services</p>
-                  <p className="text-white text-xl font-bold">{services.length}</p>
+                  <p className="text-white text-xl font-bold break-words">{services.length}</p>
                 </div>
                 <div className="bg-slate-800/30 rounded-xl p-4 text-center">
                   <p className="text-slate-500 text-xs">Total Sub-Services</p>
-                  <p className="text-white text-xl font-bold">{subServices.length}</p>
+                  <p className="text-white text-xl font-bold break-words">{subServices.length}</p>
                 </div>
                 <div className="bg-slate-800/30 rounded-xl p-4 text-center">
                   <p className="text-slate-500 text-xs">Payment Methods</p>
-                  <p className="text-white text-xl font-bold">{[...new Set(bookings.map(b => b.payment_method).filter(Boolean))].length || 0}</p>
+                 <p className="text-white text-xl font-bold break-words">{[...new Set(bookings.map(b => b.payment_method).filter(Boolean))].length || 0}</p>
                 </div>
                 <div className="bg-slate-800/30 rounded-xl p-4 text-center">
                   <p className="text-slate-500 text-xs">GST Collected</p>
-                  <p className="text-white text-xl font-bold">₹{bookings.filter(b => b.work_status === 3).reduce((sum, b) => sum + (b.gst || 0), 0).toLocaleString()}</p>
+                  <p className="text-white text-xl font-bold break-words">{(() => {
+  const completedBookings = bookings.filter(b => b.work_status === 3);
+
+  const totalGST = completedBookings.reduce(
+    (sum, b) => sum + (Number(b.gst) || 0),
+    0
+  );
+
+  return `₹${totalGST.toLocaleString("en-IN")}`;
+})()}</p>
                 </div>
               </div>
 
@@ -1016,12 +1114,22 @@ const ServicesTab = ({
     price: "",
   });
   const [editSubServiceImage, setEditSubServiceImage] = useState<File | null>(null);
+  const [localSearch, setLocalSearch] = useState("");
 
-  const filteredServices = services.filter(
-    (s) =>
-      s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.service_code.toLowerCase().includes(searchQuery.toLowerCase()),
+  // const filteredServices = services.filter(
+  //   (s) =>
+  //     s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  //     s.service_code.toLowerCase().includes(searchQuery.toLowerCase()),
+  // );
+
+  const filteredServices = services.filter((s) => {
+  const searchText = localSearch.toLowerCase();
+
+  return (
+    s.name?.toLowerCase().includes(searchText) ||
+    s.service_code?.toLowerCase().includes(searchText)
   );
+});
 
   // Show success message
   const showSuccess = (msg: string) => {
@@ -1197,6 +1305,19 @@ const ServicesTab = ({
     }
   };
 
+
+const filteredSubServices = subServices
+  .filter((sub) => {
+    const searchText = localSearch.toLowerCase();
+
+    return (
+      sub.name?.toLowerCase().includes(searchText) ||
+      sub.subservice_code?.toLowerCase().includes(searchText) ||
+      sub.Service?.name?.toLowerCase().includes(searchText)
+    );
+  })
+  .slice(0, 5);
+
   return (
     <div className="space-y-6">
       {/* Success Message */}
@@ -1331,12 +1452,26 @@ const ServicesTab = ({
         )}
       </div>
 
+
+
+      {/* Search Bar */}
+<div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
+  <input
+    type="text"
+    placeholder="Search Service (AC Repair) or Sub-Service (AC Deep Cleaning)..."
+    value={localSearch}
+   onChange={(e) => setLocalSearch(e.target.value)}
+    className="w-full bg-transparent text-white placeholder:text-slate-500 outline-none"
+  />
+</div>
+
       {/* Sub-Services Table */}
       <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl overflow-hidden">
         <div className="p-6 border-b border-slate-800">
           <h3 className="text-xl font-bold text-white">Sub-Services</h3>
         </div>
-        <div className="overflow-x-auto">
+        {/* <div className="overflow-x-auto"> */}
+        <div className="overflow-x-auto max-h-[300px] overflow-y-auto">
           <table className="w-full">
             <thead className="bg-slate-800/50">
               <tr>
@@ -1358,7 +1493,8 @@ const ServicesTab = ({
               </tr>
             </thead>
             <tbody>
-              {subServices.map((sub) => (
+              {/* {subServices.map((sub) => ( */}
+              {filteredSubServices.map((sub) => (
                 <tr
                   key={sub.id}
                   className="border-t border-slate-800 hover:bg-slate-800/30 transition-colors"
@@ -1412,7 +1548,8 @@ const ServicesTab = ({
                   </td>
                 </tr>
               ))}
-              {subServices.length === 0 && (
+              {/* {subServices.length === 0 && ( */}
+              {filteredSubServices.length === 0 && (
                 <tr>
                   <td colSpan={5} className="p-8 text-center text-slate-500">
                     No sub-services added yet
@@ -1867,14 +2004,31 @@ const TechniciansTab = ({
   );
   const [selectedTech, setSelectedTech] = useState<User | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [localSearch, setLocalSearch] = useState("");
+  const [activeMap, setActiveMap] = useState<Record<number, boolean>>({});
 
-  const filteredUsers = users.filter((u) => {
-    const matchesSearch =
-      u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.email?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter = filter === "ALL" || u.technician?.status === filter;
-    return matchesSearch && matchesFilter;
-  });
+  // const filteredUsers = users.filter((u) => {
+  //   const matchesSearch =
+  //     u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  //     u.email?.toLowerCase().includes(searchQuery.toLowerCase());
+  //   const matchesFilter = filter === "ALL" || u.technician?.status === filter;
+  //   return matchesSearch && matchesFilter;
+  // });
+
+const filteredUsers = users.filter((u) => {
+  const searchText = localSearch.toLowerCase(); // ✅ FIXED
+
+  const matchesSearch =
+    u.name?.toLowerCase().includes(searchText) ||
+    u.email?.toLowerCase().includes(searchText) ||
+    u.technician?.skill?.toLowerCase().includes(searchText) || // skill
+    u.technician?.status?.toLowerCase().includes(searchText); // status
+
+  const matchesFilter =
+    filter === "ALL" || u.technician?.status === filter;
+
+  return matchesSearch && matchesFilter;
+});
 
   const pendingCount = users.filter(
     (u) => u.technician?.status === "PENDING",
@@ -1890,6 +2044,40 @@ const TechniciansTab = ({
     setSelectedTech(tech);
     setShowDetailModal(true);
   };
+
+
+const handleToggleActive = async (userId: number) => {
+  try {
+    const token = sessionStorage.getItem("accessToken");
+
+    const res = await fetch(
+      `${API_BASE}/api/auth/technician/${userId}/toggle-active`,
+      {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    // ✅ ONLY toggle AFTER success (status 200)
+    if (res.status === 200) {
+      setActiveMap((prev) => {
+        const currentState = prev[userId] ?? true;
+
+        return {
+          ...prev,
+          [userId]: !currentState, // toggle Active <-> Inactive
+        };
+      });
+    } else {
+      alert("Failed to update status");
+    }
+  } catch (error) {
+    console.error("Toggle error:", error);
+    alert("Something went wrong");
+  }
+};
 
   return (
     <div className="space-y-6">
@@ -1941,6 +2129,8 @@ const TechniciansTab = ({
         </button>
       </div>
 
+      
+
       {/* Pending Alert */}
       {filter === "ALL" && pendingCount > 0 && (
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex items-center gap-4">
@@ -1962,6 +2152,22 @@ const TechniciansTab = ({
           </button>
         </div>
       )}
+
+
+      {/* Search Bar */}
+<div className="relative">
+  <input
+    type="text"
+    placeholder="Search technician, skill or status..."
+    value={localSearch}
+  onChange={(e) => setLocalSearch(e.target.value)}
+    className="w-full bg-slate-900/50 border border-slate-800 rounded-xl px-4 py-3 pl-10 text-white placeholder-slate-500 focus:outline-none focus:border-violet-500"
+  />
+  <Search
+    size={18}
+    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+  />
+</div>
 
       {/* Technicians Grid (Card View for Pending) */}
       {filter === "PENDING" ? (
@@ -2101,9 +2307,11 @@ const TechniciansTab = ({
       ) : (
         /* Table View for Other Filters */
         <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl overflow-hidden">
-          <div className="overflow-x-auto">
+          {/* <div className="overflow-x-auto"> */}
+          <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
             <table className="w-full">
-              <thead className="bg-slate-800/50">
+              {/* <thead className="bg-slate-800/50"> */}
+              <thead className="bg-slate-900 sticky top-0 z-10">
                 <tr>
                   <th className="text-left p-4 text-slate-400 font-semibold text-sm">
                     Technician
@@ -2123,6 +2331,9 @@ const TechniciansTab = ({
                   <th className="text-left p-4 text-slate-400 font-semibold text-sm">
                     Actions
                   </th>
+                  <th className="text-left p-4 text-slate-400 font-semibold text-sm">
+  Active/Inactive
+</th>
                 </tr>
               </thead>
               <tbody>
@@ -2213,11 +2424,27 @@ const TechniciansTab = ({
                         )}
                       </div>
                     </td>
+
+
+<td className="p-4 text-center">
+  <div className="flex justify-center">
+    <button
+      onClick={() => handleToggleActive(tech.userId)}
+      className={`px-3 py-1 rounded-full text-xs font-bold transition-all duration-200 transform hover:scale-105 ${
+        activeMap[tech.userId] ?? true
+          ? "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 hover:shadow-lg"
+          : "bg-red-500/20 text-red-400 hover:bg-red-500/30 hover:shadow-lg"
+      }`}
+    >
+      {activeMap[tech.userId] ?? true ? "Active" : "Inactive"}
+    </button>
+  </div>
+</td>
                   </tr>
                 ))}
                 {filteredUsers.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="p-8 text-center text-slate-500">
+                    <td colSpan={7} className="p-8 text-center text-slate-500">
                       No technicians found
                     </td>
                   </tr>
@@ -2478,111 +2705,6 @@ const DocumentPreview = ({ url, label }: { url: string; label: string }) => {
 };
 
 // ==================== CLIENTS TAB ====================
-// const ClientsTab = ({
-//   users,
-//   searchQuery,
-// }: {
-//   users: User[];
-//   searchQuery: string;
-// }) => {
-//   const filteredUsers = users.filter(
-//     (u) =>
-//       u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-//       u.email?.toLowerCase().includes(searchQuery.toLowerCase()),
-//   );
-
-//   return (
-//     <div className="space-y-6">
-//       {/* Stats */}
-//       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-//         <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
-//           <p className="text-slate-500 text-sm">Total Clients</p>
-//           <p className="text-2xl font-bold text-white">{users.length}</p>
-//         </div>
-//         <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
-//           <p className="text-slate-500 text-sm">Active This Month</p>
-//           <p className="text-2xl font-bold text-emerald-400">{users.length}</p>
-//         </div>
-//         <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
-//           <p className="text-slate-500 text-sm">New This Week</p>
-//           <p className="text-2xl font-bold text-violet-400">
-//             {Math.min(users.length, 3)}
-//           </p>
-//         </div>
-//       </div>
-
-//       {/* Clients Table */}
-//       <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl overflow-hidden">
-//         <div className="overflow-x-auto">
-//           <table className="w-full">
-//             <thead className="bg-slate-800/50">
-//               <tr>
-//                 <th className="text-left p-4 text-slate-400 font-semibold text-sm">
-//                   Client
-//                 </th>
-//                 <th className="text-left p-4 text-slate-400 font-semibold text-sm">
-//                   Email
-//                 </th>
-//                 <th className="text-left p-4 text-slate-400 font-semibold text-sm">
-//                   Phone
-//                 </th>
-//                 <th className="text-left p-4 text-slate-400 font-semibold text-sm">
-//                   Address
-//                 </th>
-//                 <th className="text-left p-4 text-slate-400 font-semibold text-sm">
-//                   Actions
-//                 </th>
-//               </tr>
-//             </thead>
-//             <tbody>
-//               {filteredUsers.map((client) => (
-//                 <tr
-//                   key={client.userId}
-//                   className="border-t border-slate-800 hover:bg-slate-800/30 transition-colors"
-//                 >
-//                   <td className="p-4">
-//                     <div className="flex items-center gap-3">
-//                       <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center text-white font-bold">
-//                         {client.name.charAt(0)}
-//                       </div>
-//                       <div>
-//                         <p className="text-white font-semibold">
-//                           {client.name}
-//                         </p>
-//                         <p className="text-slate-500 text-sm">
-//                           @{client.username}
-//                         </p>
-//                       </div>
-//                     </div>
-//                   </td>
-//                   <td className="p-4 text-white">{client.email || "N/A"}</td>
-//                   <td className="p-4 text-white">{client.mobile || "N/A"}</td>
-//                   <td className="p-4 text-slate-400 max-w-xs truncate">
-//                     {client.address || "N/A"}
-//                   </td>
-//                   <td className="p-4">
-//                     <button className="p-2 hover:bg-slate-800 rounded-lg">
-//                       <Eye size={16} className="text-slate-400" />
-//                     </button>
-//                   </td>
-//                 </tr>
-//               ))}
-//               {filteredUsers.length === 0 && (
-//                 <tr>
-//                   <td colSpan={5} className="p-8 text-center text-slate-500">
-//                     No clients found
-//                   </td>
-//                 </tr>
-//               )}
-//             </tbody>
-//           </table>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// };
-
-// ==================== CLIENTS TAB ====================
 const ClientsTab = ({
   users,
   searchQuery,
@@ -2593,11 +2715,25 @@ const ClientsTab = ({
   const [selectedClient, setSelectedClient] = useState<User | null>(null);
   const [showClientModal, setShowClientModal] = useState(false);
 
-  const filteredUsers = users.filter(
-    (u) =>
-      u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.email?.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  const [localSearch, setLocalSearch] = useState("");
+
+  // const filteredUsers = users.filter(
+  //   (u) =>
+  //     u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  //     u.email?.toLowerCase().includes(searchQuery.toLowerCase()),
+  // );
+
+const filteredUsers = users.filter((u) => {
+  const searchText = (localSearch || "").toLowerCase(); // ✅ FIX
+
+  const matchesSearch =
+    u.name?.toLowerCase().includes(searchText) ||
+    u.email?.toLowerCase().includes(searchText) ||
+    u.mobile?.toLowerCase().includes(searchText) ||
+    u.address?.toLowerCase().includes(searchText);
+
+  return matchesSearch;
+});
 
   const openClientDetail = (client: User) => {
     setSelectedClient(client);
@@ -2624,11 +2760,27 @@ const ClientsTab = ({
         </div>
       </div>
 
+<div className="relative">
+  <input
+    type="text"
+    placeholder="Search client, email, phone or address..."
+    value={localSearch} // ✅ MUST BE THIS
+    onChange={(e) => setLocalSearch(e.target.value)} // ✅ MUST BE THIS
+    className="w-full bg-slate-900/50 border border-slate-800 rounded-xl px-4 py-3 pl-10 text-white placeholder-slate-500 focus:outline-none focus:border-violet-500"
+  />
+  <Search
+    size={18}
+    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+  />
+</div>
+
       {/* Clients Table */}
       <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* <div className="overflow-x-auto"> */}
+        <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
           <table className="w-full">
-            <thead className="bg-slate-800/50">
+            {/* <thead className="bg-slate-800/50"> */}
+            <thead className="bg-slate-900 sticky top-0 z-10">
               <tr>
                 <th className="text-left p-4 text-slate-400 font-semibold text-sm">
                   Client
@@ -2708,11 +2860,6 @@ const ClientsTab = ({
 
 
 
-
-
-
-
-
 // ==================== CLIENT DETAIL MODAL ====================
 const ClientDetailModal = ({
   client,
@@ -2780,6 +2927,7 @@ const BookingsTab = ({
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [assigning, setAssigning] = useState(false);
+  const [localSearch, setLocalSearch] = useState("");
 
   // Work Status mapping based on backend:
   // 0 = Rejected (technician rejected) or Unassigned awaiting action
@@ -2803,21 +2951,47 @@ const BookingsTab = ({
     },
   };
 
-  const filteredBookings = bookings.filter((b) => {
+  // const filteredBookings = bookings.filter((b) => {
+  //   const matchesSearch =
+  //     b.order_id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  //     b.User?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  //     b.subservice?.name?.toLowerCase().includes(searchQuery.toLowerCase());
+
+  //   if (filter === "ALL") return matchesSearch;
+  //   // "NEW" filter now shows all unassigned bookings (technician_allocated: false)
+  //   if (filter === "NEW") return matchesSearch && !b.technician_allocated;
+  //   if (filter === "PENDING")
+  //     return matchesSearch && b.technician_allocated && b.work_status === 1;
+  //   if (filter === "IN_PROGRESS") return matchesSearch && b.work_status === 2;
+  //   if (filter === "COMPLETED") return matchesSearch && b.work_status === 3;
+  //   return matchesSearch;
+  // });
+
+
+
+  const filteredBookings = bookings
+  .filter((b) => {
+    // const searchText = searchQuery.toLowerCase();
+    const searchText = localSearch.toLowerCase();
+
     const matchesSearch =
-      b.order_id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      b.User?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      b.subservice?.name?.toLowerCase().includes(searchQuery.toLowerCase());
+      b.order_id?.toLowerCase().includes(searchText) ||
+      b.User?.name?.toLowerCase().includes(searchText) ||
+      b.subservice?.name?.toLowerCase().includes(searchText) ||
+      b.service?.name?.toLowerCase().includes(searchText); // ✅ added service search
 
     if (filter === "ALL") return matchesSearch;
-    // "NEW" filter now shows all unassigned bookings (technician_allocated: false)
     if (filter === "NEW") return matchesSearch && !b.technician_allocated;
     if (filter === "PENDING")
       return matchesSearch && b.technician_allocated && b.work_status === 1;
-    if (filter === "IN_PROGRESS") return matchesSearch && b.work_status === 2;
-    if (filter === "COMPLETED") return matchesSearch && b.work_status === 3;
+    if (filter === "IN_PROGRESS")
+      return matchesSearch && b.work_status === 2;
+    if (filter === "COMPLETED")
+      return matchesSearch && b.work_status === 3;
+
     return matchesSearch;
-  });
+  })
+  .slice(0, 15); // ✅ LIMIT TO 15 BOOKINGS
 
   const stats = {
     total: bookings.length,
@@ -2938,14 +3112,26 @@ const BookingsTab = ({
         </div>
       )}
 
+      <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
+  <input
+    type="text"
+    placeholder="Search by Order ID (BD177...), Customer, Service (Switch Work)..."
+    value={localSearch}
+   onChange={(e) => setLocalSearch(e.target.value)}
+    className="w-full bg-transparent text-white placeholder:text-slate-500 outline-none"
+  />
+</div>
+
       {/* Bookings Table */}
       <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl overflow-hidden">
         <div className="p-6 border-b border-slate-800">
           <h3 className="text-xl font-bold text-white">All Bookings</h3>
         </div>
-        <div className="overflow-x-auto">
+        {/* <div className="overflow-x-auto"> */}
+        <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
           <table className="w-full">
-            <thead className="bg-slate-800/50">
+            {/* <thead className="bg-slate-800/50"> */}
+            <thead className="bg-slate-900 sticky top-0 z-20">
               <tr>
                 <th className="text-left p-4 text-slate-400 font-semibold text-sm">
                   Order ID

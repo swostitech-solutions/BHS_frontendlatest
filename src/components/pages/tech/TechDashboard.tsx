@@ -2934,14 +2934,14 @@ const EarningsTab = ({
             Download Report
           </button> */}
 
-          <button
+          {/* <button
   onClick={downloadReport}
   className="text-emerald-400 text-sm font-semibold hover:text-emerald-300"
 >
   Download Report
-</button>
+</button> */}
         </div>
-        <div className="divide-y divide-slate-800">
+        {/* <div className="divide-y divide-slate-800">
           {completedJobs.map((job) => (
             <div
               key={job.id}
@@ -2972,22 +2972,192 @@ const EarningsTab = ({
               No completed jobs yet
             </div>
           )}
+        </div> */}
+
+
+
+
+
+        <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl flex flex-col h-[600px]">
+  
+  {/* Header */}
+  {/* <div className="p-6 border-b border-slate-800 flex items-center justify-between">
+    <h3 className="text-xl font-bold text-white">Transaction History</h3>
+  </div> */}
+
+  {/* Scrollable List */}
+  <div className="flex-1 overflow-y-auto divide-y divide-slate-800">
+    {completedJobs.map((job) => (
+      <div
+        key={job.id}
+        className="p-4 flex items-center justify-between hover:bg-slate-800/30 transition-colors"
+      >
+        <div className="flex items-center gap-4">
+          <div className="w-10 h-10 bg-emerald-500/20 rounded-lg flex items-center justify-center">
+            <DollarSign size={20} className="text-emerald-400" />
+          </div>
+          <div>
+            <p className="text-white font-semibold">
+              {job.subservice?.name || job.subservice_code}
+            </p>
+            <p className="text-slate-500 text-sm">#{job.order_id}</p>
+          </div>
         </div>
+        <div className="text-right">
+          <p className="text-emerald-400 font-bold">
+            +₹{job.total_price?.toLocaleString() || 0}
+          </p>
+          <p className="text-slate-500 text-sm">{job.date}</p>
+        </div>
+      </div>
+    ))}
+
+    {completedJobs.length === 0 && (
+      <div className="p-8 text-center text-slate-500">
+        No completed jobs yet
+      </div>
+    )}
+  </div>
+</div>
       </div>
     </div>
   );
 };
 
 // ==================== PROFILE TAB ====================
-const ProfileTab = ({
-  profile,
-  onProfileUpdate,
-}: {
-  profile: TechnicianProfile | null;
+// const ProfileTab = ({
+//   profile,
+//   onProfileUpdate,
+// }: {
+//   profile: TechnicianProfile | null;
+//   onProfileUpdate?: (updatedProfile: TechnicianProfile) => void;
+// }) => {
+//   const [isEditing, setIsEditing] = useState(false);
+//   const [saving, setSaving] = useState(false);
+//   const [editData, setEditData] = useState({
+//     name: "",
+//     email: "",
+//     mobile: "",
+//     address: "",
+//     skill: "",
+//     experience: 0,
+//     bankName: "",
+//     ifscNo: "",
+//     branchName: "",
+//     timeDuration: "",
+//     emergencyAvailable: false,
+//     techCategory: "",
+//   });
+
+//   useEffect(() => {
+//     if (profile) {
+//       setEditData({
+//         name: profile.name || "",
+//         email: profile.email || "",
+//         mobile: profile.mobile || "",
+//         address: profile.address || "",
+//         skill: profile.technicianDetails?.skill || "",
+//         experience: profile.technicianDetails?.experience || 0,
+//         bankName: profile.technicianDetails?.bankName || "",
+//         ifscNo: profile.technicianDetails?.ifscNo || "",
+//         branchName: profile.technicianDetails?.branchName || "",
+//         timeDuration: profile.technicianDetails?.timeDuration || "",
+//         emergencyAvailable:
+//           profile.technicianDetails?.emergencyAvailable || false,
+//         techCategory: profile.technicianDetails?.techCategory || "",
+//       });
+//     }
+//   }, [profile]);
+
+//   if (!profile) return null;
+
+//   const tech = profile.technicianDetails;
+
+//   const handleSaveProfile = async () => {
+//     setSaving(true);
+//     try {
+//       const formData = new FormData();
+//       formData.append("userId", String(profile.id));
+//       formData.append("name", editData.name);
+//       formData.append("email", editData.email);
+//       formData.append("mobile", editData.mobile);
+//       formData.append("address", editData.address);
+//       formData.append("skill", editData.skill);
+//       formData.append("experience", String(editData.experience));
+//       formData.append("bankName", editData.bankName);
+//       formData.append("ifscNo", editData.ifscNo);
+//       formData.append("branchName", editData.branchName);
+//       formData.append("timeDuration", editData.timeDuration);
+//       formData.append(
+//         "emergencyAvailable",
+//         String(editData.emergencyAvailable)
+//       );
+//       formData.append("techCategory", editData.techCategory);
+
+//       const token = sessionStorage.getItem("accessToken");
+//       const res = await fetch(`${API_BASE}/api/auth/technician/profile`, {
+//         method: "PUT",
+//         headers: {
+//           Authorization: `Bearer ${token}`,
+//         },
+//         body: formData,
+//       });
+
+//       if (res.ok) {
+//         // Update session storage and trigger parent update
+//         const updatedProfile: TechnicianProfile = {
+//           ...profile,
+//           name: editData.name,
+//           email: editData.email,
+//           mobile: editData.mobile,
+//           address: editData.address,
+//           technicianDetails: {
+//             ...profile.technicianDetails!,
+//             skill: editData.skill,
+//             experience: editData.experience,
+//             bankName: editData.bankName,
+//             ifscNo: editData.ifscNo,
+//             branchName: editData.branchName,
+//             timeDuration: editData.timeDuration,
+//             emergencyAvailable: editData.emergencyAvailable,
+//             techCategory: editData.techCategory,
+//           },
+//         };
+
+//         sessionStorage.setItem("user", JSON.stringify(updatedProfile));
+//         onProfileUpdate?.(updatedProfile);
+//         setIsEditing(false);
+//         alert("Profile updated successfully!");
+//       } else {
+//         const errorData = await res.json();
+//         alert(errorData.message || "Failed to update profile");
+//       }
+//     } catch (error) {
+//       console.error("Error updating profile:", error);
+//       alert("Failed to update profile. Please try again.");
+//     } finally {
+//       setSaving(false);
+//     }
+//   };
+
+//   const handleInputChange = (
+//     field: string,
+//     value: string | number | boolean
+//   ) => {
+//     setEditData((prev) => ({ ...prev, [field]: value }));
+//   };
+
+
+
+
+
+const ProfileTab = ({ onProfileUpdate }: {
   onProfileUpdate?: (updatedProfile: TechnicianProfile) => void;
 }) => {
+  const [profile, setProfile] = useState<TechnicianProfile | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+
   const [editData, setEditData] = useState({
     name: "",
     email: "",
@@ -3003,25 +3173,73 @@ const ProfileTab = ({
     techCategory: "",
   });
 
+  const [isModalOpen, setIsModalOpen] = useState(false);
+const [selectedDoc, setSelectedDoc] = useState<{
+  name: string;
+  url?: string | null;
+} | null>(null);
+
+  // ✅ Fetch profile from API using sessionStorage userId
   useEffect(() => {
-    if (profile) {
-      setEditData({
-        name: profile.name || "",
-        email: profile.email || "",
-        mobile: profile.mobile || "",
-        address: profile.address || "",
-        skill: profile.technicianDetails?.skill || "",
-        experience: profile.technicianDetails?.experience || 0,
-        bankName: profile.technicianDetails?.bankName || "",
-        ifscNo: profile.technicianDetails?.ifscNo || "",
-        branchName: profile.technicianDetails?.branchName || "",
-        timeDuration: profile.technicianDetails?.timeDuration || "",
-        emergencyAvailable:
-          profile.technicianDetails?.emergencyAvailable || false,
-        techCategory: profile.technicianDetails?.techCategory || "",
-      });
-    }
-  }, [profile]);
+    const fetchProfile = async () => {
+      try {
+        const userStr = sessionStorage.getItem("user");
+        if (!userStr) return;
+
+        const user = JSON.parse(userStr);
+        const userId = user.id;
+
+        const token = sessionStorage.getItem("accessToken");
+
+        const res = await fetch(
+          `${API_BASE}/api/auth/users/${userId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        const data = await res.json();
+
+        if (res.ok) {
+          const fetchedProfile = data.user;
+
+          setProfile(fetchedProfile);
+
+          // ✅ Initialize edit data here
+          setEditData({
+            name: fetchedProfile.name || "",
+            email: fetchedProfile.email || "",
+            mobile: fetchedProfile.mobile || "",
+            address: fetchedProfile.address || "",
+            skill: fetchedProfile.technicianDetails?.skill || "",
+            experience:
+              fetchedProfile.technicianDetails?.experience || 0,
+            bankName:
+              fetchedProfile.technicianDetails?.bankName || "",
+            ifscNo:
+              fetchedProfile.technicianDetails?.ifscNo || "",
+            branchName:
+              fetchedProfile.technicianDetails?.branchName || "",
+            timeDuration:
+              fetchedProfile.technicianDetails?.timeDuration || "",
+            emergencyAvailable:
+              fetchedProfile.technicianDetails
+                ?.emergencyAvailable || false,
+            techCategory:
+              fetchedProfile.technicianDetails?.techCategory || "",
+          });
+        } else {
+          alert(data.message || "Failed to fetch user");
+        }
+      } catch (err) {
+        console.error("Fetch error:", err);
+      }
+    };
+
+    fetchProfile();
+  }, []);
 
   if (!profile) return null;
 
@@ -3049,22 +3267,22 @@ const ProfileTab = ({
       formData.append("techCategory", editData.techCategory);
 
       const token = sessionStorage.getItem("accessToken");
-      const res = await fetch(`${API_BASE}/api/auth/technician/profile`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
-      });
+
+      const res = await fetch(
+        `${API_BASE}/api/auth/technician/profile`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        }
+      );
 
       if (res.ok) {
-        // Update session storage and trigger parent update
         const updatedProfile: TechnicianProfile = {
           ...profile,
-          name: editData.name,
-          email: editData.email,
-          mobile: editData.mobile,
-          address: editData.address,
+          ...editData,
           technicianDetails: {
             ...profile.technicianDetails!,
             skill: editData.skill,
@@ -3078,17 +3296,20 @@ const ProfileTab = ({
           },
         };
 
+        setProfile(updatedProfile);
         sessionStorage.setItem("user", JSON.stringify(updatedProfile));
+
         onProfileUpdate?.(updatedProfile);
+
         setIsEditing(false);
         alert("Profile updated successfully!");
       } else {
-        const errorData = await res.json();
-        alert(errorData.message || "Failed to update profile");
+        const err = await res.json();
+        alert(err.message || "Update failed");
       }
-    } catch (error) {
-      console.error("Error updating profile:", error);
-      alert("Failed to update profile. Please try again.");
+    } catch (err) {
+      console.error(err);
+      alert("Error updating profile");
     } finally {
       setSaving(false);
     }
@@ -3100,6 +3321,18 @@ const ProfileTab = ({
   ) => {
     setEditData((prev) => ({ ...prev, [field]: value }));
   };
+
+
+
+  const handleDocumentClick = (name: string, url?: string | null) => {
+  if (!url) {
+    alert("Document not uploaded");
+    return;
+  }
+
+  setSelectedDoc({ name, url });
+  setIsModalOpen(true);
+};
 
   return (
     <div className="space-y-6">
@@ -3448,7 +3681,7 @@ const ProfileTab = ({
         <h4 className="text-lg font-bold text-white mb-4">
           Verified Documents
         </h4>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {/* <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
             { name: "Aadhar Card", value: tech?.aadharCardNo },
             { name: "PAN Card", value: tech?.panCardNo },
@@ -3477,8 +3710,105 @@ const ProfileTab = ({
               </div>
             </div>
           ))}
-        </div>
+        </div> */}
+
+
+
+
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+  {[
+    {
+      name: "Aadhar Card",
+      value: tech?.aadharDoc || tech?.aadharCardNo,
+      url: tech?.aadharDoc,
+    },
+    {
+      name: "PAN Card",
+      value: tech?.panDoc || tech?.panCardNo,
+      url: tech?.panDoc,
+    },
+    {
+      name: "Bank Passbook",
+      value: tech?.bankPassbookDoc,
+      url: tech?.bankPassbookDoc,
+    },
+    {
+      name: "Experience Certificate",
+      value: tech?.experienceCertDoc,
+      url: tech?.experienceCertDoc,
+    },
+  ].map((doc) => (
+    <div
+      key={doc.name}
+      onClick={() => handleDocumentClick(doc.name, doc.url)}
+      className="p-4 bg-slate-800/50 rounded-xl flex items-center gap-3 cursor-pointer hover:bg-slate-700/50 transition-all"
+    >
+      <FileText
+        size={20}
+        className={doc.value ? "text-emerald-400" : "text-slate-600"}
+      />
+      <div>
+        <p className="text-white text-sm font-medium">{doc.name}</p>
+        <p
+          className={
+            doc.value
+              ? "text-emerald-400 text-xs"
+              : "text-slate-500 text-xs"
+          }
+        >
+          {doc.value ? "Click to view" : "Not uploaded"}
+        </p>
       </div>
+    </div>
+  ))}
+</div>
+      </div>
+
+      {isModalOpen && selectedDoc && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+    <div className="bg-slate-900 rounded-2xl p-6 w-[90%] max-w-2xl relative">
+      
+      {/* Close Button */}
+      <button
+        onClick={() => setIsModalOpen(false)}
+        className="absolute top-4 right-4 text-slate-400 hover:text-white"
+      >
+        <X size={22} />
+      </button>
+
+      {/* Title */}
+      <h3 className="text-xl font-bold text-white mb-4">
+        {selectedDoc.name}
+      </h3>
+
+      {/* Preview */}
+      {selectedDoc.url ? (
+        selectedDoc.url.endsWith(".pdf") ? (
+          <iframe
+            src={selectedDoc.url}
+            title="Document Preview"
+            className="w-full h-[500px] rounded-lg"
+          />
+        ) : (
+          <img
+            src={selectedDoc.url}
+            alt="Document"
+            className="w-full max-h-[500px] object-contain rounded-lg"
+          />
+        )
+      ) : (
+        <p className="text-slate-400">No preview available</p>
+      )}
+    </div>
+
+    {/* Click outside to close */}
+    <div
+      className="absolute inset-0"
+      onClick={() => setIsModalOpen(false)}
+    />
+  </div>
+)}
     </div>
   );
 };
