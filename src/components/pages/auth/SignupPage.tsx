@@ -131,6 +131,14 @@ const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTML
     setFormData({ ...formData, mobile: numericValue });
   }
 
+
+    // ✅ Aadhar restriction (NEW)
+  else if (name === "aadharCardNo") {
+    const numericValue = value.replace(/\D/g, "");
+    if (numericValue.length > 12) return;
+    setFormData({ ...formData, aadharCardNo: numericValue });
+  }
+
   // IFSC code restriction
   else if (name === "ifscNo") {
     const formatted = value.toUpperCase().replace(/[^A-Z0-9]/g, "");
@@ -653,7 +661,7 @@ const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTML
                     {Array.isArray(serviceCategories) && serviceCategories.length > 0 ? (
                       serviceCategories.map((service) => (
                         <option key={service.id} value={service.service_code}>
-                          {service.name}
+                        {service.name} ({service.service_code})
                         </option>
                       ))
                     ) : (

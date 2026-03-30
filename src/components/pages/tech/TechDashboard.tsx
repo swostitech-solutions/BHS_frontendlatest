@@ -3179,6 +3179,47 @@ const [selectedDoc, setSelectedDoc] = useState<{
   url?: string | null;
 } | null>(null);
 
+const [services, setServices] = useState<any[]>([]);
+
+
+useEffect(() => {
+  const fetchServices = async () => {
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/services`
+      );
+      const data = await res.json();
+
+      if (res.ok) {
+        setServices(data.data || []);
+      }
+    } catch (err) {
+      console.error("Service fetch error:", err);
+    }
+  };
+
+  fetchServices();
+}, []);
+
+
+
+
+const getServiceLabel = (code?: string) => {
+  if (!code) return "All Services";
+
+  const service = services.find(
+    (s) => s.service_code === code
+  );
+
+  return service
+    ? `${service.service_code} (${service.name})`
+    : code;
+};
+
+
+
+
+
   // ✅ Fetch profile from API using sessionStorage userId
   useEffect(() => {
     const fetchProfile = async () => {
@@ -3570,22 +3611,38 @@ const [selectedDoc, setSelectedDoc] = useState<{
             <div>
               <p className="text-slate-500 text-sm mb-1">Category</p>
               {isEditing ? (
-                <input
-                  type="text"
-                  value={editData.techCategory}
-                  onChange={(e) =>
-                    handleInputChange("techCategory", e.target.value)
-                  }
-                  placeholder="e.g., Home Services"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
-                />
+                // <input
+                //   type="text"
+                //   value={editData.techCategory}
+                //   onChange={(e) =>
+                //     handleInputChange("techCategory", e.target.value)
+                //   }
+                //   placeholder="e.g., Home Services"
+                //   className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
+                // />
+
+                <select
+  value={editData.techCategory}
+  onChange={(e) =>
+    handleInputChange("techCategory", e.target.value)
+  }
+  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white"
+>
+  <option value="">Select Category</option>
+  {services.map((service) => (
+    <option key={service.id} value={service.service_code}>
+      {service.service_code} ({service.name})
+    </option>
+  ))}
+</select>
               ) : (
                 <span className="text-white">
-                  {tech?.techCategory || "All Services"}
+                  {/* {tech?.techCategory || "All Services"} */}
+                  {getServiceLabel(tech?.techCategory)}
                 </span>
               )}
             </div>
-            <div>
+            {/* <div>
               <p className="text-slate-500 text-sm mb-1">Availability</p>
               {isEditing ? (
                 <input
@@ -3602,7 +3659,33 @@ const [selectedDoc, setSelectedDoc] = useState<{
                   {tech?.timeDuration || "Full Time"}
                 </span>
               )}
-            </div>
+            </div> */}
+
+
+
+            <div>
+  <p className="text-slate-500 text-sm mb-1">Availability</p>
+
+  {isEditing ? (
+    <select
+      value={editData.timeDuration}
+      onChange={(e) =>
+        handleInputChange("timeDuration", e.target.value)
+      }
+      className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
+    >
+      <option value="">Select availability</option>
+      <option value="Full-time">Full-time (8AM - 8PM)</option>
+      <option value="Part-time Morning">Part-time Morning (8AM - 2PM)</option>
+      <option value="Part-time Evening">Part-time Evening (2PM - 8PM)</option>
+      <option value="Weekends Only">Weekends Only</option>
+    </select>
+  ) : (
+    <span className="text-white">
+      {tech?.timeDuration || "Not specified"}
+    </span>
+  )}
+</div>
           </div>
         </div>
       </div>

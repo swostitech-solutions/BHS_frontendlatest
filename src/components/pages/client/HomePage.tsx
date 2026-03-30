@@ -645,10 +645,10 @@ const HomePage = () => {
                   className="w-full h-full object-cover rounded-t-[3rem]"
                 />
 
-                <div className="absolute top-6 right-6 bg-white px-4 py-2 rounded-xl flex gap-1">
+                {/* <div className="absolute top-6 right-6 bg-white px-4 py-2 rounded-xl flex gap-1">
                   <Star size={16} className="text-amber-400 fill-amber-400" />
                   <span className="font-black">4.8</span>
-                </div>
+                </div> */}
               </div>
 
               {/* CONTENT */}

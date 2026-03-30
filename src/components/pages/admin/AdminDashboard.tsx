@@ -1306,17 +1306,29 @@ const ServicesTab = ({
   };
 
 
-const filteredSubServices = subServices
-  .filter((sub) => {
-    const searchText = localSearch.toLowerCase();
+// const filteredSubServices = subServices
+//   .filter((sub) => {
+//     const searchText = localSearch.toLowerCase();
 
-    return (
-      sub.name?.toLowerCase().includes(searchText) ||
-      sub.subservice_code?.toLowerCase().includes(searchText) ||
-      sub.Service?.name?.toLowerCase().includes(searchText)
-    );
-  })
-  .slice(0, 5);
+//     return (
+//       sub.name?.toLowerCase().includes(searchText) ||
+//       sub.subservice_code?.toLowerCase().includes(searchText) ||
+//       sub.Service?.name?.toLowerCase().includes(searchText)
+//     );
+//   })
+//   .slice(0, 5);
+
+
+
+const filteredSubServices = subServices.filter((sub) => {
+  const searchText = localSearch.toLowerCase();
+
+  return (
+    sub.name?.toLowerCase().includes(searchText) ||
+    sub.subservice_code?.toLowerCase().includes(searchText) ||
+    sub.Service?.name?.toLowerCase().includes(searchText)
+  );
+});
 
   return (
     <div className="space-y-6">
@@ -2046,6 +2058,54 @@ const filteredUsers = users.filter((u) => {
   };
 
 
+
+  useEffect(() => {
+  const initialMap: Record<number, boolean> = {};
+
+  users.forEach((u) => {
+    // assuming backend sends isActive inside technician
+    initialMap[u.userId] = (u as any)?.technician?.isActive ?? true;
+  });
+
+  setActiveMap(initialMap);
+}, [users]);
+
+
+// const handleToggleActive = async (userId: number) => {
+//   try {
+//     const token = sessionStorage.getItem("accessToken");
+
+//     const res = await fetch(
+//       `${API_BASE}/api/auth/technician/${userId}/toggle-active`,
+//       {
+//         method: "PATCH",
+//         headers: {
+//           Authorization: `Bearer ${token}`,
+//         },
+//       }
+//     );
+
+//     // ✅ ONLY toggle AFTER success (status 200)
+//     if (res.status === 200) {
+//       setActiveMap((prev) => {
+//         const currentState = prev[userId] ?? true;
+
+//         return {
+//           ...prev,
+//           [userId]: !currentState, // toggle Active <-> Inactive
+//         };
+//       });
+//     } else {
+//       alert("Failed to update status");
+//     }
+//   } catch (error) {
+//     console.error("Toggle error:", error);
+//     alert("Something went wrong");
+//   }
+// };
+
+
+
 const handleToggleActive = async (userId: number) => {
   try {
     const token = sessionStorage.getItem("accessToken");
@@ -2060,18 +2120,16 @@ const handleToggleActive = async (userId: number) => {
       }
     );
 
-    // ✅ ONLY toggle AFTER success (status 200)
-    if (res.status === 200) {
-      setActiveMap((prev) => {
-        const currentState = prev[userId] ?? true;
+    const data = await res.json();
 
-        return {
-          ...prev,
-          [userId]: !currentState, // toggle Active <-> Inactive
-        };
-      });
+    if (res.status === 200) {
+      // ✅ USE BACKEND VALUE (IMPORTANT)
+      setActiveMap((prev) => ({
+        ...prev,
+        [userId]: data.isActive,
+      }));
     } else {
-      alert("Failed to update status");
+      alert(data.message || "Failed to update status");
     }
   } catch (error) {
     console.error("Toggle error:", error);

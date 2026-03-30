@@ -457,15 +457,35 @@ const LoginPage = () => {
 
       const data = await res.json();
 
+      // if (!res.ok) {
+      //   // Handle specific error cases
+      //   if (res.status === 403) {
+      //     setError("Your technician account is pending approval. Please wait for admin verification.");
+      //   } else {
+      //     setError(data.message || "Login failed. Please check your credentials.");
+      //   }
+      //   return;
+      // }
+
+
       if (!res.ok) {
-        // Handle specific error cases
-        if (res.status === 403) {
-          setError("Your technician account is pending approval. Please wait for admin verification.");
-        } else {
-          setError(data.message || "Login failed. Please check your credentials.");
-        }
-        return;
-      }
+  // ✅ Handle inactive account (NEW)
+  if (data.message === "Your account is inactive. Please contact admin.") {
+    setError("Your account is inactive. Please contact admin.");
+  }
+  // ✅ Existing pending approval logic
+  else if (res.status === 403) {
+    setError(
+      "Your technician account is pending approval. Please wait for admin verification."
+    );
+  }
+  // ✅ Default fallback
+  else {
+    setError(data.message || "Login failed. Please check your credentials.");
+  }
+
+  return;
+}
 
       // Validate role matches selection
       const userRole = data.user.roleName;
