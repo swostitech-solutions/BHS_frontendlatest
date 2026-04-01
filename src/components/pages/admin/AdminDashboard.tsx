@@ -3665,7 +3665,518 @@ const BookingsTab = ({
 };
 
 // ==================== SETTINGS TAB ====================
+// const SettingsTab = () => {
+//   const [showPasswordModal, setShowPasswordModal] = useState(false);
+//   const [step, setStep] = useState(1);
+//   const [cpLoading, setCpLoading] = useState(false);
+
+//   const [cpData, setCpData] = useState({
+//     current_password: "",
+//     otp: "",
+//     token: "",
+//     new_password: "",
+//     confirm_password: "",
+//   });
+
+//   const [showCP, setShowCP] = useState({
+//     current: false,
+//     new: false,
+//     confirm: false,
+//   });
+
+//   const currentRef = useRef<HTMLInputElement>(null);
+//   const newRef = useRef<HTMLInputElement>(null);
+//   const confirmRef = useRef<HTMLInputElement>(null);
+
+//   const user = JSON.parse(sessionStorage.getItem("user") || "{}");
+
+//   // ================= EMERGENCY STATE =================
+//   const [emergencyRules, setEmergencyRules] = useState<any[]>([]);
+//   const [showEmergencyModal, setShowEmergencyModal] = useState(false);
+//   const [editingRule, setEditingRule] = useState<any>(null);
+//   const [emergencyLoading, setEmergencyLoading] = useState(false);
+
+//   const [emergencyForm, setEmergencyForm] = useState({
+//     urgency_level: "",
+//     label: "",
+//     percentage_markup: "",
+//     multiplier: "",
+//     is_active: true,
+//   });
+
+//   // ================= FETCH RULES =================
+//   const fetchEmergencyRules = async () => {
+//     try {
+//       const res = await fetch(`${API_BASE}/api/emergency-pricing`);
+//       const data = await res.json();
+//       setEmergencyRules(data || []);
+//     } catch {
+//       console.error("Fetch failed");
+//     }
+//   };
+
+//   useEffect(() => {
+//     fetchEmergencyRules();
+//   }, []);
+
+//   // ================= PASSWORD APIs =================
+//   const handleRequestOtp = async () => {
+//     if (!cpData.current_password) return alert("Enter current password");
+
+//     setCpLoading(true);
+
+//     try {
+//       const res = await fetch(`${API_BASE}/api/change-password/request-otp`, {
+//         method: "POST",
+//         headers: { "Content-Type": "application/json" },
+//         body: JSON.stringify({ username: user.username, current_password: cpData.current_password }),
+//       });
+
+//       const data = await res.json();
+//       setCpLoading(false);
+
+//       if (!res.ok) return alert(data.message);
+
+//       alert("OTP sent");
+//       setStep(2);
+//     } catch {
+//       setCpLoading(false);
+//       alert("Error");
+//     }
+//   };
+
+//   const handleVerifyOtp = async () => {
+//     if (!cpData.otp) return alert("Enter OTP");
+
+//     setCpLoading(true);
+
+//     try {
+//       const res = await fetch(`${API_BASE}/api/change-password/verify-otp`, {
+//         method: "POST",
+//         headers: { "Content-Type": "application/json" },
+//         body: JSON.stringify({ username: user.username, otp: cpData.otp }),
+//       });
+
+//       const data = await res.json();
+//       setCpLoading(false);
+
+//       if (!res.ok) return alert(data.message);
+
+//       setCpData(prev => ({ ...prev, token: data.token }));
+//       setStep(3);
+//     } catch {
+//       setCpLoading(false);
+//       alert("Verification failed");
+//     }
+//   };
+
+//   const handleChangePassword = async () => {
+//     if (cpData.new_password !== cpData.confirm_password)
+//       return alert("Passwords mismatch");
+
+//     setCpLoading(true);
+
+//     try {
+//       const res = await fetch(`${API_BASE}/api/change-password`, {
+//         method: "POST",
+//         headers: { "Content-Type": "application/json" },
+//         body: JSON.stringify({
+//           username: user.username,
+//           token: cpData.token,
+//           new_password: cpData.new_password,
+//           confirm_password: cpData.confirm_password,
+//         }),
+//       });
+
+//       const data = await res.json();
+//       setCpLoading(false);
+
+//       if (!res.ok) return alert(data.message);
+
+//       alert("Password updated");
+
+//       setShowPasswordModal(false);
+//       setStep(1);
+//       setCpData({
+//         current_password: "",
+//         otp: "",
+//         token: "",
+//         new_password: "",
+//         confirm_password: "",
+//       });
+//     } catch {
+//       setCpLoading(false);
+//       alert("Error");
+//     }
+//   };
+
+//   // ================= EMERGENCY CRUD =================
+// const handleSaveEmergency = async () => {
+//   if (!emergencyForm.urgency_level || !emergencyForm.label) {
+//     return alert("Fill required fields");
+//   }
+
+//   setEmergencyLoading(true);
+
+//   try {
+//     const url = editingRule
+//       ? `${API_BASE}/api/emergency-pricing/${editingRule.id}`
+//       : `${API_BASE}/api/emergency-pricing`;
+
+//     const method = editingRule ? "PUT" : "POST";
+
+//     const payload = {
+//       urgency_level: emergencyForm.urgency_level,
+//       label: emergencyForm.label,
+
+//       // ✅ FIXED VALUES
+//       percentage_markup: 40,
+//       multiplier: 1.4,
+//       is_active: true,
+//     };
+
+//     const res = await fetch(url, {
+//       method,
+//       headers: { "Content-Type": "application/json" },
+//       body: JSON.stringify(payload),
+//     });
+
+//     const data = await res.json();
+//     setEmergencyLoading(false);
+
+//     if (!res.ok) return alert(data.message);
+
+//     alert(editingRule ? "Updated" : "Created");
+
+//     setShowEmergencyModal(false);
+//     setEditingRule(null);
+
+//     setEmergencyForm({
+//       urgency_level: "",
+//       label: "",
+//     });
+
+//     fetchEmergencyRules();
+//   } catch {
+//     setEmergencyLoading(false);
+//     alert("Error saving");
+//   }
+// };
+
+//   const handleDeleteEmergency = async (id: number) => {
+//     if (!confirm("Delete rule?")) return;
+
+//     await fetch(`${API_BASE}/api/emergency-pricing/${id}`, {
+//       method: "DELETE",
+//     });
+
+//     fetchEmergencyRules();
+//   };
+
+//   const handleEditEmergency = (rule: any) => {
+//     setEditingRule(rule);
+//     setEmergencyForm(rule);
+//     setShowEmergencyModal(true);
+//   };
+
+//   // ================= UI =================
+
+//   return (
+//   <div className="space-y-6">
+
+//       {/* SETTINGS */}
+//       <div className="bg-slate-900 border rounded-2xl p-6">
+//         <h3 className="text-white text-xl mb-4 font-bold">Settings</h3>
+
+//         <button
+//           onClick={() => setShowPasswordModal(true)}
+//           className="bg-indigo-600 px-4 py-2 rounded text-white"
+//         >
+//           Change Password
+//         </button>
+//       </div>
+
+//       {/* EMERGENCY RULES */}
+//       <div className="bg-slate-900 border rounded-2xl p-6">
+//         <div className="flex justify-between mb-4">
+//           <h3 className="text-white text-xl font-bold">
+//             Emergency Pricing
+//           </h3>
+
+//           <button
+//             onClick={() => {
+//               setEditingRule(null);
+//               setShowEmergencyModal(true);
+//             }}
+//             className="bg-indigo-600 px-4 py-2 text-white rounded"
+//           >
+//             + Add
+//           </button>
+//         </div>
+
+//         {emergencyRules.map(rule => (
+//           <div key={rule.id} className="bg-slate-800 p-4 rounded mb-2 flex justify-between">
+//             <div>
+//               <p className="text-white">{rule.label}</p>
+//               <p className="text-slate-400 text-sm">
+//                 {rule.percentage_markup}% | x{rule.multiplier}
+//               </p>
+//             </div>
+
+//             <div className="flex gap-2">
+//               <button onClick={() => handleEditEmergency(rule)} className="bg-yellow-500 px-3 py-1 rounded text-white">Edit</button>
+//               <button onClick={() => handleDeleteEmergency(rule.id)} className="bg-red-500 px-3 py-1 rounded text-white">Delete</button>
+//             </div>
+//           </div>
+//         ))}
+//       </div>
+
+//       {/* EMERGENCY MODAL */}
+// {showEmergencyModal && (
+//   <div className="fixed inset-0 bg-black/70 flex justify-center items-center z-50">
+//     <div className="bg-slate-900 p-6 rounded-xl w-full max-w-md relative">
+
+//       {/* ❌ CLOSE */}
+//       <button
+//         onClick={() => {
+//           setShowEmergencyModal(false);
+//           setEditingRule(null);
+//         }}
+//         className="absolute top-4 right-4 text-slate-400 hover:text-white"
+//       >
+//         <X size={20} />
+//       </button>
+
+//       <h3 className="text-white mb-4 font-bold text-lg">
+//         {editingRule ? "Edit Rule" : "Add Rule"}
+//       </h3>
+
+//       <div className="space-y-4">
+
+//         {/* URGENCY LEVEL */}
+//         <input
+//           placeholder="Urgency Level (e.g. super_emergency)"
+//           className="w-full p-3 bg-slate-800 text-white rounded"
+//           value={emergencyForm.urgency_level}
+//           onChange={(e) =>
+//             setEmergencyForm(prev => ({
+//               ...prev,
+//               urgency_level: e.target.value
+//             }))
+//           }
+//         />
+
+//         {/* LABEL */}
+//         <input
+//           placeholder="Label (e.g. Super Emergency 30–45 mins)"
+//           className="w-full p-3 bg-slate-800 text-white rounded"
+//           value={emergencyForm.label}
+//           onChange={(e) =>
+//             setEmergencyForm(prev => ({
+//               ...prev,
+//               label: e.target.value
+//             }))
+//           }
+//         />
+
+//         {/* ACTION BUTTONS */}
+//         <div className="flex gap-3 pt-2">
+//           <button
+//             onClick={handleSaveEmergency}
+//             className="flex-1 bg-green-600 py-2 rounded text-white"
+//           >
+//             {emergencyLoading ? "Saving..." : "Save"}
+//           </button>
+
+//           <button
+//             onClick={() => {
+//               setShowEmergencyModal(false);
+//               setEditingRule(null);
+//             }}
+//             className="flex-1 bg-slate-700 py-2 rounded text-white"
+//           >
+//             Cancel
+//           </button>
+//         </div>
+//       </div>
+//     </div>
+//   </div>
+// )}
+
+//       {/* PASSWORD MODAL (UNCHANGED LOGIC) */}
+//  {showPasswordModal && (
+//   <div className="fixed inset-0 bg-black/70 flex justify-center items-center z-50">
+    
+//     <div className="bg-slate-900 p-8 rounded-xl w-full max-w-lg relative shadow-xl">
+
+//       {/* CLOSE BUTTON */}
+//       <button
+//         onClick={() => setShowPasswordModal(false)}
+//         className="absolute top-5 right-5 text-slate-400 hover:text-white transition"
+//       >
+//         <X size={22} />
+//       </button>
+
+//       {/* TITLE */}
+//       <h2 className="text-white text-xl font-semibold mb-6">
+//         Change Password
+//       </h2>
+
+//       {/* STEP 1 */}
+//       {step === 1 && (
+//         <>
+//           <div className="relative mb-4">
+//             <input
+//               ref={currentRef}
+//               type={showCP.current ? "text" : "password"}
+//               placeholder="Current Password"
+//               value={cpData.current_password}
+//               onChange={(e) =>
+//                 setCpData((prev) => ({
+//                   ...prev,
+//                   current_password: e.target.value,
+//                 }))
+//               }
+//               className="w-full p-3 bg-slate-800 text-white rounded pr-10"
+//             />
+
+//             <button
+//               type="button"
+//               onClick={() => {
+//                 setShowCP((prev) => ({ ...prev, current: !prev.current }));
+//                 setTimeout(() => currentRef.current?.focus(), 0);
+//               }}
+//               className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+//             >
+//               {showCP.current ? <Eye size={18} /> : <EyeOff size={18} />}
+//             </button>
+//           </div>
+
+//           <button
+//             onClick={handleRequestOtp}
+//             className="w-full bg-indigo-600 py-3 rounded text-white hover:bg-indigo-500 transition"
+//           >
+//             Send OTP
+//           </button>
+//         </>
+//       )}
+
+//       {/* STEP 2 */}
+//       {step === 2 && (
+//         <>
+//           <input
+//             placeholder="Enter OTP"
+//             value={cpData.otp}
+//             onChange={(e) =>
+//               setCpData((prev) => ({ ...prev, otp: e.target.value }))
+//             }
+//             className="w-full p-3 bg-slate-800 text-white rounded mb-4"
+//           />
+
+//           <button
+//             onClick={handleVerifyOtp}
+//             className="w-full bg-indigo-600 py-3 rounded text-white hover:bg-indigo-500 transition"
+//           >
+//             Verify OTP
+//           </button>
+//         </>
+//       )}
+
+//       {/* STEP 3 */}
+//       {step === 3 && (
+//         <>
+//           <div className="relative mb-4">
+//             <input
+//               ref={newRef}
+//               type={showCP.new ? "text" : "password"}
+//               placeholder="New Password"
+//               value={cpData.new_password}
+//               onChange={(e) =>
+//                 setCpData((prev) => ({
+//                   ...prev,
+//                   new_password: e.target.value,
+//                 }))
+//               }
+//               className="w-full p-3 bg-slate-800 text-white rounded pr-10"
+//             />
+
+//             <button
+//               type="button"
+//               onClick={() => {
+//                 setShowCP((prev) => ({ ...prev, new: !prev.new }));
+//                 setTimeout(() => newRef.current?.focus(), 0);
+//               }}
+//               className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+//             >
+//               {showCP.new ? <Eye size={18} /> : <EyeOff size={18} />}
+//             </button>
+//           </div>
+
+//           <div className="relative mb-4">
+//             <input
+//               ref={confirmRef}
+//               type={showCP.confirm ? "text" : "password"}
+//               placeholder="Confirm Password"
+//               value={cpData.confirm_password}
+//               onChange={(e) =>
+//                 setCpData((prev) => ({
+//                   ...prev,
+//                   confirm_password: e.target.value,
+//                 }))
+//               }
+//               className="w-full p-3 bg-slate-800 text-white rounded pr-10"
+//             />
+
+//             <button
+//               type="button"
+//               onClick={() => {
+//                 setShowCP((prev) => ({ ...prev, confirm: !prev.confirm }));
+//                 setTimeout(() => confirmRef.current?.focus(), 0);
+//               }}
+//               className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+//             >
+//               {showCP.confirm ? <Eye size={18} /> : <EyeOff size={18} />}
+//             </button>
+//           </div>
+
+//           <button
+//             onClick={handleChangePassword}
+//             className="w-full bg-green-600 py-3 rounded text-white hover:bg-green-500 transition"
+//           >
+//             Change Password
+//           </button>
+//         </>
+//       )}
+//     </div>
+//   </div>
+// )}
+
+//     </div>
+//   );
+// };
+
+
+
+
+// ==================== SETTINGS TAB ====================
 const SettingsTab = () => {
+
+  const user = JSON.parse(sessionStorage.getItem("user") || "{}");
+
+  // ================= ADMIN PROFILE =================
+  const [profile, setProfile] = useState<any>(null);
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(false);
+
+  const [profileForm, setProfileForm] = useState({
+    name: "",
+    email: "",
+    mobile: "",
+    address: "",
+    profileImage: null as File | null,
+  });
+
+  // ================= PASSWORD STATES =================
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [step, setStep] = useState(1);
   const [cpLoading, setCpLoading] = useState(false);
@@ -3688,8 +4199,6 @@ const SettingsTab = () => {
   const newRef = useRef<HTMLInputElement>(null);
   const confirmRef = useRef<HTMLInputElement>(null);
 
-  const user = JSON.parse(sessionStorage.getItem("user") || "{}");
-
   // ================= EMERGENCY STATE =================
   const [emergencyRules, setEmergencyRules] = useState<any[]>([]);
   const [showEmergencyModal, setShowEmergencyModal] = useState(false);
@@ -3699,12 +4208,105 @@ const SettingsTab = () => {
   const [emergencyForm, setEmergencyForm] = useState({
     urgency_level: "",
     label: "",
-    percentage_markup: "",
-    multiplier: "",
-    is_active: true,
   });
 
-  // ================= FETCH RULES =================
+  // ================= FETCH ADMIN PROFILE =================
+  const fetchAdminProfile = async () => {
+    try {
+
+      const res = await fetch(`${API_BASE}/api/auth/users/${user.id}`);
+      const data = await res.json();
+
+      if (!res.ok) return;
+
+      const u = data.user;
+
+      setProfile(u);
+
+      setProfileForm({
+        name: u.name || "",
+        email: u.email || "",
+        mobile: u.mobile || "",
+        address: u.address || "",
+        profileImage: null,
+      });
+
+    } catch {
+      console.error("Profile fetch failed");
+    }
+  };
+
+  // ================= UPDATE ADMIN PROFILE =================
+  const handleUpdateProfile = async () => {
+
+    const formData = new FormData();
+
+    formData.append("userId", user.id);
+    formData.append("name", profileForm.name);
+    formData.append("email", profileForm.email);
+    formData.append("mobile", profileForm.mobile);
+    formData.append("address", profileForm.address);
+
+    if (profileForm.profileImage) {
+      formData.append("profileImage", profileForm.profileImage);
+    }
+
+    setProfileLoading(true);
+
+    try {
+
+      const res = await fetch(`${API_BASE}/api/auth/admin/profile`, {
+        method: "PUT",
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      setProfileLoading(false);
+
+      if (!res.ok) return alert(data.message);
+
+      alert("Profile updated");
+
+      sessionStorage.setItem(
+        "user",
+        JSON.stringify({
+          ...user,
+          name: profileForm.name,
+          email: profileForm.email,
+          mobile: profileForm.mobile,
+          address: profileForm.address,
+        })
+      );
+
+      setEditingProfile(false);
+      fetchAdminProfile();
+
+    } catch {
+      setProfileLoading(false);
+      alert("Update failed");
+    }
+  };
+
+
+
+
+
+  const handleCancelEdit = () => {
+  if (!profile) return;
+
+  setProfileForm({
+    name: profile.name || "",
+    email: profile.email || "",
+    mobile: profile.mobile || "",
+    address: profile.address || "",
+    profileImage: null,
+  });
+
+  setEditingProfile(false);
+};
+
+  // ================= FETCH EMERGENCY RULES =================
   const fetchEmergencyRules = async () => {
     try {
       const res = await fetch(`${API_BASE}/api/emergency-pricing`);
@@ -3717,19 +4319,25 @@ const SettingsTab = () => {
 
   useEffect(() => {
     fetchEmergencyRules();
+    fetchAdminProfile();
   }, []);
 
   // ================= PASSWORD APIs =================
   const handleRequestOtp = async () => {
+
     if (!cpData.current_password) return alert("Enter current password");
 
     setCpLoading(true);
 
     try {
+
       const res = await fetch(`${API_BASE}/api/change-password/request-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: user.username, current_password: cpData.current_password }),
+        body: JSON.stringify({
+          username: user.username,
+          current_password: cpData.current_password,
+        }),
       });
 
       const data = await res.json();
@@ -3739,6 +4347,7 @@ const SettingsTab = () => {
 
       alert("OTP sent");
       setStep(2);
+
     } catch {
       setCpLoading(false);
       alert("Error");
@@ -3746,15 +4355,20 @@ const SettingsTab = () => {
   };
 
   const handleVerifyOtp = async () => {
+
     if (!cpData.otp) return alert("Enter OTP");
 
     setCpLoading(true);
 
     try {
+
       const res = await fetch(`${API_BASE}/api/change-password/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: user.username, otp: cpData.otp }),
+        body: JSON.stringify({
+          username: user.username,
+          otp: cpData.otp,
+        }),
       });
 
       const data = await res.json();
@@ -3764,6 +4378,7 @@ const SettingsTab = () => {
 
       setCpData(prev => ({ ...prev, token: data.token }));
       setStep(3);
+
     } catch {
       setCpLoading(false);
       alert("Verification failed");
@@ -3771,12 +4386,14 @@ const SettingsTab = () => {
   };
 
   const handleChangePassword = async () => {
+
     if (cpData.new_password !== cpData.confirm_password)
       return alert("Passwords mismatch");
 
     setCpLoading(true);
 
     try {
+
       const res = await fetch(`${API_BASE}/api/change-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -3797,6 +4414,7 @@ const SettingsTab = () => {
 
       setShowPasswordModal(false);
       setStep(1);
+
       setCpData({
         current_password: "",
         otp: "",
@@ -3804,6 +4422,7 @@ const SettingsTab = () => {
         new_password: "",
         confirm_password: "",
       });
+
     } catch {
       setCpLoading(false);
       alert("Error");
@@ -3811,57 +4430,57 @@ const SettingsTab = () => {
   };
 
   // ================= EMERGENCY CRUD =================
-const handleSaveEmergency = async () => {
-  if (!emergencyForm.urgency_level || !emergencyForm.label) {
-    return alert("Fill required fields");
-  }
+  const handleSaveEmergency = async () => {
 
-  setEmergencyLoading(true);
+    if (!emergencyForm.urgency_level || !emergencyForm.label)
+      return alert("Fill required fields");
 
-  try {
-    const url = editingRule
-      ? `${API_BASE}/api/emergency-pricing/${editingRule.id}`
-      : `${API_BASE}/api/emergency-pricing`;
+    setEmergencyLoading(true);
 
-    const method = editingRule ? "PUT" : "POST";
+    try {
 
-    const payload = {
-      urgency_level: emergencyForm.urgency_level,
-      label: emergencyForm.label,
+      const url = editingRule
+        ? `${API_BASE}/api/emergency-pricing/${editingRule.id}`
+        : `${API_BASE}/api/emergency-pricing`;
 
-      // ✅ FIXED VALUES
-      percentage_markup: 40,
-      multiplier: 1.4,
-      is_active: true,
-    };
+      const method = editingRule ? "PUT" : "POST";
 
-    const res = await fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+      const payload = {
+        urgency_level: emergencyForm.urgency_level,
+        label: emergencyForm.label,
+        percentage_markup: 40,
+        multiplier: 1.4,
+        is_active: true,
+      };
 
-    const data = await res.json();
-    setEmergencyLoading(false);
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
-    if (!res.ok) return alert(data.message);
+      const data = await res.json();
+      setEmergencyLoading(false);
 
-    alert(editingRule ? "Updated" : "Created");
+      if (!res.ok) return alert(data.message);
 
-    setShowEmergencyModal(false);
-    setEditingRule(null);
+      alert(editingRule ? "Updated" : "Created");
 
-    setEmergencyForm({
-      urgency_level: "",
-      label: "",
-    });
+      setShowEmergencyModal(false);
+      setEditingRule(null);
 
-    fetchEmergencyRules();
-  } catch {
-    setEmergencyLoading(false);
-    alert("Error saving");
-  }
-};
+      setEmergencyForm({
+        urgency_level: "",
+        label: "",
+      });
+
+      fetchEmergencyRules();
+
+    } catch {
+      setEmergencyLoading(false);
+      alert("Error saving");
+    }
+  };
 
   const handleDeleteEmergency = async (id: number) => {
     if (!confirm("Delete rule?")) return;
@@ -3880,13 +4499,150 @@ const handleSaveEmergency = async () => {
   };
 
   // ================= UI =================
-
   return (
-  <div className="space-y-6">
+
+    <div className="space-y-6">
+
+      {/* ================= ADMIN PROFILE ================= */}
+      <div className="bg-slate-900 border rounded-2xl p-6">
+
+        <div className="flex justify-between items-center mb-6">
+
+          <h3 className="text-white text-xl font-bold">
+            Admin Profile
+          </h3>
+
+        {!editingProfile ? (
+
+  <button
+    onClick={() => setEditingProfile(true)}
+    className="bg-indigo-600 px-4 py-2 rounded text-white"
+  >
+    Edit
+  </button>
+
+) : (
+
+  <div className="flex gap-3">
+
+    <button
+      onClick={handleUpdateProfile}
+      className="bg-green-600 px-4 py-2 rounded text-white"
+    >
+      {profileLoading ? "Updating..." : "Save"}
+    </button>
+
+    <button
+      onClick={handleCancelEdit}
+      className="bg-gray-600 px-4 py-2 rounded text-white"
+    >
+      Cancel
+    </button>
+
+  </div>
+
+)}
+
+        </div>
+
+        {profile && (
+
+          <div className="grid md:grid-cols-2 gap-6">
+
+            {/* PROFILE IMAGE */}
+            <div className="flex flex-col items-center">
+
+              <img
+                src={
+                  profileForm.profileImage
+                    ? URL.createObjectURL(profileForm.profileImage)
+                    : profile.profileImage
+                }
+                className="w-28 h-28 rounded-full object-cover mb-3 border"
+              />
+
+              {editingProfile && (
+                <input
+                  type="file"
+                  onChange={(e) =>
+                    setProfileForm(prev => ({
+                      ...prev,
+                      profileImage: e.target.files?.[0] || null,
+                    }))
+                  }
+                  className="text-white"
+                />
+              )}
+
+            </div>
+
+            {/* PROFILE FIELDS */}
+            <div className="space-y-4">
+
+              <input
+                disabled={!editingProfile}
+                value={profileForm.name}
+                onChange={(e) =>
+                  setProfileForm(prev => ({
+                    ...prev,
+                    name: e.target.value,
+                  }))
+                }
+                className="w-full p-3 bg-slate-800 text-white rounded"
+                placeholder="Name"
+              />
+
+              <input
+                disabled={!editingProfile}
+                value={profileForm.email}
+                onChange={(e) =>
+                  setProfileForm(prev => ({
+                    ...prev,
+                    email: e.target.value,
+                  }))
+                }
+                className="w-full p-3 bg-slate-800 text-white rounded"
+                placeholder="Email"
+              />
+
+              <input
+                disabled={!editingProfile}
+                value={profileForm.mobile}
+                onChange={(e) =>
+                  setProfileForm(prev => ({
+                    ...prev,
+                    mobile: e.target.value,
+                  }))
+                }
+                className="w-full p-3 bg-slate-800 text-white rounded"
+                placeholder="Mobile"
+              />
+
+              <textarea
+                disabled={!editingProfile}
+                value={profileForm.address}
+                onChange={(e) =>
+                  setProfileForm(prev => ({
+                    ...prev,
+                    address: e.target.value,
+                  }))
+                }
+                className="w-full p-3 bg-slate-800 text-white rounded"
+                placeholder="Address"
+              />
+
+            </div>
+
+          </div>
+        )}
+
+      </div>
 
       {/* SETTINGS */}
       <div className="bg-slate-900 border rounded-2xl p-6">
-        <h3 className="text-white text-xl mb-4 font-bold">Settings</h3>
+        <h3 className="text-white text-xl mb-4 font-bold">
+          Settings
+        </h3>
 
         <button
           onClick={() => setShowPasswordModal(true)}
@@ -3896,9 +4652,11 @@ const handleSaveEmergency = async () => {
         </button>
       </div>
 
-      {/* EMERGENCY RULES */}
+      {/* EMERGENCY PRICING */}
       <div className="bg-slate-900 border rounded-2xl p-6">
+
         <div className="flex justify-between mb-4">
+
           <h3 className="text-white text-xl font-bold">
             Emergency Pricing
           </h3>
@@ -3912,10 +4670,16 @@ const handleSaveEmergency = async () => {
           >
             + Add
           </button>
+
         </div>
 
         {emergencyRules.map(rule => (
-          <div key={rule.id} className="bg-slate-800 p-4 rounded mb-2 flex justify-between">
+
+          <div
+            key={rule.id}
+            className="bg-slate-800 p-4 rounded mb-2 flex justify-between"
+          >
+
             <div>
               <p className="text-white">{rule.label}</p>
               <p className="text-slate-400 text-sm">
@@ -3924,232 +4688,28 @@ const handleSaveEmergency = async () => {
             </div>
 
             <div className="flex gap-2">
-              <button onClick={() => handleEditEmergency(rule)} className="bg-yellow-500 px-3 py-1 rounded text-white">Edit</button>
-              <button onClick={() => handleDeleteEmergency(rule.id)} className="bg-red-500 px-3 py-1 rounded text-white">Delete</button>
+
+              <button
+                onClick={() => handleEditEmergency(rule)}
+                className="bg-yellow-500 px-3 py-1 rounded text-white"
+              >
+                Edit
+              </button>
+
+              <button
+                onClick={() => handleDeleteEmergency(rule.id)}
+                className="bg-red-500 px-3 py-1 rounded text-white"
+              >
+                Delete
+              </button>
+
             </div>
+
           </div>
+
         ))}
+
       </div>
-
-      {/* EMERGENCY MODAL */}
-{showEmergencyModal && (
-  <div className="fixed inset-0 bg-black/70 flex justify-center items-center z-50">
-    <div className="bg-slate-900 p-6 rounded-xl w-full max-w-md relative">
-
-      {/* ❌ CLOSE */}
-      <button
-        onClick={() => {
-          setShowEmergencyModal(false);
-          setEditingRule(null);
-        }}
-        className="absolute top-4 right-4 text-slate-400 hover:text-white"
-      >
-        <X size={20} />
-      </button>
-
-      <h3 className="text-white mb-4 font-bold text-lg">
-        {editingRule ? "Edit Rule" : "Add Rule"}
-      </h3>
-
-      <div className="space-y-4">
-
-        {/* URGENCY LEVEL */}
-        <input
-          placeholder="Urgency Level (e.g. super_emergency)"
-          className="w-full p-3 bg-slate-800 text-white rounded"
-          value={emergencyForm.urgency_level}
-          onChange={(e) =>
-            setEmergencyForm(prev => ({
-              ...prev,
-              urgency_level: e.target.value
-            }))
-          }
-        />
-
-        {/* LABEL */}
-        <input
-          placeholder="Label (e.g. Super Emergency 30–45 mins)"
-          className="w-full p-3 bg-slate-800 text-white rounded"
-          value={emergencyForm.label}
-          onChange={(e) =>
-            setEmergencyForm(prev => ({
-              ...prev,
-              label: e.target.value
-            }))
-          }
-        />
-
-        {/* ACTION BUTTONS */}
-        <div className="flex gap-3 pt-2">
-          <button
-            onClick={handleSaveEmergency}
-            className="flex-1 bg-green-600 py-2 rounded text-white"
-          >
-            {emergencyLoading ? "Saving..." : "Save"}
-          </button>
-
-          <button
-            onClick={() => {
-              setShowEmergencyModal(false);
-              setEditingRule(null);
-            }}
-            className="flex-1 bg-slate-700 py-2 rounded text-white"
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-)}
-
-      {/* PASSWORD MODAL (UNCHANGED LOGIC) */}
- {showPasswordModal && (
-  <div className="fixed inset-0 bg-black/70 flex justify-center items-center z-50">
-    
-    <div className="bg-slate-900 p-8 rounded-xl w-full max-w-lg relative shadow-xl">
-
-      {/* CLOSE BUTTON */}
-      <button
-        onClick={() => setShowPasswordModal(false)}
-        className="absolute top-5 right-5 text-slate-400 hover:text-white transition"
-      >
-        <X size={22} />
-      </button>
-
-      {/* TITLE */}
-      <h2 className="text-white text-xl font-semibold mb-6">
-        Change Password
-      </h2>
-
-      {/* STEP 1 */}
-      {step === 1 && (
-        <>
-          <div className="relative mb-4">
-            <input
-              ref={currentRef}
-              type={showCP.current ? "text" : "password"}
-              placeholder="Current Password"
-              value={cpData.current_password}
-              onChange={(e) =>
-                setCpData((prev) => ({
-                  ...prev,
-                  current_password: e.target.value,
-                }))
-              }
-              className="w-full p-3 bg-slate-800 text-white rounded pr-10"
-            />
-
-            <button
-              type="button"
-              onClick={() => {
-                setShowCP((prev) => ({ ...prev, current: !prev.current }));
-                setTimeout(() => currentRef.current?.focus(), 0);
-              }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-            >
-              {showCP.current ? <Eye size={18} /> : <EyeOff size={18} />}
-            </button>
-          </div>
-
-          <button
-            onClick={handleRequestOtp}
-            className="w-full bg-indigo-600 py-3 rounded text-white hover:bg-indigo-500 transition"
-          >
-            Send OTP
-          </button>
-        </>
-      )}
-
-      {/* STEP 2 */}
-      {step === 2 && (
-        <>
-          <input
-            placeholder="Enter OTP"
-            value={cpData.otp}
-            onChange={(e) =>
-              setCpData((prev) => ({ ...prev, otp: e.target.value }))
-            }
-            className="w-full p-3 bg-slate-800 text-white rounded mb-4"
-          />
-
-          <button
-            onClick={handleVerifyOtp}
-            className="w-full bg-indigo-600 py-3 rounded text-white hover:bg-indigo-500 transition"
-          >
-            Verify OTP
-          </button>
-        </>
-      )}
-
-      {/* STEP 3 */}
-      {step === 3 && (
-        <>
-          <div className="relative mb-4">
-            <input
-              ref={newRef}
-              type={showCP.new ? "text" : "password"}
-              placeholder="New Password"
-              value={cpData.new_password}
-              onChange={(e) =>
-                setCpData((prev) => ({
-                  ...prev,
-                  new_password: e.target.value,
-                }))
-              }
-              className="w-full p-3 bg-slate-800 text-white rounded pr-10"
-            />
-
-            <button
-              type="button"
-              onClick={() => {
-                setShowCP((prev) => ({ ...prev, new: !prev.new }));
-                setTimeout(() => newRef.current?.focus(), 0);
-              }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-            >
-              {showCP.new ? <Eye size={18} /> : <EyeOff size={18} />}
-            </button>
-          </div>
-
-          <div className="relative mb-4">
-            <input
-              ref={confirmRef}
-              type={showCP.confirm ? "text" : "password"}
-              placeholder="Confirm Password"
-              value={cpData.confirm_password}
-              onChange={(e) =>
-                setCpData((prev) => ({
-                  ...prev,
-                  confirm_password: e.target.value,
-                }))
-              }
-              className="w-full p-3 bg-slate-800 text-white rounded pr-10"
-            />
-
-            <button
-              type="button"
-              onClick={() => {
-                setShowCP((prev) => ({ ...prev, confirm: !prev.confirm }));
-                setTimeout(() => confirmRef.current?.focus(), 0);
-              }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-            >
-              {showCP.confirm ? <Eye size={18} /> : <EyeOff size={18} />}
-            </button>
-          </div>
-
-          <button
-            onClick={handleChangePassword}
-            className="w-full bg-green-600 py-3 rounded text-white hover:bg-green-500 transition"
-          >
-            Change Password
-          </button>
-        </>
-      )}
-    </div>
-  </div>
-)}
 
     </div>
   );
