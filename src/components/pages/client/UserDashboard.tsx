@@ -659,7 +659,29 @@ const UserDashboard = () => {
   //   }
   // };
 
-  const fetchBookings = async (userId: number) => {
+//   const fetchBookings = async (userId: number) => {
+//   setLoading(true);
+//   try {
+//     const res = await fetch(
+//       `${API_BASE}/api/service-on-booking/user/${userId}`
+//     );
+//     const data = await res.json();
+
+//     // 🔥 FIX IS HERE
+//     setBookings(data.bookings || []);
+//   } catch (error) {
+//     console.error("Error fetching bookings:", error);
+//     setBookings([]);
+//   } finally {
+//     setLoading(false);
+//   }
+// };
+
+
+
+
+
+const fetchBookings = async (userId: number) => {
   setLoading(true);
   try {
     const res = await fetch(
@@ -667,8 +689,12 @@ const UserDashboard = () => {
     );
     const data = await res.json();
 
-    // 🔥 FIX IS HERE
-    setBookings(data.bookings || []);
+    // ✅ Show only PAID bookings
+    const paidBookings = (data.bookings || []).filter(
+      (booking: any) => booking.payment_status === "PAID"
+    );
+
+    setBookings(paidBookings);
   } catch (error) {
     console.error("Error fetching bookings:", error);
     setBookings([]);
@@ -1058,10 +1084,10 @@ const UserDashboard = () => {
                           <Star size={18} />
                           Rate Service
                         </button>
-                        <button className="flex items-center gap-2 px-5 py-3 bg-slate-100 text-slate-700 rounded-xl font-bold text-sm hover:bg-slate-200 transition-colors">
+                        {/* <button className="flex items-center gap-2 px-5 py-3 bg-slate-100 text-slate-700 rounded-xl font-bold text-sm hover:bg-slate-200 transition-colors">
                           <RefreshCw size={18} />
                           Book Again
-                        </button>
+                        </button> */}
                       </div>
                     )}
                   </div>

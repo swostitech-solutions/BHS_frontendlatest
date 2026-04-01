@@ -32,10 +32,12 @@ import {
   ThumbsUp,
   ThumbsDown,
   Timer,
+  Package,
   CreditCard,
   ArrowUpRight,
   ArrowDownRight,
   Eye,
+  EyeOff,
   MessageSquare,
   Zap,
   RefreshCw,
@@ -91,6 +93,7 @@ interface Booking {
   work_status_code: string;
   technician_allocated: boolean;
   technician_id?: number;
+  payment_status: string; // ✅ ADD THIS
   image?: string;
   User?: { name: string; mobile: string; email: string };
   service?: { name: string };
@@ -384,37 +387,6 @@ const [withdrawDisplayAmount, setWithdrawDisplayAmount] = useState(0);
     }
   };
 }, [profile?.id, isPolling]);
-
-
-
-
-
-/// current ///
-// const fetchWalletDetails = async (userId: number) => {
-//   try {
-//     const token = sessionStorage.getItem("accessToken");
-
-//     const res = await fetch(
-//       `${API_BASE}/api/wallet/${userId}`,
-//       {
-//         headers: {
-//           Authorization: `Bearer ${token}`,
-//         },
-//       }
-//     );
-
-//     if (!res.ok) return;
-
-//     const data = await res.json();
-
-//     setWalletBalance(Number(data.balance || 0));
-//     setWalletTransactions(data.transactions || []);
-//   } catch (error) {
-//     console.error("Wallet fetch error:", error);
-//   }
-// };
-
-
 
 const fetchWalletDetails = async () => {
   try {
@@ -780,78 +752,215 @@ const fetchTechnicianRating = async (userId: number) => {
 
 
 
-  // NEW: Fetch bookings and check for new jobs
-  const fetchBookingsWithNotification = async (techUserId: number) => {
-    try {
-      const userDataStr = sessionStorage.getItem("user");
-      const userData = userDataStr ? JSON.parse(userDataStr) : null;
-      const techCategory = userData?.technicianDetails?.techCategory;
+//   // NEW: Fetch bookings and check for new jobs
+//   const fetchBookingsWithNotification = async (techUserId: number) => {
+//     try {
+//       const userDataStr = sessionStorage.getItem("user");
+//       const userData = userDataStr ? JSON.parse(userDataStr) : null;
+//       const techCategory = userData?.technicianDetails?.techCategory;
 
-      const res = await fetch(`${API_BASE}/api/service-on-booking`);
-      if (!res.ok) return;
+//       const res = await fetch(`${API_BASE}/api/service-on-booking`);
+//       if (!res.ok) return;
 
-      const data = await res.json();
-      const allBookings: Booking[] = data.bookings || [];
+//       const data = await res.json();
+//       const allBookings: Booking[] = data.bookings || [];
 
-      const relevantBookings = allBookings.filter((b: Booking) => {
-        if (b.technician_allocated && b.technician?.id === techUserId) {
+//       // const relevantBookings = allBookings.filter((b: Booking) => {
+//       //   if (b.technician_allocated && b.technician?.id === techUserId) {
+//       //     return true;
+//       //   }
+//       //   if (!b.technician_allocated) {
+//       //     const serviceName = b.service?.name || "";
+//       //     const serviceCode = b.service_code || b.service?.service_code || "";
+//       //     // Use smart category matching (supports both service codes and names)
+//       //     if (categoryMatchesService(techCategory, serviceName, serviceCode)) {
+//       //       return true;
+//       //     }
+//       //   }
+//       //   return false;
+//       // });
+
+
+
+//       const relevantBookings = allBookings.filter((b: Booking) => {
+
+//   // ❌ Ignore unpaid bookings
+//   if (b.payment_status !== "PAID") {
+//     return false;
+//   }
+
+//   // if (b.technician_allocated && b.technician?.id === techUserId) {
+//   //   return true;
+//   // }
+
+//   // ✅ Job already accepted by THIS technician
+// if (b.technician_allocated && b.technician?.id === techUserId) {
+//   return true;
+// }
+
+// // ❌ Job accepted by another technician → hide
+// if (b.technician_allocated && b.technician?.id !== techUserId) {
+//   return false;
+// }
+
+//   if (!b.technician_allocated) {
+//     const serviceName = b.service?.name || "";
+//     const serviceCode = b.service_code || b.service?.service_code || "";
+
+//     if (categoryMatchesService(techCategory, serviceName, serviceCode)) {
+//       return true;
+//     }
+//   }
+
+//   return false;
+// });
+
+//       // Check for NEW jobs (not seen before)
+//       const newUnseenJobs = relevantBookings.filter(
+//         (b) => !b.technician_allocated && !seenJobIds.has(b.order_id)
+//       );
+
+//       // if (newUnseenJobs.length > 0) {
+//       //   // Show popup for the first new job
+//       //   setNewJobAlert(newUnseenJobs[0]);
+//       //   setShowNewJobPopup(true);
+
+//       //   // Play notification sound
+//       //   playNotificationSound();
+
+//       //   // Vibrate if supported
+//       //   if (navigator.vibrate) {
+//       //     navigator.vibrate([200, 100, 200]);
+//       //   }
+//       // }
+
+
+
+//       if (newUnseenJobs.length > 0) {
+//   const nextJob = newUnseenJobs[0];
+
+//   // ✅ Check using REF (not state)
+//   if (!seenJobIdsRef.current.has(nextJob.order_id)) {
+//     setNewJobAlert(nextJob);
+//     setShowNewJobPopup(true);
+
+//     playNotificationSound();
+
+//     if (navigator.vibrate) {
+//       navigator.vibrate([200, 100, 200]);
+//     }
+//   }
+// }
+
+
+//       setBookings(relevantBookings);
+//       setNotifications(relevantBookings.filter((b) => !b.technician_allocated));
+//     } catch (error) {
+//       console.error("Polling error:", error);
+//     }
+//   };
+
+
+// NEW: Fetch bookings and check for new jobs
+// NEW: Fetch bookings and check for new jobs
+const fetchBookingsWithNotification = async (techUserId: number) => {
+  try {
+    const userDataStr = sessionStorage.getItem("user");
+    const userData = userDataStr ? JSON.parse(userDataStr) : null;
+    const techCategory = userData?.technicianDetails?.techCategory;
+
+    const res = await fetch(`${API_BASE}/api/service-on-booking`);
+    if (!res.ok) return;
+
+    const data = await res.json();
+    const allBookings: Booking[] = data.bookings || [];
+
+    // ✅ Filter relevant bookings
+    const relevantBookings = allBookings.filter((b: Booking) => {
+
+      // ❌ Ignore unpaid bookings
+      if (b.payment_status !== "PAID") {
+        return false;
+      }
+
+      // ✅ Job already accepted by THIS technician
+      if (b.technician_allocated && b.technician?.id === techUserId) {
+        return true;
+      }
+
+      // ❌ Job accepted by another technician
+      if (b.technician_allocated && b.technician?.id !== techUserId) {
+        return false;
+      }
+
+      // ✅ Show open jobs matching technician category
+      if (!b.technician_allocated) {
+        const serviceName = b.service?.name || "";
+        const serviceCode = b.service_code || b.service?.service_code || "";
+
+        if (categoryMatchesService(techCategory, serviceName, serviceCode)) {
           return true;
         }
-        if (!b.technician_allocated) {
-          const serviceName = b.service?.name || "";
-          const serviceCode = b.service_code || b.service?.service_code || "";
-          // Use smart category matching (supports both service codes and names)
-          if (categoryMatchesService(techCategory, serviceName, serviceCode)) {
-            return true;
-          }
+      }
+
+      return false;
+    });
+
+    // ✅ FIX 3 — Auto close popup if another technician accepted the job
+    if (
+      newJobAlert &&
+      allBookings.some(
+        (b) =>
+          b.order_id === newJobAlert.order_id &&
+          b.technician_allocated &&
+          b.technician?.id !== techUserId
+      )
+    ) {
+      setShowNewJobPopup(false);
+      setNewJobAlert(null);
+    }
+
+    // ✅ Find new unseen jobs
+    const newUnseenJobs = relevantBookings.filter(
+      (b) =>
+        !b.technician_allocated &&
+        !seenJobIdsRef.current.has(b.order_id)
+    );
+
+    // ✅ Only allow valid open jobs
+    const validNewJobs = newUnseenJobs.filter(
+      (job) => !job.technician_allocated
+    );
+
+    if (validNewJobs.length > 0) {
+      const nextJob = validNewJobs[0];
+
+      if (!seenJobIdsRef.current.has(nextJob.order_id)) {
+        setNewJobAlert(nextJob);
+        setShowNewJobPopup(true);
+
+        // 🔔 Play notification sound
+        playNotificationSound();
+
+        // 📳 Vibrate if supported
+        if (navigator.vibrate) {
+          navigator.vibrate([200, 100, 200]);
         }
-        return false;
-      });
-
-      // Check for NEW jobs (not seen before)
-      const newUnseenJobs = relevantBookings.filter(
-        (b) => !b.technician_allocated && !seenJobIds.has(b.order_id)
-      );
-
-      // if (newUnseenJobs.length > 0) {
-      //   // Show popup for the first new job
-      //   setNewJobAlert(newUnseenJobs[0]);
-      //   setShowNewJobPopup(true);
-
-      //   // Play notification sound
-      //   playNotificationSound();
-
-      //   // Vibrate if supported
-      //   if (navigator.vibrate) {
-      //     navigator.vibrate([200, 100, 200]);
-      //   }
-      // }
-
-
-
-      if (newUnseenJobs.length > 0) {
-  const nextJob = newUnseenJobs[0];
-
-  // ✅ Check using REF (not state)
-  if (!seenJobIdsRef.current.has(nextJob.order_id)) {
-    setNewJobAlert(nextJob);
-    setShowNewJobPopup(true);
-
-    playNotificationSound();
-
-    if (navigator.vibrate) {
-      navigator.vibrate([200, 100, 200]);
+      }
     }
+
+    // ✅ Update job list
+    setBookings(relevantBookings);
+
+    // ✅ Update notification list
+    setNotifications(
+      relevantBookings.filter((b) => !b.technician_allocated)
+    );
+
+  } catch (error) {
+    console.error("Polling error:", error);
   }
-}
-
-
-      setBookings(relevantBookings);
-      setNotifications(relevantBookings.filter((b) => !b.technician_allocated));
-    } catch (error) {
-      console.error("Polling error:", error);
-    }
-  };
+};
 
   // NEW: Play notification sound
   const playNotificationSound = () => {
@@ -943,14 +1052,14 @@ const fetchTechnicianRating = async (userId: number) => {
   //   setNewJobAlert(null);
   // };
 
-  const handleDismissPopup = () => {
-  if (!newJobAlert) return;
+//   const handleDismissPopup = () => {
+//   if (!newJobAlert) return;
 
-  markJobAsSeen(newJobAlert.order_id);
+//   markJobAsSeen(newJobAlert.order_id);
 
-  setShowNewJobPopup(false);
-  setNewJobAlert(null);
-};
+//   setShowNewJobPopup(false);
+//   setNewJobAlert(null);
+// };
 
 
   // Fetch bookings for technician:
@@ -974,23 +1083,59 @@ const fetchTechnicianRating = async (userId: number) => {
       // Filter bookings:
       // 1. Bookings assigned to this technician (any status)
       // 2. Unassigned bookings (technician_allocated: false) matching technician's category
+      // const relevantBookings = allBookings.filter((b: Booking) => {
+      //   // Already assigned to this technician
+      //   // NOTE: b.technician.id is USER ID (backend maps it from user.id in response)
+      //   if (b.technician_allocated && b.technician?.id === techUserId) {
+      //     return true;
+      //   }
+      //   // Unassigned booking matching category (new job requests)
+      //   // Use smart category matching function
+      //   if (!b.technician_allocated) {
+      //     const serviceName = b.service?.name || "";
+      //     const serviceCode = b.service_code || b.service?.service_code || "";
+      //     if (categoryMatchesService(techCategory, serviceName, serviceCode)) {
+      //       return true;
+      //     }
+      //   }
+      //   return false;
+      // });
+
+
       const relevantBookings = allBookings.filter((b: Booking) => {
-        // Already assigned to this technician
-        // NOTE: b.technician.id is USER ID (backend maps it from user.id in response)
-        if (b.technician_allocated && b.technician?.id === techUserId) {
-          return true;
-        }
-        // Unassigned booking matching category (new job requests)
-        // Use smart category matching function
-        if (!b.technician_allocated) {
-          const serviceName = b.service?.name || "";
-          const serviceCode = b.service_code || b.service?.service_code || "";
-          if (categoryMatchesService(techCategory, serviceName, serviceCode)) {
-            return true;
-          }
-        }
-        return false;
-      });
+
+  // ❌ Ignore unpaid bookings
+  if (b.payment_status !== "PAID") {
+    return false;
+  }
+
+  // ✅ Already assigned to this technician
+  // if (b.technician_allocated && b.technician?.id === techUserId) {
+  //   return true;
+  // }
+
+  // ✅ Job already accepted by THIS technician
+if (b.technician_allocated && b.technician?.id === techUserId) {
+  return true;
+}
+
+// ❌ Job accepted by another technician → hide
+if (b.technician_allocated && b.technician?.id !== techUserId) {
+  return false;
+}
+
+  // ✅ New jobs for this technician category
+  if (!b.technician_allocated) {
+    const serviceName = b.service?.name || "";
+    const serviceCode = b.service_code || b.service?.service_code || "";
+
+    if (categoryMatchesService(techCategory, serviceName, serviceCode)) {
+      return true;
+    }
+  }
+
+  return false;
+});
 
       setBookings(relevantBookings);
 
@@ -1078,44 +1223,112 @@ const fetchTechnicianRating = async (userId: number) => {
 
   // Reject job using existing Swagger API: POST /api/service-on-booking/accept/:order_id
   // opinion=2 means reject
+  // const handleRejectJob = async (orderId: string) => {
+  //   try {
+  //     const token = sessionStorage.getItem("accessToken");
+  //     // Backend expects USER ID, not technician record ID
+
+  //     if (!profile?.id) {
+  //       alert("Profile not found. Please log in again.");
+  //       return;
+  //     }
+
+  //     const res = await fetch(
+  //       `${API_BASE}/api/service-on-booking/accept/${orderId}`,
+  //       {
+  //         method: "POST",
+  //         headers: {
+  //           "Content-Type": "application/json",
+  //           Authorization: `Bearer ${token}`,
+  //         },
+  //         body: JSON.stringify({
+  //           technician_id: profile.id, // USER ID
+  //           opinion: 2, // 2 = Reject
+  //         }),
+  //       }
+  //     );
+
+  //     if (!res.ok) {
+  //       const errorData = await res.json();
+  //       alert(errorData.message || "Failed to reject job");
+  //       return;
+  //     }
+
+  //     if (profile?.id) fetchBookings(profile.id);
+  //     setShowJobModal(false);
+  //   } catch (error) {
+  //     console.error("Error rejecting job:", error);
+  //     alert("Failed to reject job. Please try again.");
+  //   }
+  // };
+
+
   const handleRejectJob = async (orderId: string) => {
-    try {
-      const token = sessionStorage.getItem("accessToken");
-      // Backend expects USER ID, not technician record ID
+  try {
+    const token = sessionStorage.getItem("accessToken");
 
-      if (!profile?.id) {
-        alert("Profile not found. Please log in again.");
-        return;
-      }
+    if (!profile?.id) {
+      setShowErrorToast("Profile not found. Please login again.");
+      return;
+    }
 
-      const res = await fetch(
-        `${API_BASE}/api/service-on-booking/accept/${orderId}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            technician_id: profile.id, // USER ID
-            opinion: 2, // 2 = Reject
-          }),
-        }
+    // 🔎 Check if job already allocated
+    const resCheck = await fetch(`${API_BASE}/api/service-on-booking`);
+    const dataCheck = await resCheck.json();
+
+    const booking = dataCheck.bookings?.find(
+      (b: Booking) => b.order_id === orderId
+    );
+
+    // ❌ If already accepted by another technician
+    if (
+      booking?.technician_allocated &&
+      booking?.technician?.id !== profile.id
+    ) {
+      setShowErrorToast(
+        "This job has already been accepted by another technician."
       );
 
-      if (!res.ok) {
-        const errorData = await res.json();
-        alert(errorData.message || "Failed to reject job");
-        return;
-      }
-
+      // Refresh dashboard
       if (profile?.id) fetchBookings(profile.id);
-      setShowJobModal(false);
-    } catch (error) {
-      console.error("Error rejecting job:", error);
-      alert("Failed to reject job. Please try again.");
+
+      return;
     }
-  };
+
+    // ✅ Call reject API
+    const res = await fetch(
+      `${API_BASE}/api/service-on-booking/accept/${orderId}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          technician_id: profile.id,
+          opinion: 2,
+        }),
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      setShowErrorToast(data.message || "Failed to reject job");
+      return;
+    }
+
+    setShowSuccessToast(true);
+    setTimeout(() => setShowSuccessToast(false), 3000);
+
+    if (profile?.id) fetchBookings(profile.id);
+    setShowJobModal(false);
+
+  } catch (error) {
+    console.error("Error rejecting job:", error);
+    setShowErrorToast("Failed to reject job. Please try again.");
+  }
+};
 
   // Update work status using existing Swagger API: POST /api/service-on-booking/work-status/:order_id
   const updateWorkStatus = async (
@@ -1331,7 +1544,7 @@ const fetchTechnicianRating = async (userId: number) => {
         </div>
 
         {/* Service Specialization Badge */}
-        {profile?.technicianDetails?.techCategory && (
+        {/* {profile?.technicianDetails?.techCategory && (
           <div className="mb-6 p-3 bg-gradient-to-r from-violet-500/10 to-purple-500/10 border border-violet-500/20 rounded-xl">
             <p className="text-violet-400 text-xs font-bold uppercase tracking-wider mb-1">
               Specialization
@@ -1343,7 +1556,27 @@ const fetchTechnicianRating = async (userId: number) => {
               You receive jobs matching this category
             </p>
           </div>
-        )}
+        )} */}
+
+        {/* Service Specialization Badge */}
+{profile?.technicianDetails?.techCategory && (
+  <div className="mb-6 p-3 bg-gradient-to-r from-violet-500/10 to-purple-500/10 border border-violet-500/20 rounded-xl">
+    <p className="text-violet-400 text-xs font-bold uppercase tracking-wider mb-1">
+      Specialization
+    </p>
+
+    <p className="text-white font-semibold text-sm">
+      {profile.technicianDetails.skill}
+      {profile?.technicianDetails?.techCategory && (
+        <> ({profile.technicianDetails.techCategory})</>
+      )}
+    </p>
+
+    <p className="text-slate-500 text-xs mt-1">
+      You receive jobs matching this category
+    </p>
+  </div>
+)}
 
         {/* Navigation */}
         <nav className="flex-1 space-y-2">
@@ -1700,29 +1933,6 @@ const fetchTechnicianRating = async (userId: number) => {
 </div>
 
     {/* Transactions */}
-    {/* <div className="bg-slate-800/40 border border-slate-700 rounded-3xl p-8">
-      <h3 className="text-xl font-bold text-white mb-4">
-        Recent Transactions
-      </h3>
-
-      {walletTransactions.length === 0 ? (
-        <p className="text-slate-400">No transactions yet.</p>
-      ) : (
-        walletTransactions.map((txn: any, index: number) => (
-          <div
-            key={index}
-            className="flex justify-between py-3 border-b border-slate-700"
-          >
-            <span className="text-slate-300">{txn.type}</span>
-            <span className="text-emerald-400 font-semibold">
-              ₹{txn.amount}
-            </span>
-          </div>
-        ))
-      )}
-    </div> */}
-
-    {/* Transactions */}
 <div className="bg-slate-800/40 border border-slate-700 rounded-3xl p-8">
   <h3 className="text-xl font-bold text-white mb-6">
     Recent Transactions
@@ -1884,161 +2094,164 @@ const fetchTechnicianRating = async (userId: number) => {
       )}
 
       {/* NEW JOB ALERT POPUP - Auto-shows when new job arrives */}
-      {showNewJobPopup && newJobAlert && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fadeIn">
-          {/* Pulsing background effect */}
-          <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 via-transparent to-emerald-500/20 animate-pulse" />
+   {showNewJobPopup && newJobAlert && (
+  <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fadeIn">
+    <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 via-transparent to-emerald-500/20 animate-pulse" />
 
-          <div className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-3xl w-full max-w-md border-2 border-emerald-500/50 shadow-2xl shadow-emerald-500/20 overflow-hidden animate-scaleIn">
-            {/* Animated top bar */}
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 via-cyan-500 to-emerald-500 animate-shimmer" />
+    <div className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-3xl w-full max-w-md border-2 border-emerald-500/50 shadow-2xl shadow-emerald-500/20 overflow-hidden animate-scaleIn">
 
-            {/* Alert Header */}
-            <div className="bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 p-6 text-center relative overflow-hidden">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(16,185,129,0.1),transparent_70%)]" />
+      {/* Top Bar */}
+      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 via-cyan-500 to-emerald-500 animate-shimmer" />
 
-              {/* Animated bell icon */}
-              <div className="relative inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-emerald-500 to-cyan-500 mb-4 animate-bounce shadow-lg shadow-emerald-500/50">
-                <Bell className="w-10 h-10 text-white animate-wiggle" />
-                <span className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-bold animate-pulse">
-                  1
-                </span>
+      {/* Header */}
+      <div className="bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 p-6 text-center relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(16,185,129,0.1),transparent_70%)]" />
+
+        <div className="relative inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-emerald-500 to-cyan-500 mb-4 animate-bounce shadow-lg shadow-emerald-500/50">
+          <Bell className="w-10 h-10 text-white animate-wiggle" />
+        </div>
+
+        <h2 className="text-2xl font-bold text-white mb-1">
+          New Job Request!
+        </h2>
+        <p className="text-emerald-400 text-sm font-medium">
+          A customer needs your service
+        </p>
+      </div>
+
+      {/* Details */}
+      <div className="p-6 space-y-4">
+
+        {/* ✅ Service Section with Quantity */}
+        <div className="bg-slate-800/50 rounded-2xl p-4 border border-slate-700">
+          <div className="flex items-start justify-between gap-3">
+
+            {/* Left Side: Service Info */}
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+                <Briefcase className="w-6 h-6 text-white" />
               </div>
 
-              <h2 className="text-2xl font-bold text-white mb-1">
-                New Job Request!
-              </h2>
-              <p className="text-emerald-400 text-sm font-medium">
-                A customer needs your service
-              </p>
-            </div>
-
-            {/* Job Details */}
-            <div className="p-6 space-y-4">
-              {/* Service Type */}
-              <div className="bg-slate-800/50 rounded-2xl p-4 border border-slate-700">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
-                    <Briefcase className="w-6 h-6 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-slate-400 text-xs uppercase tracking-wider">
-                      Service
-                    </p>
-                    <p className="text-white font-bold text-lg">
-                      {newJobAlert.service?.name || "Service"}
-                    </p>
-                    <p className="text-slate-400 text-sm">
-                      {newJobAlert.subservice?.name ||
-                        newJobAlert.subservice_code}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Customer & Location */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700">
-                  <div className="flex items-center gap-2 mb-1">
-                    <User size={14} className="text-cyan-400" />
-                    <p className="text-slate-400 text-xs">Customer</p>
-                  </div>
-                  <p className="text-white font-semibold text-sm truncate">
-                    {newJobAlert.User?.name || "Customer"}
-                  </p>
-                </div>
-                <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700">
-                  <div className="flex items-center gap-2 mb-1">
-                    <DollarSign size={14} className="text-emerald-400" />
-                    <p className="text-slate-400 text-xs">Earnings</p>
-                  </div>
-                  <p className="text-emerald-400 font-bold text-sm">
-                    ₹{newJobAlert.total_price?.toLocaleString() || "0"}
-                  </p>
-                </div>
-              </div>
-
-              {/* Schedule */}
-              <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <Calendar size={14} className="text-amber-400" />
-                    <span className="text-white text-sm font-medium">
-                      {new Date(newJobAlert.date).toLocaleDateString("en-IN", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                      })}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Clock size={14} className="text-amber-400" />
-                    <span className="text-white text-sm font-medium">
-                      {newJobAlert.time_slot}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Location */}
-              <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700">
-                <div className="flex items-start gap-2">
-                  <MapPin size={14} className="text-red-400 mt-0.5 shrink-0" />
-                  <p className="text-slate-300 text-sm line-clamp-2">
-                    {newJobAlert.address}
-                  </p>
-                </div>
-              </div>
-
-              {/* Urgency indicator */}
-              <div className="flex items-center justify-center gap-2 text-amber-400 bg-amber-500/10 rounded-xl py-2 border border-amber-500/30">
-                <Zap size={16} className="animate-pulse" />
-                <span className="text-sm font-medium">
-                  Accept quickly before another technician does!
-                </span>
+              <div>
+                <p className="text-slate-400 text-xs uppercase tracking-wider">
+                  Service
+                </p>
+                <p className="text-white font-bold text-lg">
+                  {newJobAlert.service?.name || "Service"}
+                </p>
+                <p className="text-slate-400 text-sm">
+                  {newJobAlert.subservice?.name ||
+                    newJobAlert.subservice_code}
+                </p>
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="p-6 pt-0 space-y-3">
-              <div className="flex gap-3">
-                <button
-                  onClick={handleRejectFromPopup}
-                  className="flex-1 py-4 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 font-bold transition-all flex items-center justify-center gap-2 border border-red-500/30"
-                >
-                  <ThumbsDown size={20} />
-                  Reject
-                </button>
-                <button
-                  onClick={handleAcceptFromPopup}
-                  className="flex-1 py-4 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50"
-                >
-                  <Check size={20} />
-                  Accept Job
-                </button>
-              </div>
-              <button
-                onClick={handleDismissPopup}
-                className="w-full py-3 rounded-xl bg-slate-800/50 hover:bg-slate-800 text-slate-400 font-medium transition-all flex items-center justify-center gap-2 border border-slate-700"
-              >
-                <Clock size={16} />
-                Decide Later
-              </button>
+            {/* ✅ Quantity Badge */}
+            <div className="bg-violet-500/20 border border-violet-500/40 text-violet-300 px-3 py-1 rounded-lg text-xs font-bold">
+              Qty: {newJobAlert.quantity ?? 1}
             </div>
 
-            {/* Order ID footer */}
-            <div className="px-6 pb-4 text-center">
-              <p className="text-slate-500 text-xs">
-                Order ID:{" "}
-                <span className="text-slate-400 font-mono">
-                  {newJobAlert.order_id}
-                </span>
-              </p>
+          </div>
+        </div>
+
+        {/* Customer + Earnings */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700">
+            <div className="flex items-center gap-2 mb-1">
+              <User size={14} className="text-cyan-400" />
+              <p className="text-slate-400 text-xs">Customer</p>
+            </div>
+            <p className="text-white font-semibold text-sm truncate">
+              {newJobAlert.User?.name || "Customer"}
+            </p>
+          </div>
+
+          <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700">
+            <div className="flex items-center gap-2 mb-1">
+              <DollarSign size={14} className="text-emerald-400" />
+              <p className="text-slate-400 text-xs">Earnings</p>
+            </div>
+            <p className="text-emerald-400 font-bold text-sm">
+              ₹{newJobAlert.total_price?.toLocaleString() || "0"}
+            </p>
+          </div>
+        </div>
+
+        {/* Schedule */}
+        <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Calendar size={14} className="text-amber-400" />
+              <span className="text-white text-sm font-medium">
+                {new Date(newJobAlert.date).toLocaleDateString("en-IN", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Clock size={14} className="text-amber-400" />
+              <span className="text-white text-sm font-medium">
+                {newJobAlert.time_slot}
+              </span>
             </div>
           </div>
         </div>
-      )}
 
+        {/* Location */}
+        <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700">
+          <div className="flex items-start gap-2">
+            <MapPin size={14} className="text-red-400 mt-0.5 shrink-0" />
+            <p className="text-slate-300 text-sm line-clamp-2">
+              {newJobAlert.address}
+            </p>
+          </div>
+        </div>
+
+        {/* Urgency */}
+        <div className="flex items-center justify-center gap-2 text-amber-400 bg-amber-500/10 rounded-xl py-2 border border-amber-500/30">
+          <Zap size={16} className="animate-pulse" />
+          <span className="text-sm font-medium">
+            Accept quickly before another technician does!
+          </span>
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="p-6 pt-0 space-y-3">
+        <div className="flex gap-3">
+          <button
+            onClick={handleRejectFromPopup}
+            className="flex-1 py-4 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 font-bold transition-all flex items-center justify-center gap-2 border border-red-500/30"
+          >
+            <ThumbsDown size={20} />
+            Reject
+          </button>
+
+          <button
+            onClick={handleAcceptFromPopup}
+            className="flex-1 py-4 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50"
+          >
+            <Check size={20} />
+            Accept Job
+          </button>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="px-6 pb-4 text-center">
+        <p className="text-slate-500 text-xs">
+          Order ID:{" "}
+          <span className="text-slate-400 font-mono">
+            {newJobAlert.order_id}
+          </span>
+        </p>
+      </div>
+    </div>
+  </div>
+)}
 
 
       {showWithdrawModal && (
@@ -2727,7 +2940,7 @@ const JobsTab = ({
       </div>
 
       {/* Jobs Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {filteredBookings.map((job) => {
           const statusConfig = getStatusConfig(job.work_status);
           const isNew = job.work_status === WORK_STATUS.NEW;
@@ -2815,7 +3028,130 @@ const JobsTab = ({
             <p className="text-slate-500">No jobs found</p>
           </div>
         )}
+      </div> */}
+
+
+
+      <div className="max-h-[70vh] overflow-y-auto pr-2">
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    {filteredBookings.map((job) => {
+      const statusConfig = getStatusConfig(job.work_status);
+      const isNew = job.work_status === WORK_STATUS.NEW;
+
+      return (
+        <div
+          key={job.id}
+          className={`bg-slate-900/50 backdrop-blur-xl border rounded-2xl p-6 hover:border-slate-700 transition-all ${
+            isNew ? "border-violet-500/50" : "border-slate-800"
+          }`}
+        >
+          <div className="flex items-start justify-between mb-4">
+            <span
+              className={`px-3 py-1 rounded-full text-xs font-bold ${statusConfig.color}`}
+            >
+              {statusConfig.label}
+            </span>
+            <p className="text-slate-500 text-sm font-mono">
+              #{job.order_id}
+            </p>
+          </div>
+
+          <h4 className="text-xl font-bold text-white mb-2">
+            {job.subservice?.name || job.subservice_code}
+          </h4>
+          <p className="text-slate-500 text-sm mb-4">
+            {job.service?.name || job.service_code}
+          </p>
+
+          {/* <div className="space-y-2 mb-4">
+            <div className="flex items-center gap-2 text-slate-400 text-sm">
+              <MapPin size={16} />
+              <span className="truncate">
+                {job.address || "Address not provided"}
+              </span>
+            </div>
+            <div className="flex items-center gap-4 text-slate-400 text-sm">
+              <span className="flex items-center gap-1">
+                <Calendar size={16} /> {job.date}
+              </span>
+              <span className="flex items-center gap-1">
+                <Clock size={16} /> {job.time_slot}
+              </span>
+            </div>
+          </div> */}
+
+
+          <div className="space-y-2 mb-4">
+  <div className="flex items-center gap-2 text-slate-400 text-sm">
+    <MapPin size={16} />
+    <span className="truncate">
+      {job.address || "Address not provided"}
+    </span>
+  </div>
+
+  <div className="flex items-center gap-4 text-slate-400 text-sm">
+    <span className="flex items-center gap-1">
+      <Calendar size={16} /> {job.date}
+    </span>
+    <span className="flex items-center gap-1">
+      <Clock size={16} /> {job.time_slot}
+    </span>
+  </div>
+
+  {/* ✅ Quantity added here */}
+  <div className="flex items-center gap-2 text-slate-400 text-sm">
+    <Package size={16} />
+    <span>Qty: {job.quantity ?? 1}</span>
+  </div>
+</div>
+
+          <div className="flex items-center justify-between pt-4 border-t border-slate-800">
+            <p className="text-2xl font-black text-emerald-400">
+              ₹{job.total_price?.toLocaleString() || 0}
+            </p>
+
+            {isNew ? (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => onReject(job.order_id)}
+                  className="px-4 py-2 bg-red-500/20 text-red-400 rounded-lg font-semibold hover:bg-red-500/30 transition-colors"
+                >
+                  Reject
+                </button>
+                <button
+                  onClick={() => onAccept(job.order_id)}
+                  className="px-4 py-2 bg-emerald-500 text-white rounded-lg font-semibold hover:bg-emerald-400 transition-colors"
+                >
+                  Accept
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => onViewJob(job)}
+                className="px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg font-semibold hover:bg-emerald-500/30 transition-colors"
+              >
+                {job.work_status === WORK_STATUS.COMPLETED
+                  ? "View Details"
+                  : "Update Status"}
+              </button>
+            )}
+          </div>
+        </div>
+      );
+    })}
+
+    {filteredBookings.length === 0 && (
+      <div className="col-span-full text-center py-16">
+        <Briefcase size={48} className="text-slate-600 mx-auto mb-4" />
+        <p className="text-slate-500">No jobs found</p>
       </div>
+    )}
+  </div>
+</div>
+
+
+
+      
     </div>
   );
 };
@@ -3025,132 +3361,6 @@ const EarningsTab = ({
 };
 
 // ==================== PROFILE TAB ====================
-// const ProfileTab = ({
-//   profile,
-//   onProfileUpdate,
-// }: {
-//   profile: TechnicianProfile | null;
-//   onProfileUpdate?: (updatedProfile: TechnicianProfile) => void;
-// }) => {
-//   const [isEditing, setIsEditing] = useState(false);
-//   const [saving, setSaving] = useState(false);
-//   const [editData, setEditData] = useState({
-//     name: "",
-//     email: "",
-//     mobile: "",
-//     address: "",
-//     skill: "",
-//     experience: 0,
-//     bankName: "",
-//     ifscNo: "",
-//     branchName: "",
-//     timeDuration: "",
-//     emergencyAvailable: false,
-//     techCategory: "",
-//   });
-
-//   useEffect(() => {
-//     if (profile) {
-//       setEditData({
-//         name: profile.name || "",
-//         email: profile.email || "",
-//         mobile: profile.mobile || "",
-//         address: profile.address || "",
-//         skill: profile.technicianDetails?.skill || "",
-//         experience: profile.technicianDetails?.experience || 0,
-//         bankName: profile.technicianDetails?.bankName || "",
-//         ifscNo: profile.technicianDetails?.ifscNo || "",
-//         branchName: profile.technicianDetails?.branchName || "",
-//         timeDuration: profile.technicianDetails?.timeDuration || "",
-//         emergencyAvailable:
-//           profile.technicianDetails?.emergencyAvailable || false,
-//         techCategory: profile.technicianDetails?.techCategory || "",
-//       });
-//     }
-//   }, [profile]);
-
-//   if (!profile) return null;
-
-//   const tech = profile.technicianDetails;
-
-//   const handleSaveProfile = async () => {
-//     setSaving(true);
-//     try {
-//       const formData = new FormData();
-//       formData.append("userId", String(profile.id));
-//       formData.append("name", editData.name);
-//       formData.append("email", editData.email);
-//       formData.append("mobile", editData.mobile);
-//       formData.append("address", editData.address);
-//       formData.append("skill", editData.skill);
-//       formData.append("experience", String(editData.experience));
-//       formData.append("bankName", editData.bankName);
-//       formData.append("ifscNo", editData.ifscNo);
-//       formData.append("branchName", editData.branchName);
-//       formData.append("timeDuration", editData.timeDuration);
-//       formData.append(
-//         "emergencyAvailable",
-//         String(editData.emergencyAvailable)
-//       );
-//       formData.append("techCategory", editData.techCategory);
-
-//       const token = sessionStorage.getItem("accessToken");
-//       const res = await fetch(`${API_BASE}/api/auth/technician/profile`, {
-//         method: "PUT",
-//         headers: {
-//           Authorization: `Bearer ${token}`,
-//         },
-//         body: formData,
-//       });
-
-//       if (res.ok) {
-//         // Update session storage and trigger parent update
-//         const updatedProfile: TechnicianProfile = {
-//           ...profile,
-//           name: editData.name,
-//           email: editData.email,
-//           mobile: editData.mobile,
-//           address: editData.address,
-//           technicianDetails: {
-//             ...profile.technicianDetails!,
-//             skill: editData.skill,
-//             experience: editData.experience,
-//             bankName: editData.bankName,
-//             ifscNo: editData.ifscNo,
-//             branchName: editData.branchName,
-//             timeDuration: editData.timeDuration,
-//             emergencyAvailable: editData.emergencyAvailable,
-//             techCategory: editData.techCategory,
-//           },
-//         };
-
-//         sessionStorage.setItem("user", JSON.stringify(updatedProfile));
-//         onProfileUpdate?.(updatedProfile);
-//         setIsEditing(false);
-//         alert("Profile updated successfully!");
-//       } else {
-//         const errorData = await res.json();
-//         alert(errorData.message || "Failed to update profile");
-//       }
-//     } catch (error) {
-//       console.error("Error updating profile:", error);
-//       alert("Failed to update profile. Please try again.");
-//     } finally {
-//       setSaving(false);
-//     }
-//   };
-
-//   const handleInputChange = (
-//     field: string,
-//     value: string | number | boolean
-//   ) => {
-//     setEditData((prev) => ({ ...prev, [field]: value }));
-//   };
-
-
-
-
-
 const ProfileTab = ({ onProfileUpdate }: {
   onProfileUpdate?: (updatedProfile: TechnicianProfile) => void;
 }) => {
@@ -3180,6 +3390,30 @@ const [selectedDoc, setSelectedDoc] = useState<{
 } | null>(null);
 
 const [services, setServices] = useState<any[]>([]);
+
+
+const [showPasswordModal, setShowPasswordModal] = useState(false);
+const [step, setStep] = useState(1);
+const [cpLoading, setCpLoading] = useState(false);
+
+const [cpData, setCpData] = useState({
+  current_password: "",
+  otp: "",
+  token: "",
+  new_password: "",
+  confirm_password: "",
+});
+
+const [showCP, setShowCP] = useState({
+  current: false,
+  new: false,
+  confirm: false,
+});
+
+// refs (IMPORTANT for fixing input clearing issue)
+const currentRef = useRef<HTMLInputElement>(null);
+const newRef = useRef<HTMLInputElement>(null);
+const confirmRef = useRef<HTMLInputElement>(null);
 
 
 useEffect(() => {
@@ -3375,6 +3609,143 @@ const getServiceLabel = (code?: string) => {
   setIsModalOpen(true);
 };
 
+
+
+const handleRequestOtp = async () => {
+  if (!cpData.current_password) {
+    alert("Enter current password");
+    return;
+  }
+
+  setCpLoading(true);
+
+  try {
+    const res = await fetch(`${API_BASE}/api/change-password/request-otp`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        username: profile.username,
+        current_password: cpData.current_password,
+      }),
+    });
+
+    const data = await res.json();
+    setCpLoading(false);
+
+    if (!res.ok) {
+      alert(data.message);
+      return;
+    }
+
+    alert("OTP sent successfully");
+    setStep(2);
+  } catch (err) {
+    setCpLoading(false);
+    alert("Error sending OTP");
+  }
+};
+
+
+const handleVerifyOtp = async () => {
+  if (!cpData.otp) {
+    alert("Enter OTP");
+    return;
+  }
+
+  setCpLoading(true);
+
+  try {
+    const res = await fetch(`${API_BASE}/api/change-password/verify-otp`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        username: profile.username,
+        otp: cpData.otp,
+      }),
+    });
+
+    const data = await res.json();
+    setCpLoading(false);
+
+    if (!res.ok) {
+      alert(data.message);
+      return;
+    }
+
+    setCpData(prev => ({ ...prev, token: data.token }));
+    setStep(3);
+  } catch (err) {
+    setCpLoading(false);
+    alert("OTP verification failed");
+  }
+};
+
+
+
+const handleChangePassword = async () => {
+  if (!cpData.new_password || !cpData.confirm_password) {
+    alert("Fill all fields");
+    return;
+  }
+
+  if (cpData.new_password !== cpData.confirm_password) {
+    alert("Passwords do not match");
+    return;
+  }
+
+  setCpLoading(true);
+
+  try {
+    const res = await fetch(`${API_BASE}/api/change-password`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        username: profile.username,
+        token: cpData.token,
+        new_password: cpData.new_password,
+        confirm_password: cpData.confirm_password,
+      }),
+    });
+
+    const data = await res.json();
+    setCpLoading(false);
+
+    if (!res.ok) {
+      alert(data.message);
+      return;
+    }
+
+    alert("Password changed successfully");
+
+    // RESET EVERYTHING
+    setShowPasswordModal(false);
+    setStep(1);
+    setCpData({
+      current_password: "",
+      otp: "",
+      token: "",
+      new_password: "",
+      confirm_password: "",
+    });
+
+    setShowCP({
+      current: false,
+      new: false,
+      confirm: false,
+    });
+
+  } catch (err) {
+    setCpLoading(false);
+    alert("Error changing password");
+  }
+};
+
   return (
     <div className="space-y-6">
       {/* Profile Header */}
@@ -3526,6 +3897,15 @@ const getServiceLabel = (code?: string) => {
               Cancel
             </button>
           )}
+
+
+
+<button
+  onClick={() => setShowPasswordModal(true)}
+  className="px-5 py-2.5 rounded-xl font-semibold bg-indigo-600 text-white hover:bg-indigo-500"
+>
+  Change Password
+</button>
         </div>
       </div>
 
@@ -3611,15 +3991,6 @@ const getServiceLabel = (code?: string) => {
             <div>
               <p className="text-slate-500 text-sm mb-1">Category</p>
               {isEditing ? (
-                // <input
-                //   type="text"
-                //   value={editData.techCategory}
-                //   onChange={(e) =>
-                //     handleInputChange("techCategory", e.target.value)
-                //   }
-                //   placeholder="e.g., Home Services"
-                //   className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
-                // />
 
                 <select
   value={editData.techCategory}
@@ -3631,7 +4002,7 @@ const getServiceLabel = (code?: string) => {
   <option value="">Select Category</option>
   {services.map((service) => (
     <option key={service.id} value={service.service_code}>
-      {service.service_code} ({service.name})
+         {service.name}  ({service.service_code}) 
     </option>
   ))}
 </select>
@@ -3642,27 +4013,6 @@ const getServiceLabel = (code?: string) => {
                 </span>
               )}
             </div>
-            {/* <div>
-              <p className="text-slate-500 text-sm mb-1">Availability</p>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={editData.timeDuration}
-                  onChange={(e) =>
-                    handleInputChange("timeDuration", e.target.value)
-                  }
-                  placeholder="e.g., Full Time, Part Time"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
-                />
-              ) : (
-                <span className="text-white">
-                  {tech?.timeDuration || "Full Time"}
-                </span>
-              )}
-            </div> */}
-
-
-
             <div>
   <p className="text-slate-500 text-sm mb-1">Availability</p>
 
@@ -3764,40 +4114,6 @@ const getServiceLabel = (code?: string) => {
         <h4 className="text-lg font-bold text-white mb-4">
           Verified Documents
         </h4>
-        {/* <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            { name: "Aadhar Card", value: tech?.aadharCardNo },
-            { name: "PAN Card", value: tech?.panCardNo },
-            { name: "Bank Passbook", value: tech?.bankName },
-            { name: "Experience Certificate", value: "Uploaded" },
-          ].map((doc) => (
-            <div
-              key={doc.name}
-              className="p-4 bg-slate-800/50 rounded-xl flex items-center gap-3"
-            >
-              <FileText
-                size={20}
-                className={doc.value ? "text-emerald-400" : "text-slate-600"}
-              />
-              <div>
-                <p className="text-white text-sm font-medium">{doc.name}</p>
-                <p
-                  className={
-                    doc.value
-                      ? "text-emerald-400 text-xs"
-                      : "text-slate-500 text-xs"
-                  }
-                >
-                  {doc.value ? "Verified" : "Not uploaded"}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div> */}
-
-
-
-
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
   {[
@@ -3890,6 +4206,179 @@ const getServiceLabel = (code?: string) => {
       className="absolute inset-0"
       onClick={() => setIsModalOpen(false)}
     />
+  </div>
+)}
+
+
+
+
+
+
+
+
+
+
+
+
+
+{showPasswordModal && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+    <div className="bg-slate-900 rounded-2xl p-6 w-[90%] max-w-md relative">
+
+      {/* Close */}
+      <button
+        onClick={() => {
+          setShowPasswordModal(false);
+          setStep(1);
+        }}
+        className="absolute top-4 right-4 text-slate-400 hover:text-white"
+      >
+        <X size={22} />
+      </button>
+
+      <h3 className="text-xl font-bold text-white mb-4">
+        Change Password
+      </h3>
+
+      {/* STEP 1 */}
+      {step === 1 && (
+        <div className="space-y-4">
+          <div className="relative">
+            <input
+              ref={currentRef}
+              type={showCP.current ? "text" : "password"}
+              placeholder="Current Password"
+              value={cpData.current_password}
+              onChange={(e) =>
+                setCpData(prev => ({
+                  ...prev,
+                  current_password: e.target.value,
+                }))
+              }
+              className="w-full p-3 rounded-lg bg-slate-800 text-white pr-10"
+            />
+
+            <button
+              type="button"
+              onClick={() => {
+                setShowCP(prev => ({
+                  ...prev,
+                  current: !prev.current,
+                }));
+                setTimeout(() => currentRef.current?.focus(), 0);
+              }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+            >
+              {showCP.current ? <Eye size={18} /> : <EyeOff size={18} />}
+            </button>
+          </div>
+
+          <button
+            onClick={handleRequestOtp}
+            className="w-full py-3 bg-indigo-600 rounded-lg text-white font-semibold"
+          >
+            {cpLoading ? "Sending..." : "Send OTP"}
+          </button>
+        </div>
+      )}
+
+      {/* STEP 2 */}
+      {step === 2 && (
+        <div className="space-y-4">
+          <input
+            type="text"
+            placeholder="Enter OTP"
+            value={cpData.otp}
+            onChange={(e) =>
+              setCpData(prev => ({ ...prev, otp: e.target.value }))
+            }
+            className="w-full p-3 rounded-lg bg-slate-800 text-white"
+          />
+
+          <button
+            onClick={handleVerifyOtp}
+            className="w-full py-3 bg-indigo-600 rounded-lg text-white font-semibold"
+          >
+            {cpLoading ? "Verifying..." : "Verify OTP"}
+          </button>
+        </div>
+      )}
+
+      {/* STEP 3 */}
+      {step === 3 && (
+        <div className="space-y-4">
+
+          {/* NEW PASSWORD */}
+          <div className="relative">
+            <input
+              ref={newRef}
+              type={showCP.new ? "text" : "password"}
+              placeholder="New Password"
+              value={cpData.new_password}
+              onChange={(e) =>
+                setCpData(prev => ({
+                  ...prev,
+                  new_password: e.target.value,
+                }))
+              }
+              className="w-full p-3 rounded-lg bg-slate-800 text-white pr-10"
+            />
+
+            <button
+              type="button"
+              onClick={() => {
+                setShowCP(prev => ({
+                  ...prev,
+                  new: !prev.new,
+                }));
+                setTimeout(() => newRef.current?.focus(), 0);
+              }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+            >
+              {showCP.new ? <Eye size={18} /> : <EyeOff size={18} />}
+            </button>
+          </div>
+
+          {/* CONFIRM PASSWORD */}
+          <div className="relative">
+            <input
+              ref={confirmRef}
+              type={showCP.confirm ? "text" : "password"}
+              placeholder="Confirm Password"
+              value={cpData.confirm_password}
+              onChange={(e) =>
+                setCpData(prev => ({
+                  ...prev,
+                  confirm_password: e.target.value,
+                }))
+              }
+              className="w-full p-3 rounded-lg bg-slate-800 text-white pr-10"
+            />
+
+            <button
+              type="button"
+              onClick={() => {
+                setShowCP(prev => ({
+                  ...prev,
+                  confirm: !prev.confirm,
+                }));
+                setTimeout(() => confirmRef.current?.focus(), 0);
+              }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+            >
+              {showCP.confirm ? <Eye size={18} /> : <EyeOff size={18} />}
+            </button>
+          </div>
+
+          <button
+            onClick={handleChangePassword}
+            className="w-full py-3 bg-green-600 rounded-lg text-white font-semibold"
+          >
+            {cpLoading ? "Updating..." : "Change Password"}
+          </button>
+        </div>
+      )}
+    </div>
   </div>
 )}
     </div>

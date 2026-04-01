@@ -261,42 +261,46 @@ const handleSave = async () => {
           <div className="px-8 pb-8 -mt-16 relative">
             <div className="flex flex-col md:flex-row md:items-end gap-6">
               {/* Avatar */}
-              <div className="relative">
-                {/* <div className="w-32 h-32 bg-gradient-to-br from-indigo-500 to-violet-500 rounded-3xl border-4 border-white shadow-xl flex items-center justify-center text-white text-5xl font-black">
-                  {user.name?.charAt(0) || "U"}
-                </div> */}
-                <div className="w-32 h-32 rounded-3xl border-4 border-white shadow-xl overflow-hidden bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center">
-  {user.profileImage ? (
-    <img
-      src={user.profileImage}
-      alt={user.name}
-      className="w-full h-full object-cover"
-    />
-  ) : (
-    <span className="text-white text-5xl font-black">
-      {user.name?.charAt(0) || "U"}
-    </span>
-  )}
+             <div className="relative">
+  <div className="w-32 h-32 rounded-3xl border-4 border-white shadow-xl overflow-hidden bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center">
+    {user.profileImage ? (
+      <img
+        src={user.profileImage}
+        alt={user.name}
+        className="w-full h-full object-cover"
+      />
+    ) : (
+      <span className="text-white text-5xl font-black">
+        {user.name?.charAt(0) || "U"}
+      </span>
+    )}
+  </div>
+
+  {/* Camera Button */}
+  <label
+    className={`absolute -bottom-2 -right-2 w-10 h-10 rounded-xl shadow-lg flex items-center justify-center transition-colors
+    ${
+      isEditing
+        ? "bg-white hover:bg-slate-50 cursor-pointer"
+        : "bg-slate-200 cursor-not-allowed pointer-events-none"
+    }`}
+  >
+    <Camera size={18} className="text-slate-600" />
+
+    {isEditing && (
+      <input
+        type="file"
+        accept="image/*"
+        hidden
+        onChange={(e) => {
+          if (e.target.files && e.target.files[0]) {
+            setProfileImage(e.target.files[0]);
+          }
+        }}
+      />
+    )}
+  </label>
 </div>
-
-                {/* <button className="absolute -bottom-2 -right-2 w-10 h-10 bg-white rounded-xl shadow-lg flex items-center justify-center hover:bg-slate-50 transition-colors">
-                  <Camera size={18} className="text-slate-600" />
-                </button> */}
-                <label className="absolute -bottom-2 -right-2 w-10 h-10 bg-white rounded-xl shadow-lg flex items-center justify-center hover:bg-slate-50 transition-colors cursor-pointer">
-  <Camera size={18} className="text-slate-600" />
-  <input
-    type="file"
-    accept="image/*"
-    hidden
-    onChange={(e) => {
-      if (e.target.files && e.target.files[0]) {
-        setProfileImage(e.target.files[0]);
-      }
-    }}
-  />
-</label>
-
-              </div>
 
               {/* Name & Role */}
               <div className="flex-1">
@@ -365,27 +369,49 @@ const handleSave = async () => {
                 <label className="text-slate-600 text-sm font-medium block mb-2">
                   Email Address
                 </label>
-                <input
+                {/* <input
                   type="email"
                   value={editData.email}
                   onChange={(e) =>
                     setEditData({ ...editData, email: e.target.value })
                   }
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-5 py-4 text-slate-900 focus:outline-none focus:border-indigo-500"
-                />
+                /> */}
+
+                <input
+  type="email"
+  value={editData.email}
+  readOnly
+  className="w-full bg-slate-100 border border-slate-200 rounded-xl px-5 py-4 text-slate-500 cursor-not-allowed"
+/>
               </div>
               <div>
                 <label className="text-slate-600 text-sm font-medium block mb-2">
                   Phone Number
                 </label>
-                <input
+                {/* <input
                   type="tel"
                   value={editData.mobile}
                   onChange={(e) =>
                     setEditData({ ...editData, mobile: e.target.value })
                   }
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-5 py-4 text-slate-900 focus:outline-none focus:border-indigo-500"
-                />
+                /> */}
+
+                <input
+  type="tel"
+  value={editData.mobile}
+  maxLength={10}
+  onChange={(e) => {
+    const value = e.target.value;
+
+    // Allow only digits
+    if (/^\d*$/.test(value)) {
+      setEditData({ ...editData, mobile: value });
+    }
+  }}
+  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-5 py-4 text-slate-900 focus:outline-none focus:border-indigo-500"
+/>
               </div>
               <div>
                 <label className="text-slate-600 text-sm font-medium block mb-2">

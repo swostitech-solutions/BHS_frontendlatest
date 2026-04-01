@@ -681,7 +681,7 @@ const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTML
                       className="w-full bg-slate-700/50 border border-slate-600 rounded-xl px-4 py-3.5 text-white focus:outline-none focus:border-indigo-500 transition-colors"
                     >
                       <option value="">Select availability</option>
-                      <option value="Full-time">Full-time (8AM - 8PM)</option>
+                      <option value="Full-time">Full-time (8AM - 6PM)</option>
                       <option value="Part-time Morning">Part-time Morning (8AM - 2PM)</option>
                       <option value="Part-time Evening">Part-time Evening (2PM - 8PM)</option>
                       <option value="Weekends Only">Weekends Only</option>

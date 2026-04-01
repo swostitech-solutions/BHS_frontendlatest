@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   LayoutDashboard,
   Wrench,
@@ -16,6 +16,7 @@ import {
   Edit3,
   Trash2,
   Eye,
+  EyeOff,
   ChevronRight,
   Search,
   Filter,
@@ -541,32 +542,32 @@ const OverviewTab = ({
       value: stats.totalUsers,
       icon: Users,
       color: "from-blue-500 to-cyan-500",
-      change: "+12%",
-      up: true,
+      // change: "+12%",
+      // up: true,
     },
     {
       label: "Active Technicians",
       value: stats.activeTechnicians,
       icon: UserCog,
       color: "from-emerald-500 to-teal-500",
-      change: "+8%",
-      up: true,
+      // change: "+8%",
+      // up: true,
     },
     {
       label: "Pending Approvals",
       value: stats.pendingTechnicians,
       icon: Clock,
       color: "from-amber-500 to-orange-500",
-      change: stats.pendingTechnicians > 0 ? "Action Required" : "All Clear",
-      up: false,
+      // change: stats.pendingTechnicians > 0 ? "Action Required" : "All Clear",
+      // up: false,
     },
     {
       label: "Total Services",
       value: stats.totalSubServices,
       icon: Package,
       color: "from-violet-500 to-fuchsia-500",
-      change: "+5%",
-      up: true,
+      // change: "+5%",
+      // up: true,
     },
   ];
 
@@ -589,7 +590,7 @@ const OverviewTab = ({
               >
                 <stat.icon size={24} className="text-white" />
               </div>
-              <span
+              {/* <span
                 className={`flex items-center gap-1 text-xs font-bold ${
                   stat.up ? "text-emerald-400" : "text-amber-400"
                 }`}
@@ -600,7 +601,7 @@ const OverviewTab = ({
                   <AlertCircle size={14} />
                 )}
                 {stat.change}
-              </span>
+              </span> */}
             </div>
             <p className="text-slate-500 text-sm font-medium">{stat.label}</p>
             <p className="text-4xl font-black text-white mt-1">{stat.value}</p>
@@ -1116,12 +1117,6 @@ const ServicesTab = ({
   const [editSubServiceImage, setEditSubServiceImage] = useState<File | null>(null);
   const [localSearch, setLocalSearch] = useState("");
 
-  // const filteredServices = services.filter(
-  //   (s) =>
-  //     s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-  //     s.service_code.toLowerCase().includes(searchQuery.toLowerCase()),
-  // );
-
   const filteredServices = services.filter((s) => {
   const searchText = localSearch.toLowerCase();
 
@@ -1367,7 +1362,9 @@ const filteredSubServices = subServices.filter((sub) => {
       </div>
 
       {/* Services Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"> */}
+      <div className="max-h-[650px] overflow-y-auto pr-2">
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredServices.map((service) => (
           <div
             key={service.id}
@@ -1462,6 +1459,7 @@ const filteredSubServices = subServices.filter((sub) => {
             </button>
           </div>
         )}
+      </div>
       </div>
 
 
@@ -2059,12 +2057,28 @@ const filteredUsers = users.filter((u) => {
 
 
 
-  useEffect(() => {
+//   useEffect(() => {
+//   const initialMap: Record<number, boolean> = {};
+
+//   users.forEach((u) => {
+//     // assuming backend sends isActive inside technician
+//     initialMap[u.userId] = (u as any)?.technician?.isActive ?? true;
+//   });
+
+//   setActiveMap(initialMap);
+// }, [users]);
+
+
+useEffect(() => {
   const initialMap: Record<number, boolean> = {};
 
   users.forEach((u) => {
-    // assuming backend sends isActive inside technician
-    initialMap[u.userId] = (u as any)?.technician?.isActive ?? true;
+    // ❌ If rejected → always inactive
+    if (u.technician?.status === "REJECT") {
+      initialMap[u.userId] = false;
+    } else {
+      initialMap[u.userId] = (u as any)?.technician?.isActive ?? true;
+    }
   });
 
   setActiveMap(initialMap);
@@ -2106,7 +2120,48 @@ const filteredUsers = users.filter((u) => {
 
 
 
+// const handleToggleActive = async (userId: number) => {
+//   try {
+//     const token = sessionStorage.getItem("accessToken");
+
+//     const res = await fetch(
+//       `${API_BASE}/api/auth/technician/${userId}/toggle-active`,
+//       {
+//         method: "PATCH",
+//         headers: {
+//           Authorization: `Bearer ${token}`,
+//         },
+//       }
+//     );
+
+//     const data = await res.json();
+
+//     if (res.status === 200) {
+//       // ✅ USE BACKEND VALUE (IMPORTANT)
+//       setActiveMap((prev) => ({
+//         ...prev,
+//         [userId]: data.isActive,
+//       }));
+//     } else {
+//       alert(data.message || "Failed to update status");
+//     }
+//   } catch (error) {
+//     console.error("Toggle error:", error);
+//     alert("Something went wrong");
+//   }
+// };
+
+
+
+
 const handleToggleActive = async (userId: number) => {
+  const tech = users.find((u) => u.userId === userId);
+
+  // ❌ Prevent toggling if rejected
+  if (tech?.technician?.status === "REJECT") {
+    return;
+  }
+
   try {
     const token = sessionStorage.getItem("accessToken");
 
@@ -2123,7 +2178,6 @@ const handleToggleActive = async (userId: number) => {
     const data = await res.json();
 
     if (res.status === 200) {
-      // ✅ USE BACKEND VALUE (IMPORTANT)
       setActiveMap((prev) => ({
         ...prev,
         [userId]: data.isActive,
@@ -2136,6 +2190,8 @@ const handleToggleActive = async (userId: number) => {
     alert("Something went wrong");
   }
 };
+
+
 
   return (
     <div className="space-y-6">
@@ -2487,12 +2543,21 @@ const handleToggleActive = async (userId: number) => {
 <td className="p-4 text-center">
   <div className="flex justify-center">
     <button
-      onClick={() => handleToggleActive(tech.userId)}
+      // onClick={() => handleToggleActive(tech.userId)}
+       onClick={() => handleToggleActive(tech.userId)}
+       disabled={tech.technician?.status === "REJECT"}
+      // className={`px-3 py-1 rounded-full text-xs font-bold transition-all duration-200 transform hover:scale-105 ${
+      //   activeMap[tech.userId] ?? true
+      //     ? "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 hover:shadow-lg"
+      //     : "bg-red-500/20 text-red-400 hover:bg-red-500/30 hover:shadow-lg"
+      // }`}
       className={`px-3 py-1 rounded-full text-xs font-bold transition-all duration-200 transform hover:scale-105 ${
-        activeMap[tech.userId] ?? true
-          ? "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 hover:shadow-lg"
-          : "bg-red-500/20 text-red-400 hover:bg-red-500/30 hover:shadow-lg"
-      }`}
+  tech.technician?.status === "REJECT"
+    ? "bg-red-500/20 text-red-400 cursor-not-allowed opacity-60"
+    : activeMap[tech.userId] ?? true
+    ? "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 hover:shadow-lg"
+    : "bg-red-500/20 text-red-400 hover:bg-red-500/30 hover:shadow-lg"
+}`}
     >
       {activeMap[tech.userId] ?? true ? "Active" : "Inactive"}
     </button>
@@ -2987,6 +3052,10 @@ const BookingsTab = ({
   const [assigning, setAssigning] = useState(false);
   const [localSearch, setLocalSearch] = useState("");
 
+
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [viewBooking, setViewBooking] = useState<Booking | null>(null);
+
   // Work Status mapping based on backend:
   // 0 = Rejected (technician rejected) or Unassigned awaiting action
   // 1 = Pending/Accepted (technician accepted, work in progress)
@@ -3298,9 +3367,19 @@ const BookingsTab = ({
                             Assign
                           </button>
                         )}
-                        <button className="p-2 hover:bg-slate-800 rounded-lg">
+                        {/* <button className="p-2 hover:bg-slate-800 rounded-lg">
                           <Eye size={16} className="text-slate-400" />
-                        </button>
+                        </button> */}
+
+                        <button
+  onClick={() => {
+    setViewBooking(booking);
+    setShowViewModal(true);
+  }}
+  className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+>
+  <Eye size={16} className="text-slate-400" />
+</button>
                       </div>
                     </td>
                   </tr>
@@ -3443,52 +3522,598 @@ const BookingsTab = ({
           </div>
         </div>
       )}
+
+
+
+
+
+
+      {/* View Booking Modal */}
+{showViewModal && viewBooking && (
+  <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
+    <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-2xl mx-4 animate-in zoom-in-95 duration-200">
+
+      {/* Header */}
+      <div className="flex items-center justify-between p-6 border-b border-slate-800">
+        <h3 className="text-xl font-bold text-white">
+          Booking Details
+        </h3>
+
+        <button
+          onClick={() => {
+            setShowViewModal(false);
+            setViewBooking(null);
+          }}
+          className="text-slate-400 hover:text-white"
+        >
+          ✕
+        </button>
+      </div>
+
+      {/* Body */}
+      <div className="p-6 space-y-6">
+
+        {/* Order Info */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <p className="text-slate-500 text-sm">Order ID</p>
+            <p className="text-violet-400 font-mono font-bold">
+              {viewBooking.order_id}
+            </p>
+          </div>
+
+          <div>
+            <p className="text-slate-500 text-sm">Status</p>
+            <p className="text-white">
+              {WORK_STATUS[viewBooking.work_status]?.label || "Unassigned"}
+            </p>
+          </div>
+        </div>
+
+        {/* Customer */}
+        <div className="bg-slate-800/50 rounded-xl p-4">
+          <p className="text-slate-400 text-sm mb-2">Customer</p>
+          <p className="text-white font-semibold">
+            {viewBooking.User?.name}
+          </p>
+          <p className="text-slate-500 text-sm">
+            {viewBooking.User?.mobile}
+          </p>
+        </div>
+
+        {/* Service */}
+        <div className="bg-slate-800/50 rounded-xl p-4">
+          <p className="text-slate-400 text-sm mb-2">Service</p>
+          <p className="text-white">
+            {viewBooking.subservice?.name || viewBooking.subservice_code}
+          </p>
+          <p className="text-slate-500 text-sm">
+            {viewBooking.service?.name || viewBooking.service_code}
+          </p>
+        </div>
+
+        {/* Schedule */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-slate-800/50 rounded-xl p-4">
+            <p className="text-slate-400 text-sm">Date</p>
+            <p className="text-white">
+              {new Date(viewBooking.date).toLocaleDateString()}
+            </p>
+          </div>
+
+          <div className="bg-slate-800/50 rounded-xl p-4">
+            <p className="text-slate-400 text-sm">Time Slot</p>
+            <p className="text-white">{viewBooking.time_slot}</p>
+          </div>
+        </div>
+
+        {/* Technician */}
+        <div className="bg-slate-800/50 rounded-xl p-4">
+          <p className="text-slate-400 text-sm mb-2">Technician</p>
+
+          {viewBooking.technician ? (
+            <p className="text-white font-semibold">
+              {viewBooking.technician.name}
+            </p>
+          ) : (
+            <p className="text-red-400">Not Assigned</p>
+          )}
+        </div>
+
+        {/* Price */}
+        <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 flex justify-between items-center">
+          <p className="text-slate-400">Total Price</p>
+          <p className="text-emerald-400 text-xl font-bold">
+            ₹{viewBooking.total_price}
+          </p>
+        </div>
+
+      </div>
+
+      {/* Footer */}
+      <div className="p-6 border-t border-slate-800 flex justify-end">
+        <button
+          onClick={() => {
+            setShowViewModal(false);
+            setViewBooking(null);
+          }}
+          className="px-6 py-2 bg-slate-800 text-white rounded-xl hover:bg-slate-700"
+        >
+          Close
+        </button>
+      </div>
+
+    </div>
+  </div>
+)}
     </div>
   );
 };
 
 // ==================== SETTINGS TAB ====================
 const SettingsTab = () => {
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [step, setStep] = useState(1);
+  const [cpLoading, setCpLoading] = useState(false);
+
+  const [cpData, setCpData] = useState({
+    current_password: "",
+    otp: "",
+    token: "",
+    new_password: "",
+    confirm_password: "",
+  });
+
+  const [showCP, setShowCP] = useState({
+    current: false,
+    new: false,
+    confirm: false,
+  });
+
+  const currentRef = useRef<HTMLInputElement>(null);
+  const newRef = useRef<HTMLInputElement>(null);
+  const confirmRef = useRef<HTMLInputElement>(null);
+
+  const user = JSON.parse(sessionStorage.getItem("user") || "{}");
+
+  // ================= EMERGENCY STATE =================
+  const [emergencyRules, setEmergencyRules] = useState<any[]>([]);
+  const [showEmergencyModal, setShowEmergencyModal] = useState(false);
+  const [editingRule, setEditingRule] = useState<any>(null);
+  const [emergencyLoading, setEmergencyLoading] = useState(false);
+
+  const [emergencyForm, setEmergencyForm] = useState({
+    urgency_level: "",
+    label: "",
+    percentage_markup: "",
+    multiplier: "",
+    is_active: true,
+  });
+
+  // ================= FETCH RULES =================
+  const fetchEmergencyRules = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/emergency-pricing`);
+      const data = await res.json();
+      setEmergencyRules(data || []);
+    } catch {
+      console.error("Fetch failed");
+    }
+  };
+
+  useEffect(() => {
+    fetchEmergencyRules();
+  }, []);
+
+  // ================= PASSWORD APIs =================
+  const handleRequestOtp = async () => {
+    if (!cpData.current_password) return alert("Enter current password");
+
+    setCpLoading(true);
+
+    try {
+      const res = await fetch(`${API_BASE}/api/change-password/request-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: user.username, current_password: cpData.current_password }),
+      });
+
+      const data = await res.json();
+      setCpLoading(false);
+
+      if (!res.ok) return alert(data.message);
+
+      alert("OTP sent");
+      setStep(2);
+    } catch {
+      setCpLoading(false);
+      alert("Error");
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!cpData.otp) return alert("Enter OTP");
+
+    setCpLoading(true);
+
+    try {
+      const res = await fetch(`${API_BASE}/api/change-password/verify-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: user.username, otp: cpData.otp }),
+      });
+
+      const data = await res.json();
+      setCpLoading(false);
+
+      if (!res.ok) return alert(data.message);
+
+      setCpData(prev => ({ ...prev, token: data.token }));
+      setStep(3);
+    } catch {
+      setCpLoading(false);
+      alert("Verification failed");
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (cpData.new_password !== cpData.confirm_password)
+      return alert("Passwords mismatch");
+
+    setCpLoading(true);
+
+    try {
+      const res = await fetch(`${API_BASE}/api/change-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: user.username,
+          token: cpData.token,
+          new_password: cpData.new_password,
+          confirm_password: cpData.confirm_password,
+        }),
+      });
+
+      const data = await res.json();
+      setCpLoading(false);
+
+      if (!res.ok) return alert(data.message);
+
+      alert("Password updated");
+
+      setShowPasswordModal(false);
+      setStep(1);
+      setCpData({
+        current_password: "",
+        otp: "",
+        token: "",
+        new_password: "",
+        confirm_password: "",
+      });
+    } catch {
+      setCpLoading(false);
+      alert("Error");
+    }
+  };
+
+  // ================= EMERGENCY CRUD =================
+const handleSaveEmergency = async () => {
+  if (!emergencyForm.urgency_level || !emergencyForm.label) {
+    return alert("Fill required fields");
+  }
+
+  setEmergencyLoading(true);
+
+  try {
+    const url = editingRule
+      ? `${API_BASE}/api/emergency-pricing/${editingRule.id}`
+      : `${API_BASE}/api/emergency-pricing`;
+
+    const method = editingRule ? "PUT" : "POST";
+
+    const payload = {
+      urgency_level: emergencyForm.urgency_level,
+      label: emergencyForm.label,
+
+      // ✅ FIXED VALUES
+      percentage_markup: 40,
+      multiplier: 1.4,
+      is_active: true,
+    };
+
+    const res = await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+    setEmergencyLoading(false);
+
+    if (!res.ok) return alert(data.message);
+
+    alert(editingRule ? "Updated" : "Created");
+
+    setShowEmergencyModal(false);
+    setEditingRule(null);
+
+    setEmergencyForm({
+      urgency_level: "",
+      label: "",
+    });
+
+    fetchEmergencyRules();
+  } catch {
+    setEmergencyLoading(false);
+    alert("Error saving");
+  }
+};
+
+  const handleDeleteEmergency = async (id: number) => {
+    if (!confirm("Delete rule?")) return;
+
+    await fetch(`${API_BASE}/api/emergency-pricing/${id}`, {
+      method: "DELETE",
+    });
+
+    fetchEmergencyRules();
+  };
+
+  const handleEditEmergency = (rule: any) => {
+    setEditingRule(rule);
+    setEmergencyForm(rule);
+    setShowEmergencyModal(true);
+  };
+
+  // ================= UI =================
+
   return (
-    <div className="space-y-6">
-      <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl p-6">
-        <h3 className="text-xl font-bold text-white mb-6">Platform Settings</h3>
-        <div className="space-y-6">
-          <div>
-            <label className="text-slate-400 text-sm font-medium block mb-2">
-              Commission Rate (%)
-            </label>
-            <input
-              type="number"
-              defaultValue={10}
-              className="w-full max-w-xs bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-violet-500"
-            />
+  <div className="space-y-6">
+
+      {/* SETTINGS */}
+      <div className="bg-slate-900 border rounded-2xl p-6">
+        <h3 className="text-white text-xl mb-4 font-bold">Settings</h3>
+
+        <button
+          onClick={() => setShowPasswordModal(true)}
+          className="bg-indigo-600 px-4 py-2 rounded text-white"
+        >
+          Change Password
+        </button>
+      </div>
+
+      {/* EMERGENCY RULES */}
+      <div className="bg-slate-900 border rounded-2xl p-6">
+        <div className="flex justify-between mb-4">
+          <h3 className="text-white text-xl font-bold">
+            Emergency Pricing
+          </h3>
+
+          <button
+            onClick={() => {
+              setEditingRule(null);
+              setShowEmergencyModal(true);
+            }}
+            className="bg-indigo-600 px-4 py-2 text-white rounded"
+          >
+            + Add
+          </button>
+        </div>
+
+        {emergencyRules.map(rule => (
+          <div key={rule.id} className="bg-slate-800 p-4 rounded mb-2 flex justify-between">
+            <div>
+              <p className="text-white">{rule.label}</p>
+              <p className="text-slate-400 text-sm">
+                {rule.percentage_markup}% | x{rule.multiplier}
+              </p>
+            </div>
+
+            <div className="flex gap-2">
+              <button onClick={() => handleEditEmergency(rule)} className="bg-yellow-500 px-3 py-1 rounded text-white">Edit</button>
+              <button onClick={() => handleDeleteEmergency(rule.id)} className="bg-red-500 px-3 py-1 rounded text-white">Delete</button>
+            </div>
           </div>
-          <div>
-            <label className="text-slate-400 text-sm font-medium block mb-2">
-              GST Rate (%)
-            </label>
-            <input
-              type="number"
-              defaultValue={18}
-              className="w-full max-w-xs bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-violet-500"
-            />
-          </div>
-          <div>
-            <label className="text-slate-400 text-sm font-medium block mb-2">
-              Emergency Service Fee (₹)
-            </label>
-            <input
-              type="number"
-              defaultValue={500}
-              className="w-full max-w-xs bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-violet-500"
-            />
-          </div>
-          <button className="px-6 py-3 bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-xl text-white font-semibold hover:opacity-90 transition-opacity">
-            Save Settings
+        ))}
+      </div>
+
+      {/* EMERGENCY MODAL */}
+{showEmergencyModal && (
+  <div className="fixed inset-0 bg-black/70 flex justify-center items-center z-50">
+    <div className="bg-slate-900 p-6 rounded-xl w-full max-w-md relative">
+
+      {/* ❌ CLOSE */}
+      <button
+        onClick={() => {
+          setShowEmergencyModal(false);
+          setEditingRule(null);
+        }}
+        className="absolute top-4 right-4 text-slate-400 hover:text-white"
+      >
+        <X size={20} />
+      </button>
+
+      <h3 className="text-white mb-4 font-bold text-lg">
+        {editingRule ? "Edit Rule" : "Add Rule"}
+      </h3>
+
+      <div className="space-y-4">
+
+        {/* URGENCY LEVEL */}
+        <input
+          placeholder="Urgency Level (e.g. super_emergency)"
+          className="w-full p-3 bg-slate-800 text-white rounded"
+          value={emergencyForm.urgency_level}
+          onChange={(e) =>
+            setEmergencyForm(prev => ({
+              ...prev,
+              urgency_level: e.target.value
+            }))
+          }
+        />
+
+        {/* LABEL */}
+        <input
+          placeholder="Label (e.g. Super Emergency 30–45 mins)"
+          className="w-full p-3 bg-slate-800 text-white rounded"
+          value={emergencyForm.label}
+          onChange={(e) =>
+            setEmergencyForm(prev => ({
+              ...prev,
+              label: e.target.value
+            }))
+          }
+        />
+
+        {/* ACTION BUTTONS */}
+        <div className="flex gap-3 pt-2">
+          <button
+            onClick={handleSaveEmergency}
+            className="flex-1 bg-green-600 py-2 rounded text-white"
+          >
+            {emergencyLoading ? "Saving..." : "Save"}
+          </button>
+
+          <button
+            onClick={() => {
+              setShowEmergencyModal(false);
+              setEditingRule(null);
+            }}
+            className="flex-1 bg-slate-700 py-2 rounded text-white"
+          >
+            Cancel
           </button>
         </div>
       </div>
+    </div>
+  </div>
+)}
+
+      {/* PASSWORD MODAL (UNCHANGED LOGIC) */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-black/70 flex justify-center items-center">
+          <div className="bg-slate-900 p-6 rounded-xl w-full max-w-md">
+
+            <button onClick={() => setShowPasswordModal(false)} className="absolute right-4 top-4 text-white">
+              <X />
+            </button>
+
+            {step === 1 && (
+              <>
+            <div className="relative mb-3">
+  <input
+    ref={currentRef}
+    type={showCP.current ? "text" : "password"}
+    placeholder="Current Password"
+    value={cpData.current_password}
+    onChange={e =>
+      setCpData(prev => ({
+        ...prev,
+        current_password: e.target.value
+      }))
+    }
+    className="w-full p-3 bg-slate-800 text-white rounded pr-10"
+  />
+
+  <button
+    type="button"
+    onClick={() => {
+      setShowCP(prev => ({ ...prev, current: !prev.current }));
+      setTimeout(() => currentRef.current?.focus(), 0);
+    }}
+    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+  >
+    {showCP.current ? <Eye size={18} /> : <EyeOff size={18} />}
+  </button>
+</div>
+
+                <button onClick={handleRequestOtp} className="w-full bg-indigo-600 py-2 text-white">
+                  Send OTP
+                </button>
+              </>
+            )}
+
+            {step === 2 && (
+              <>
+                <input
+                  placeholder="OTP"
+                  value={cpData.otp}
+                  onChange={e => setCpData(prev => ({ ...prev, otp: e.target.value }))}
+                  className="w-full p-3 bg-slate-800 text-white mb-3"
+                />
+
+                <button onClick={handleVerifyOtp} className="w-full bg-indigo-600 py-2 text-white">
+                  Verify
+                </button>
+              </>
+            )}
+
+            {step === 3 && (
+              <>
+               <div className="relative mb-3">
+  <input
+    ref={newRef}
+    type={showCP.new ? "text" : "password"}
+    placeholder="New Password"
+    value={cpData.new_password}
+    onChange={e =>
+      setCpData(prev => ({
+        ...prev,
+        new_password: e.target.value
+      }))
+    }
+    className="w-full p-3 bg-slate-800 text-white rounded pr-10"
+  />
+
+  <button
+    type="button"
+    onClick={() => {
+      setShowCP(prev => ({ ...prev, new: !prev.new }));
+      setTimeout(() => newRef.current?.focus(), 0);
+    }}
+    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+  >
+    {showCP.new ? <Eye size={18} /> : <EyeOff size={18} />}
+  </button>
+</div>
+
+          <div className="relative mb-3">
+  <input
+    ref={confirmRef}
+    type={showCP.confirm ? "text" : "password"}
+    placeholder="Confirm Password"
+    value={cpData.confirm_password}
+    onChange={e =>
+      setCpData(prev => ({
+        ...prev,
+        confirm_password: e.target.value
+      }))
+    }
+    className="w-full p-3 bg-slate-800 text-white rounded pr-10"
+  />
+
+  <button
+    type="button"
+    onClick={() => {
+      setShowCP(prev => ({ ...prev, confirm: !prev.confirm }));
+      setTimeout(() => confirmRef.current?.focus(), 0);
+    }}
+    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+  >
+    {showCP.confirm ? <Eye size={18} /> : <EyeOff size={18} />}
+  </button>
+</div>
+
+                <button onClick={handleChangePassword} className="w-full bg-green-600 py-2 text-white">
+                  Change Password
+                </button>
+              </>
+            )}
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

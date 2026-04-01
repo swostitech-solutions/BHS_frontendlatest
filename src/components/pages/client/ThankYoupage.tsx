@@ -1,5 +1,7 @@
 import { useSearchParams, useNavigate } from "react-router-dom";
+import React, { useEffect } from "react";
 import { CheckCircle } from "lucide-react";
+import { API_BASE } from "../../../config/api";
 
 export default function ThankYouPage() {
   const [params] = useSearchParams();
@@ -8,6 +10,40 @@ export default function ThankYouPage() {
   const orderId = params.get("order_id");
 
   console.log("ThankYou Page Order:", orderId);
+
+
+
+useEffect(() => {
+  const clearCart = async () => {
+    try {
+
+      let pendingCart = JSON.parse(
+        sessionStorage.getItem("pendingCart") || "[]"
+      );
+
+      if (pendingCart.length === 0) {
+        pendingCart = JSON.parse(sessionStorage.getItem("cart") || "[]");
+      }
+
+      console.log("Deleting cart:", pendingCart);
+
+      for (const item of pendingCart) {
+        await fetch(`${API_BASE}/api/cart/item/${item.id}`, {
+          method: "DELETE",
+        }).catch(() => {});
+      }
+
+      sessionStorage.removeItem("cart");
+      sessionStorage.removeItem("pendingCart");
+      sessionStorage.removeItem("bookingData");
+
+    } catch (err) {
+      console.error("Cart cleanup error:", err);
+    }
+  };
+
+  clearCart();
+}, []);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50">

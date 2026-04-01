@@ -524,34 +524,85 @@ useEffect(() => {
       .catch(console.error);
   };
 
+  // const handleSelectEmergency = (
+  //   cartItem: CartItem,
+  //   option: EmergencyOption,
+  // ) => {
+  //   fetch(`${API_BASE}/api/emergency-pricing/calculate`, {
+  //     method: "POST",
+  //     headers: { "Content-Type": "application/json" },
+  //     body: JSON.stringify({
+  //       subservice_id: cartItem.subservice_id,
+  //       urgency_level: option.urgency_level,
+  //     }),
+  //   })
+  //     .then((res) => res.json())
+  //     .then((res) => {
+  //       const updatedCart = cart.map((item) =>
+  //         item.id === cartItem.id
+  //           ? {
+  //               ...item,
+  //               emergencyPrice: Number(res.data.emergency_price),
+  //               urgency_level: option.urgency_level,
+  //             }
+  //           : item,
+  //       );
+  //       updateCart(updatedCart);
+  //       setSelectedCartItem(null);
+  //     })
+  //     .catch(console.error);
+  // };
+
+
+
+
   const handleSelectEmergency = (
-    cartItem: CartItem,
-    option: EmergencyOption,
-  ) => {
-    fetch(`${API_BASE}/api/emergency-pricing/calculate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        subservice_id: cartItem.subservice_id,
-        urgency_level: option.urgency_level,
-      }),
+  cartItem: CartItem,
+  option: EmergencyOption
+) => {
+  const isAlreadySelected =
+    cartItem.urgency_level === option.urgency_level;
+
+  // If same option clicked again → remove emergency
+  if (isAlreadySelected) {
+    const updatedCart = cart.map((item) =>
+      item.id === cartItem.id
+        ? {
+            ...item,
+            emergencyPrice: undefined,
+            urgency_level: undefined,
+          }
+        : item
+    );
+
+    updateCart(updatedCart);
+    return;
+  }
+
+  fetch(`${API_BASE}/api/emergency-pricing/calculate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      subservice_id: cartItem.subservice_id,
+      urgency_level: option.urgency_level,
+    }),
+  })
+    .then((res) => res.json())
+    .then((res) => {
+      const updatedCart = cart.map((item) =>
+        item.id === cartItem.id
+          ? {
+              ...item,
+              emergencyPrice: Number(res.data.emergency_price),
+              urgency_level: option.urgency_level,
+            }
+          : item
+      );
+
+      updateCart(updatedCart);
     })
-      .then((res) => res.json())
-      .then((res) => {
-        const updatedCart = cart.map((item) =>
-          item.id === cartItem.id
-            ? {
-                ...item,
-                emergencyPrice: Number(res.data.emergency_price),
-                urgency_level: option.urgency_level,
-              }
-            : item,
-        );
-        updateCart(updatedCart);
-        setSelectedCartItem(null);
-      })
-      .catch(console.error);
-  };
+    .catch(console.error);
+};
 
   // const subtotal = cart.reduce(
   //   (sum, item) =>
@@ -709,7 +760,7 @@ useEffect(() => {
                     {item.urgency_level ? "Change Emergency" : "Add Emergency"}
                   </button>
 
-                  {selectedCartItem === item.id && (
+                  {/* {selectedCartItem === item.id && (
                     <div className="mt-2 space-y-2">
                       {emergencyOptions.map((opt) => (
                         <button
@@ -721,7 +772,31 @@ useEffect(() => {
                         </button>
                       ))}
                     </div>
-                  )}
+                  )} */}
+
+
+                  {selectedCartItem === item.id && (
+  <div className="mt-2 space-y-2">
+    {emergencyOptions.map((opt) => {
+      const checked = item.urgency_level === opt.urgency_level;
+
+      return (
+        <label
+          key={opt.id}
+          className="flex items-center gap-3 px-4 py-3 border rounded-xl cursor-pointer hover:bg-amber-50"
+        >
+          <input
+            type="checkbox"
+            checked={checked}
+            onChange={() => handleSelectEmergency(item, opt)}
+          />
+
+          <span className="font-semibold">{opt.label}</span>
+        </label>
+      );
+    })}
+  </div>
+)}
                 </div>
               </div>
             ))}

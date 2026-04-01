@@ -511,29 +511,55 @@ const SubServiceDetail = () => {
   }, [selectedUrgency, subService]);
 
   /* ================= GST CALCULATION ================= */
+  // useEffect(() => {
+  //   if (!subService) return;
+
+  //   const taxableAmount =
+  //     emergencyCalc?.emergency_price ?? Number(subService.price);
+
+  //   setGstLoading(true);
+
+  //   fetch(`${API_BASE}/api/gst/calculate`, {
+  //     method: "POST",
+  //     headers: { "Content-Type": "application/json" },
+  //     body: JSON.stringify({
+  //       base_amount: taxableAmount,
+  //       is_inter_state: false,
+  //     }),
+  //   })
+  //     .then((res) => res.json())
+  //     .then((res) => {
+  //       setGstData(res.data);
+  //       setGstLoading(false);
+  //     })
+  //     .catch(() => setGstLoading(false));
+  // }, [subService, emergencyCalc]);
+
+
+
+
   useEffect(() => {
-    if (!subService) return;
+  if (!subService) return;
 
-    const taxableAmount =
-      emergencyCalc?.emergency_price ?? Number(subService.price);
+  const taxableAmount = Number(subService.price); // ✅ always base price
 
-    setGstLoading(true);
+  setGstLoading(true);
 
-    fetch(`${API_BASE}/api/gst/calculate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        base_amount: taxableAmount,
-        is_inter_state: false,
-      }),
+  fetch(`${API_BASE}/api/gst/calculate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      base_amount: taxableAmount,
+      is_inter_state: false,
+    }),
+  })
+    .then((res) => res.json())
+    .then((res) => {
+      setGstData(res.data);
+      setGstLoading(false);
     })
-      .then((res) => res.json())
-      .then((res) => {
-        setGstData(res.data);
-        setGstLoading(false);
-      })
-      .catch(() => setGstLoading(false));
-  }, [subService, emergencyCalc]);
+    .catch(() => setGstLoading(false));
+}, [subService]);
 
   /* ================= LOCATION ================= */
   const handleGetCurrentLocation = () => {
@@ -598,9 +624,12 @@ const SubServiceDetail = () => {
   const imageUrl = subService.image || "/placeholder-service.jpg";
   const basePrice = Number(subService.price);
   const addonPrice = Number(emergencyCalc?.addon_price || 0);
-  const emergencyTotal = Number(emergencyCalc?.emergency_price || 0);
+  // const emergencyTotal = Number(emergencyCalc?.emergency_price || 0);
+  // const totalGST = Number(gstData?.total_gst || 0);
   const totalGST = Number(gstData?.total_gst || 0);
-  const grandTotal = Number(gstData?.grand_total || basePrice);
+  // const grandTotal = Number(gstData?.grand_total || basePrice);
+  const emergencyAddon = Number(emergencyCalc?.addon_price || 0);
+  const grandTotal = basePrice + totalGST + emergencyAddon;
 
   const handleProceed = async () => {
     // ✅ Check login
@@ -747,6 +776,7 @@ const SubServiceDetail = () => {
             <div className="pt-6 border-t border-white/20 flex justify-between">
               <span className="font-black text-xl">Total</span>
               <span className="font-black text-3xl">
+                {/* ₹{gstLoading ? "..." : grandTotal} */}
                 ₹{gstLoading ? "..." : grandTotal}
               </span>
             </div>
