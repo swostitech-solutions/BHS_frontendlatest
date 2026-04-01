@@ -3581,15 +3581,29 @@ const BookingsTab = ({
           </p>
         </div>
 
-        {/* Service */}
+        {/* ✅ Service (with Quantity) */}
         <div className="bg-slate-800/50 rounded-xl p-4">
-          <p className="text-slate-400 text-sm mb-2">Service</p>
-          <p className="text-white">
-            {viewBooking.subservice?.name || viewBooking.subservice_code}
-          </p>
-          <p className="text-slate-500 text-sm">
-            {viewBooking.service?.name || viewBooking.service_code}
-          </p>
+          <div className="flex items-start justify-between gap-3">
+
+            {/* Left: Service Info */}
+            <div>
+              <p className="text-slate-400 text-sm mb-2">Service</p>
+
+              <p className="text-white">
+                {viewBooking.subservice?.name || viewBooking.subservice_code}
+              </p>
+
+              <p className="text-slate-500 text-sm">
+                {viewBooking.service?.name || viewBooking.service_code}
+              </p>
+            </div>
+
+            {/* Right: Quantity */}
+            <div className="bg-violet-500/20 border border-violet-500/40 text-violet-300 px-3 py-1 rounded-lg text-xs font-bold">
+              Qty: {viewBooking.quantity ?? 1}
+            </div>
+
+          </div>
         </div>
 
         {/* Schedule */}
