@@ -351,23 +351,6 @@ const [withdrawDisplayAmount, setWithdrawDisplayAmount] = useState(0);
 }, [activeTab]);
 
 
-  // NEW: Polling for new jobs every 10 seconds
-  // useEffect(() => {
-  //   if (!profile?.id || !isPolling) return;
-
-  //   pollingIntervalRef.current = setInterval(() => {
-  //     fetchBookingsWithNotification(profile.id);
-  //     setLastRefresh(new Date());
-  //   }, 10000); // Poll every 10 seconds
-
-  //   return () => {
-  //     if (pollingIntervalRef.current) {
-  //       clearInterval(pollingIntervalRef.current);
-  //     }
-  //   };
-  // }, [profile?.id, isPolling, seenJobIds]);
-
-
 
   useEffect(() => {
   if (!profile?.id || !isPolling) return;
@@ -422,35 +405,6 @@ const fetchWalletDetails = async () => {
     console.error("Wallet fetch error:", error);
   }
 };
-
-//// current ////
-// const fetchWalletTransactions = async (userId: number) => {
-//   try {
-//     const token = sessionStorage.getItem("accessToken");
-
-//     const res = await fetch(
-//       `${API_BASE}/api/wallet/${userId}/transactions`,
-//       {
-//         headers: {
-//           Authorization: `Bearer ${token}`,
-//         },
-//       }
-//     );
-
-//     if (!res.ok) {
-//       console.error("Failed to fetch transactions");
-//       return;
-//     }
-
-//     const data = await res.json();
-
-//     setWalletTransactions(data || []);
-//   } catch (error) {
-//     console.error("Transaction fetch error:", error);
-//   }
-// };
-
-
 
 
 const fetchWalletTransactions = async () => {
@@ -565,77 +519,6 @@ const handleWalletRecharge = async () => {
 };
 
 
-
-
-
-
-/// current ////
-// const handleWithdraw = async () => {
-//   const amountNumber = Number(withdrawAmount);
-
-//   if (!withdrawAmount || amountNumber <= 0) {
-//     setShowErrorToast("Enter valid withdrawal amount");
-//     return;
-//   }
-
-//   try {
-//     setWithdrawLoading(true);
-
-//     const token = sessionStorage.getItem("accessToken");
-//     const userData = sessionStorage.getItem("user");
-
-//     if (!userData) {
-//       setShowErrorToast("User not found");
-//       return;
-//     }
-
-//     const user = JSON.parse(userData);
-
-//     const payload = {
-//       technician_id: user.id,
-//       amount: amountNumber,
-//     };
-
-//     const res = await fetch(`${API_BASE}/api/wallet/withdraw`, {
-//       method: "POST",
-//       headers: {
-//         "Content-Type": "application/json",
-//         Authorization: `Bearer ${token}`,
-//       },
-//       body: JSON.stringify(payload),
-//     });
-
-//     const data = await res.json();
-
-//     if (!res.ok || !data.success) {
-//       setShowErrorToast(data.message || "Withdrawal failed");
-//       return;
-//     }
-
-
-//     setWithdrawDisplayAmount(amountNumber); // store entered amount
-//     setRemainingBalance(data.remainingBalance);
-//     setWithdrawSuccess(true);
-//     setShowWithdrawModal(true);
-
-//     setWithdrawAmount("");
-
-//     // Refresh wallet
-//     fetchWalletDetails(user.id);
-
-//     // ✅ Refresh Transactions (THIS IS WHAT YOU NEED)
-//     fetchWalletTransactions(user.id);
-
-//   } catch (error) {
-//     console.error(error);
-//     setShowErrorToast("Withdrawal failed");
-//   } finally {
-//     setWithdrawLoading(false);
-//   }
-// };
-
-
-
 const handleWithdraw = async () => {
   const amountNumber = Number(withdrawAmount);
 
@@ -748,126 +631,13 @@ const fetchTechnicianRating = async (userId: number) => {
   }
 };
 
-
-
-
-
-//   // NEW: Fetch bookings and check for new jobs
-//   const fetchBookingsWithNotification = async (techUserId: number) => {
-//     try {
-//       const userDataStr = sessionStorage.getItem("user");
-//       const userData = userDataStr ? JSON.parse(userDataStr) : null;
-//       const techCategory = userData?.technicianDetails?.techCategory;
-
-//       const res = await fetch(`${API_BASE}/api/service-on-booking`);
-//       if (!res.ok) return;
-
-//       const data = await res.json();
-//       const allBookings: Booking[] = data.bookings || [];
-
-//       // const relevantBookings = allBookings.filter((b: Booking) => {
-//       //   if (b.technician_allocated && b.technician?.id === techUserId) {
-//       //     return true;
-//       //   }
-//       //   if (!b.technician_allocated) {
-//       //     const serviceName = b.service?.name || "";
-//       //     const serviceCode = b.service_code || b.service?.service_code || "";
-//       //     // Use smart category matching (supports both service codes and names)
-//       //     if (categoryMatchesService(techCategory, serviceName, serviceCode)) {
-//       //       return true;
-//       //     }
-//       //   }
-//       //   return false;
-//       // });
-
-
-
-//       const relevantBookings = allBookings.filter((b: Booking) => {
-
-//   // ❌ Ignore unpaid bookings
-//   if (b.payment_status !== "PAID") {
-//     return false;
-//   }
-
-//   // if (b.technician_allocated && b.technician?.id === techUserId) {
-//   //   return true;
-//   // }
-
-//   // ✅ Job already accepted by THIS technician
-// if (b.technician_allocated && b.technician?.id === techUserId) {
-//   return true;
-// }
-
-// // ❌ Job accepted by another technician → hide
-// if (b.technician_allocated && b.technician?.id !== techUserId) {
-//   return false;
-// }
-
-//   if (!b.technician_allocated) {
-//     const serviceName = b.service?.name || "";
-//     const serviceCode = b.service_code || b.service?.service_code || "";
-
-//     if (categoryMatchesService(techCategory, serviceName, serviceCode)) {
-//       return true;
-//     }
-//   }
-
-//   return false;
-// });
-
-//       // Check for NEW jobs (not seen before)
-//       const newUnseenJobs = relevantBookings.filter(
-//         (b) => !b.technician_allocated && !seenJobIds.has(b.order_id)
-//       );
-
-//       // if (newUnseenJobs.length > 0) {
-//       //   // Show popup for the first new job
-//       //   setNewJobAlert(newUnseenJobs[0]);
-//       //   setShowNewJobPopup(true);
-
-//       //   // Play notification sound
-//       //   playNotificationSound();
-
-//       //   // Vibrate if supported
-//       //   if (navigator.vibrate) {
-//       //     navigator.vibrate([200, 100, 200]);
-//       //   }
-//       // }
-
-
-
-//       if (newUnseenJobs.length > 0) {
-//   const nextJob = newUnseenJobs[0];
-
-//   // ✅ Check using REF (not state)
-//   if (!seenJobIdsRef.current.has(nextJob.order_id)) {
-//     setNewJobAlert(nextJob);
-//     setShowNewJobPopup(true);
-
-//     playNotificationSound();
-
-//     if (navigator.vibrate) {
-//       navigator.vibrate([200, 100, 200]);
-//     }
-//   }
-// }
-
-
-//       setBookings(relevantBookings);
-//       setNotifications(relevantBookings.filter((b) => !b.technician_allocated));
-//     } catch (error) {
-//       console.error("Polling error:", error);
-//     }
-//   };
-
-
-// NEW: Fetch bookings and check for new jobs
 // NEW: Fetch bookings and check for new jobs
 const fetchBookingsWithNotification = async (techUserId: number) => {
   try {
     const userDataStr = sessionStorage.getItem("user");
     const userData = userDataStr ? JSON.parse(userDataStr) : null;
     const techCategory = userData?.technicianDetails?.techCategory;
+    
 
     const res = await fetch(`${API_BASE}/api/service-on-booking`);
     if (!res.ok) return;
@@ -1044,24 +814,6 @@ const fetchBookingsWithNotification = async (techUserId: number) => {
     setNewJobAlert(null);
   };
 
-  // NEW: Handle dismissing popup (just hides, doesn't reject - job stays available)
-  // const handleDismissPopup = () => {
-  //   // Just close popup without marking as seen or rejecting
-  //   // Job will show up again on next poll
-  //   setShowNewJobPopup(false);
-  //   setNewJobAlert(null);
-  // };
-
-//   const handleDismissPopup = () => {
-//   if (!newJobAlert) return;
-
-//   markJobAsSeen(newJobAlert.order_id);
-
-//   setShowNewJobPopup(false);
-//   setNewJobAlert(null);
-// };
-
-
   // Fetch bookings for technician:
   // 1. All bookings assigned to this technician
   // 2. Unassigned bookings matching technician's category (for accepting)
@@ -1082,24 +834,7 @@ const fetchBookingsWithNotification = async (techUserId: number) => {
 
       // Filter bookings:
       // 1. Bookings assigned to this technician (any status)
-      // 2. Unassigned bookings (technician_allocated: false) matching technician's category
-      // const relevantBookings = allBookings.filter((b: Booking) => {
-      //   // Already assigned to this technician
-      //   // NOTE: b.technician.id is USER ID (backend maps it from user.id in response)
-      //   if (b.technician_allocated && b.technician?.id === techUserId) {
-      //     return true;
-      //   }
-      //   // Unassigned booking matching category (new job requests)
-      //   // Use smart category matching function
-      //   if (!b.technician_allocated) {
-      //     const serviceName = b.service?.name || "";
-      //     const serviceCode = b.service_code || b.service?.service_code || "";
-      //     if (categoryMatchesService(techCategory, serviceName, serviceCode)) {
-      //       return true;
-      //     }
-      //   }
-      //   return false;
-      // });
+      // 2. Unassigned bookings (technician_allocated: false) matching technician's categor
 
 
       const relevantBookings = allBookings.filter((b: Booking) => {
@@ -1223,46 +958,6 @@ if (b.technician_allocated && b.technician?.id !== techUserId) {
 
   // Reject job using existing Swagger API: POST /api/service-on-booking/accept/:order_id
   // opinion=2 means reject
-  // const handleRejectJob = async (orderId: string) => {
-  //   try {
-  //     const token = sessionStorage.getItem("accessToken");
-  //     // Backend expects USER ID, not technician record ID
-
-  //     if (!profile?.id) {
-  //       alert("Profile not found. Please log in again.");
-  //       return;
-  //     }
-
-  //     const res = await fetch(
-  //       `${API_BASE}/api/service-on-booking/accept/${orderId}`,
-  //       {
-  //         method: "POST",
-  //         headers: {
-  //           "Content-Type": "application/json",
-  //           Authorization: `Bearer ${token}`,
-  //         },
-  //         body: JSON.stringify({
-  //           technician_id: profile.id, // USER ID
-  //           opinion: 2, // 2 = Reject
-  //         }),
-  //       }
-  //     );
-
-  //     if (!res.ok) {
-  //       const errorData = await res.json();
-  //       alert(errorData.message || "Failed to reject job");
-  //       return;
-  //     }
-
-  //     if (profile?.id) fetchBookings(profile.id);
-  //     setShowJobModal(false);
-  //   } catch (error) {
-  //     console.error("Error rejecting job:", error);
-  //     alert("Failed to reject job. Please try again.");
-  //   }
-  // };
-
-
   const handleRejectJob = async (orderId: string) => {
   try {
     const token = sessionStorage.getItem("accessToken");
@@ -1387,11 +1082,6 @@ if (b.technician_allocated && b.technician?.id !== techUserId) {
   const isRejected = profile?.technicianDetails?.status === "REJECT";
 
   // Stats update
-  // const stats = {
-  //   totalJobs: bookings.length,
-  //   completedJobs: bookings.filter((b) => b.work_status === WORK_STATUS.COMPLETED).length,
-  //   activeJobs: bookings.filter((b) => b.work_status === WORK_STATUS.IN_PROGRESS).length,
-  //   pendingJobs: bookings.filter((b) => b.work_status === WORK_STATUS.PENDING || b.work_status === WORK_STATUS.NEW).length,
   const stats = {
     totalJobs: bookings.length,
     completedJobs: bookings.filter(
@@ -1544,19 +1234,6 @@ if (b.technician_allocated && b.technician?.id !== techUserId) {
         </div>
 
         {/* Service Specialization Badge */}
-        {/* {profile?.technicianDetails?.techCategory && (
-          <div className="mb-6 p-3 bg-gradient-to-r from-violet-500/10 to-purple-500/10 border border-violet-500/20 rounded-xl">
-            <p className="text-violet-400 text-xs font-bold uppercase tracking-wider mb-1">
-              Specialization
-            </p>
-            <p className="text-white font-semibold text-sm">
-              {profile.technicianDetails.techCategory}
-            </p>
-            <p className="text-slate-500 text-xs mt-1">
-              You receive jobs matching this category
-            </p>
-          </div>
-        )} */}
 
         {/* Service Specialization Badge */}
 {profile?.technicianDetails?.techCategory && (
@@ -3110,31 +2787,29 @@ const JobsTab = ({
               ₹{job.total_price?.toLocaleString() || 0}
             </p>
 
-            {isNew ? (
-              <div className="flex gap-2">
-                <button
-                  onClick={() => onReject(job.order_id)}
-                  className="px-4 py-2 bg-red-500/20 text-red-400 rounded-lg font-semibold hover:bg-red-500/30 transition-colors"
-                >
-                  Reject
-                </button>
-                <button
-                  onClick={() => onAccept(job.order_id)}
-                  className="px-4 py-2 bg-emerald-500 text-white rounded-lg font-semibold hover:bg-emerald-400 transition-colors"
-                >
-                  Accept
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => onViewJob(job)}
-                className="px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg font-semibold hover:bg-emerald-500/30 transition-colors"
-              >
-                {job.work_status === WORK_STATUS.COMPLETED
-                  ? "View Details"
-                  : "Update Status"}
-              </button>
-            )}
+         {isNew ? (
+  <div className="flex gap-2">
+    <button
+      onClick={() => onReject(job.order_id)}
+      className="px-4 py-2 bg-red-500/20 text-red-400 rounded-lg font-semibold hover:bg-red-500/30 transition-colors"
+    >
+      Reject
+    </button>
+    <button
+      onClick={() => onAccept(job.order_id)}
+      className="px-4 py-2 bg-emerald-500 text-white rounded-lg font-semibold hover:bg-emerald-400 transition-colors"
+    >
+      Accept
+    </button>
+  </div>
+) : job.work_status !== WORK_STATUS.COMPLETED ? (
+  <button
+    onClick={() => onViewJob(job)}
+    className="px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg font-semibold hover:bg-emerald-500/30 transition-colors"
+  >
+    Update Status
+  </button>
+) : null}
           </div>
         </div>
       );
@@ -3522,6 +3197,12 @@ const getServiceLabel = (code?: string) => {
 
   const handleSaveProfile = async () => {
     setSaving(true);
+
+      if (!/^\d{10}$/.test(editData.mobile)) {
+    alert("Mobile number must be exactly 10 digits");
+    setSaving(false);
+    return;
+  }
     try {
       const formData = new FormData();
       formData.append("userId", String(profile.id));
@@ -3935,13 +3616,27 @@ const handleChangePassword = async () => {
             <div className="flex items-center gap-3">
               <Phone size={18} className="text-slate-500" />
               {isEditing ? (
+                // <input
+                //   type="tel"
+                //   value={editData.mobile}
+                //   onChange={(e) => handleInputChange("mobile", e.target.value)}
+                //   placeholder="Mobile number"
+                //   className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
+                // />
+
                 <input
-                  type="tel"
-                  value={editData.mobile}
-                  onChange={(e) => handleInputChange("mobile", e.target.value)}
-                  placeholder="Mobile number"
-                  className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
-                />
+  type="tel"
+  value={editData.mobile}
+  onChange={(e) => {
+    const value = e.target.value.replace(/\D/g, ""); // allow only numbers
+    if (value.length <= 10) {
+      handleInputChange("mobile", value);
+    }
+  }}
+  placeholder="Mobile number"
+  maxLength={10}
+  className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
+/>
               ) : (
                 <span className="text-white">
                   {profile.mobile || "Not provided"}
@@ -4025,7 +3720,7 @@ const handleChangePassword = async () => {
       className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
     >
       <option value="">Select availability</option>
-      <option value="Full-time">Full-time (8AM - 8PM)</option>
+      <option value="Full-time">Full-time (8AM - 6PM)</option>
       <option value="Part-time Morning">Part-time Morning (8AM - 2PM)</option>
       <option value="Part-time Evening">Part-time Evening (2PM - 8PM)</option>
       <option value="Weekends Only">Weekends Only</option>

@@ -4004,129 +4004,152 @@ const handleSaveEmergency = async () => {
 )}
 
       {/* PASSWORD MODAL (UNCHANGED LOGIC) */}
-      {showPasswordModal && (
-        <div className="fixed inset-0 bg-black/70 flex justify-center items-center">
-          <div className="bg-slate-900 p-6 rounded-xl w-full max-w-md">
+ {showPasswordModal && (
+  <div className="fixed inset-0 bg-black/70 flex justify-center items-center z-50">
+    
+    <div className="bg-slate-900 p-8 rounded-xl w-full max-w-lg relative shadow-xl">
 
-            <button onClick={() => setShowPasswordModal(false)} className="absolute right-4 top-4 text-white">
-              <X />
+      {/* CLOSE BUTTON */}
+      <button
+        onClick={() => setShowPasswordModal(false)}
+        className="absolute top-5 right-5 text-slate-400 hover:text-white transition"
+      >
+        <X size={22} />
+      </button>
+
+      {/* TITLE */}
+      <h2 className="text-white text-xl font-semibold mb-6">
+        Change Password
+      </h2>
+
+      {/* STEP 1 */}
+      {step === 1 && (
+        <>
+          <div className="relative mb-4">
+            <input
+              ref={currentRef}
+              type={showCP.current ? "text" : "password"}
+              placeholder="Current Password"
+              value={cpData.current_password}
+              onChange={(e) =>
+                setCpData((prev) => ({
+                  ...prev,
+                  current_password: e.target.value,
+                }))
+              }
+              className="w-full p-3 bg-slate-800 text-white rounded pr-10"
+            />
+
+            <button
+              type="button"
+              onClick={() => {
+                setShowCP((prev) => ({ ...prev, current: !prev.current }));
+                setTimeout(() => currentRef.current?.focus(), 0);
+              }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+            >
+              {showCP.current ? <Eye size={18} /> : <EyeOff size={18} />}
             </button>
-
-            {step === 1 && (
-              <>
-            <div className="relative mb-3">
-  <input
-    ref={currentRef}
-    type={showCP.current ? "text" : "password"}
-    placeholder="Current Password"
-    value={cpData.current_password}
-    onChange={e =>
-      setCpData(prev => ({
-        ...prev,
-        current_password: e.target.value
-      }))
-    }
-    className="w-full p-3 bg-slate-800 text-white rounded pr-10"
-  />
-
-  <button
-    type="button"
-    onClick={() => {
-      setShowCP(prev => ({ ...prev, current: !prev.current }));
-      setTimeout(() => currentRef.current?.focus(), 0);
-    }}
-    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-  >
-    {showCP.current ? <Eye size={18} /> : <EyeOff size={18} />}
-  </button>
-</div>
-
-                <button onClick={handleRequestOtp} className="w-full bg-indigo-600 py-2 text-white">
-                  Send OTP
-                </button>
-              </>
-            )}
-
-            {step === 2 && (
-              <>
-                <input
-                  placeholder="OTP"
-                  value={cpData.otp}
-                  onChange={e => setCpData(prev => ({ ...prev, otp: e.target.value }))}
-                  className="w-full p-3 bg-slate-800 text-white mb-3"
-                />
-
-                <button onClick={handleVerifyOtp} className="w-full bg-indigo-600 py-2 text-white">
-                  Verify
-                </button>
-              </>
-            )}
-
-            {step === 3 && (
-              <>
-               <div className="relative mb-3">
-  <input
-    ref={newRef}
-    type={showCP.new ? "text" : "password"}
-    placeholder="New Password"
-    value={cpData.new_password}
-    onChange={e =>
-      setCpData(prev => ({
-        ...prev,
-        new_password: e.target.value
-      }))
-    }
-    className="w-full p-3 bg-slate-800 text-white rounded pr-10"
-  />
-
-  <button
-    type="button"
-    onClick={() => {
-      setShowCP(prev => ({ ...prev, new: !prev.new }));
-      setTimeout(() => newRef.current?.focus(), 0);
-    }}
-    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-  >
-    {showCP.new ? <Eye size={18} /> : <EyeOff size={18} />}
-  </button>
-</div>
-
-          <div className="relative mb-3">
-  <input
-    ref={confirmRef}
-    type={showCP.confirm ? "text" : "password"}
-    placeholder="Confirm Password"
-    value={cpData.confirm_password}
-    onChange={e =>
-      setCpData(prev => ({
-        ...prev,
-        confirm_password: e.target.value
-      }))
-    }
-    className="w-full p-3 bg-slate-800 text-white rounded pr-10"
-  />
-
-  <button
-    type="button"
-    onClick={() => {
-      setShowCP(prev => ({ ...prev, confirm: !prev.confirm }));
-      setTimeout(() => confirmRef.current?.focus(), 0);
-    }}
-    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-  >
-    {showCP.confirm ? <Eye size={18} /> : <EyeOff size={18} />}
-  </button>
-</div>
-
-                <button onClick={handleChangePassword} className="w-full bg-green-600 py-2 text-white">
-                  Change Password
-                </button>
-              </>
-            )}
-
           </div>
-        </div>
+
+          <button
+            onClick={handleRequestOtp}
+            className="w-full bg-indigo-600 py-3 rounded text-white hover:bg-indigo-500 transition"
+          >
+            Send OTP
+          </button>
+        </>
       )}
+
+      {/* STEP 2 */}
+      {step === 2 && (
+        <>
+          <input
+            placeholder="Enter OTP"
+            value={cpData.otp}
+            onChange={(e) =>
+              setCpData((prev) => ({ ...prev, otp: e.target.value }))
+            }
+            className="w-full p-3 bg-slate-800 text-white rounded mb-4"
+          />
+
+          <button
+            onClick={handleVerifyOtp}
+            className="w-full bg-indigo-600 py-3 rounded text-white hover:bg-indigo-500 transition"
+          >
+            Verify OTP
+          </button>
+        </>
+      )}
+
+      {/* STEP 3 */}
+      {step === 3 && (
+        <>
+          <div className="relative mb-4">
+            <input
+              ref={newRef}
+              type={showCP.new ? "text" : "password"}
+              placeholder="New Password"
+              value={cpData.new_password}
+              onChange={(e) =>
+                setCpData((prev) => ({
+                  ...prev,
+                  new_password: e.target.value,
+                }))
+              }
+              className="w-full p-3 bg-slate-800 text-white rounded pr-10"
+            />
+
+            <button
+              type="button"
+              onClick={() => {
+                setShowCP((prev) => ({ ...prev, new: !prev.new }));
+                setTimeout(() => newRef.current?.focus(), 0);
+              }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+            >
+              {showCP.new ? <Eye size={18} /> : <EyeOff size={18} />}
+            </button>
+          </div>
+
+          <div className="relative mb-4">
+            <input
+              ref={confirmRef}
+              type={showCP.confirm ? "text" : "password"}
+              placeholder="Confirm Password"
+              value={cpData.confirm_password}
+              onChange={(e) =>
+                setCpData((prev) => ({
+                  ...prev,
+                  confirm_password: e.target.value,
+                }))
+              }
+              className="w-full p-3 bg-slate-800 text-white rounded pr-10"
+            />
+
+            <button
+              type="button"
+              onClick={() => {
+                setShowCP((prev) => ({ ...prev, confirm: !prev.confirm }));
+                setTimeout(() => confirmRef.current?.focus(), 0);
+              }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+            >
+              {showCP.confirm ? <Eye size={18} /> : <EyeOff size={18} />}
+            </button>
+          </div>
+
+          <button
+            onClick={handleChangePassword}
+            className="w-full bg-green-600 py-3 rounded text-white hover:bg-green-500 transition"
+          >
+            Change Password
+          </button>
+        </>
+      )}
+    </div>
+  </div>
+)}
 
     </div>
   );

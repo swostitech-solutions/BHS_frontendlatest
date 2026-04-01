@@ -708,7 +708,8 @@ useEffect(() => {
       ) : (
         <div className="grid md:grid-cols-3 gap-8">
           {/* CART ITEMS */}
-          <div className="md:col-span-2 space-y-4">
+          {/* <div className="md:col-span-2 space-y-4"> */}
+          <div className="md:col-span-2 space-y-4 max-h-[650px] overflow-y-auto pr-2">
             {cart.map((item) => (
               <div
                 key={item.id}

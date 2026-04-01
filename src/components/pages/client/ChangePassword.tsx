@@ -364,128 +364,144 @@ const ChangePassword = () => {
     }
   };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-md bg-white shadow-xl rounded-2xl p-6 space-y-6">
+return (
+  <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+    
+    <div className="w-full max-w-md bg-white shadow-xl rounded-2xl p-6 space-y-6 relative">
 
-        <h2 className="text-2xl font-bold text-center">
-          Change Password
-        </h2>
+      {/* CLOSE BUTTON */}
+      <button
+        onClick={() => navigate(-1)}
+        className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 transition"
+      >
+        ✕
+      </button>
 
-        {/* ================= STEP 1 ================= */}
-        {step === 1 && (
-          <>
-            <div>
-              <label className="text-sm text-gray-600">
-                Current Password
-              </label>
-              <div className="relative">
-                <input
-                  type={showCurrent ? "text" : "password"}
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="w-full mt-1 p-3 border rounded-lg"
-                />
-                <button
-                  className="absolute right-3 top-3"
-                  onClick={() => setShowCurrent(!showCurrent)}
-                >
-                  {showCurrent ? <Eye /> : <EyeOff />}
-                </button>
-              </div>
-            </div>
+      <h2 className="text-2xl font-bold text-center">
+        Change Password
+      </h2>
 
-            <button
-              onClick={handleRequestOtp}
-              className="w-full bg-indigo-600 text-white py-3 rounded-lg"
-              disabled={loading}
-            >
-              {loading ? "Sending OTP..." : "Send OTP"}
-            </button>
-          </>
-        )}
+      {/* ================= STEP 1 ================= */}
+      {step === 1 && (
+        <>
+          <div>
+            <label className="text-sm text-gray-600">
+              Current Password
+            </label>
 
-        {/* ================= STEP 2 ================= */}
-        {step === 2 && (
-          <>
-            <div>
-              <label className="text-sm text-gray-600">
-                Enter OTP
-              </label>
+            <div className="relative">
               <input
-                type="text"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-                className="w-full mt-1 p-3 border rounded-lg text-center tracking-widest"
+                type={showCurrent ? "text" : "password"}
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                className="w-full mt-1 p-3 border rounded-lg"
               />
+
+              <button
+                className="absolute right-3 top-3 text-gray-500"
+                onClick={() => setShowCurrent(!showCurrent)}
+              >
+                {showCurrent ? <Eye size={18}/> : <EyeOff size={18}/>}
+              </button>
             </div>
+          </div>
 
-            <button
-              onClick={handleVerifyOtp}
-              className="w-full bg-indigo-600 text-white py-3 rounded-lg"
-              disabled={loading}
-            >
-              {loading ? "Verifying..." : "Verify OTP"}
-            </button>
-          </>
-        )}
+          <button
+            onClick={handleRequestOtp}
+            className="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-500"
+            disabled={loading}
+          >
+            {loading ? "Sending OTP..." : "Send OTP"}
+          </button>
+        </>
+      )}
 
-        {/* ================= STEP 3 ================= */}
-        {step === 3 && (
-          <>
-            <div>
-              <label className="text-sm text-gray-600">
-                New Password
-              </label>
-              <div className="relative">
-                <input
-                  type={showNew ? "text" : "password"}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full mt-1 p-3 border rounded-lg"
-                />
-                <button
-                  className="absolute right-3 top-3"
-                  onClick={() => setShowNew(!showNew)}
-                >
-                  {showNew ? <Eye /> : <EyeOff />}
-                </button>
-              </div>
+      {/* ================= STEP 2 ================= */}
+      {step === 2 && (
+        <>
+          <div>
+            <label className="text-sm text-gray-600">
+              Enter OTP
+            </label>
+
+            <input
+              type="text"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value)}
+              className="w-full mt-1 p-3 border rounded-lg text-center tracking-widest"
+            />
+          </div>
+
+          <button
+            onClick={handleVerifyOtp}
+            className="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-500"
+            disabled={loading}
+          >
+            {loading ? "Verifying..." : "Verify OTP"}
+          </button>
+        </>
+      )}
+
+      {/* ================= STEP 3 ================= */}
+      {step === 3 && (
+        <>
+          <div>
+            <label className="text-sm text-gray-600">
+              New Password
+            </label>
+
+            <div className="relative">
+              <input
+                type={showNew ? "text" : "password"}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full mt-1 p-3 border rounded-lg"
+              />
+
+              <button
+                className="absolute right-3 top-3 text-gray-500"
+                onClick={() => setShowNew(!showNew)}
+              >
+                {showNew ? <Eye size={18}/> : <EyeOff size={18}/>}
+              </button>
             </div>
+          </div>
 
-            <div>
-              <label className="text-sm text-gray-600">
-                Confirm Password
-              </label>
-              <div className="relative">
-                <input
-                  type={showConfirm ? "text" : "password"}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full mt-1 p-3 border rounded-lg"
-                />
-                <button
-                  className="absolute right-3 top-3"
-                  onClick={() => setShowConfirm(!showConfirm)}
-                >
-                  {showConfirm ? <Eye /> : <EyeOff />}
-                </button>
-              </div>
+          <div>
+            <label className="text-sm text-gray-600">
+              Confirm Password
+            </label>
+
+            <div className="relative">
+              <input
+                type={showConfirm ? "text" : "password"}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full mt-1 p-3 border rounded-lg"
+              />
+
+              <button
+                className="absolute right-3 top-3 text-gray-500"
+                onClick={() => setShowConfirm(!showConfirm)}
+              >
+                {showConfirm ? <Eye size={18}/> : <EyeOff size={18}/>}
+              </button>
             </div>
+          </div>
 
-            <button
-              onClick={handleChangePassword}
-              className="w-full bg-green-600 text-white py-3 rounded-lg"
-              disabled={loading}
-            >
-              {loading ? "Updating..." : "Change Password"}
-            </button>
-          </>
-        )}
+          <button
+            onClick={handleChangePassword}
+            className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-500"
+            disabled={loading}
+          >
+            {loading ? "Updating..." : "Change Password"}
+          </button>
+        </>
+      )}
 
-      </div>
     </div>
-  );
+  </div>
+);
 };
 
 export default ChangePassword;
