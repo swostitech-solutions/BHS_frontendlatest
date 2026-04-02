@@ -4711,6 +4711,107 @@ const SettingsTab = () => {
 
       </div>
 
+
+
+      {/* ================= PASSWORD MODAL ================= */}
+{showPasswordModal && (
+  <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+    <div className="bg-slate-900 p-6 rounded-2xl w-full max-w-md">
+
+      <h3 className="text-white text-lg font-bold mb-4">
+        Change Password
+      </h3>
+
+      {/* STEP 1 */}
+      {step === 1 && (
+        <>
+          <input
+            type={showCP.current ? "text" : "password"}
+            placeholder="Current Password"
+            value={cpData.current_password}
+            onChange={(e) =>
+              setCpData({ ...cpData, current_password: e.target.value })
+            }
+            className="w-full p-3 mb-3 bg-slate-800 text-white rounded"
+          />
+
+          <button
+            onClick={handleRequestOtp}
+            className="w-full bg-indigo-600 p-3 rounded text-white"
+          >
+            {cpLoading ? "Sending..." : "Send OTP"}
+          </button>
+        </>
+      )}
+
+      {/* STEP 2 */}
+      {step === 2 && (
+        <>
+          <input
+            placeholder="Enter OTP"
+            value={cpData.otp}
+            onChange={(e) =>
+              setCpData({ ...cpData, otp: e.target.value })
+            }
+            className="w-full p-3 mb-3 bg-slate-800 text-white rounded"
+          />
+
+          <button
+            onClick={handleVerifyOtp}
+            className="w-full bg-indigo-600 p-3 rounded text-white"
+          >
+            {cpLoading ? "Verifying..." : "Verify OTP"}
+          </button>
+        </>
+      )}
+
+      {/* STEP 3 */}
+      {step === 3 && (
+        <>
+          <input
+            type={showCP.new ? "text" : "password"}
+            placeholder="New Password"
+            value={cpData.new_password}
+            onChange={(e) =>
+              setCpData({ ...cpData, new_password: e.target.value })
+            }
+            className="w-full p-3 mb-3 bg-slate-800 text-white rounded"
+          />
+
+          <input
+            type={showCP.confirm ? "text" : "password"}
+            placeholder="Confirm Password"
+            value={cpData.confirm_password}
+            onChange={(e) =>
+              setCpData({ ...cpData, confirm_password: e.target.value })
+            }
+            className="w-full p-3 mb-3 bg-slate-800 text-white rounded"
+          />
+
+          <button
+            onClick={handleChangePassword}
+            className="w-full bg-green-600 p-3 rounded text-white"
+          >
+            {cpLoading ? "Updating..." : "Update Password"}
+          </button>
+        </>
+      )}
+
+      {/* CLOSE BUTTON */}
+      <button
+        onClick={() => {
+          setShowPasswordModal(false);
+          setStep(1);
+        }}
+        className="mt-4 w-full bg-gray-600 p-2 rounded text-white"
+      >
+        Close
+      </button>
+
+    </div>
+  </div>
+)}
+
     </div>
   );
 };

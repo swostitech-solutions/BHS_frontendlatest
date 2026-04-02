@@ -632,12 +632,216 @@ const fetchTechnicianRating = async (userId: number) => {
 };
 
 // NEW: Fetch bookings and check for new jobs
+// const fetchBookingsWithNotification = async (techUserId: number) => {
+//   try {
+//     const userDataStr = sessionStorage.getItem("user");
+//     const userData = userDataStr ? JSON.parse(userDataStr) : null;
+//     const techCategory = userData?.technicianDetails?.techCategory;
+    
+
+//     const res = await fetch(`${API_BASE}/api/service-on-booking`);
+//     if (!res.ok) return;
+
+//     const data = await res.json();
+//     const allBookings: Booking[] = data.bookings || [];
+
+//     // ✅ Filter relevant bookings
+//     const relevantBookings = allBookings.filter((b: Booking) => {
+
+//       // ❌ Ignore unpaid bookings
+//       if (b.payment_status !== "PAID") {
+//         return false;
+//       }
+
+//       // ✅ Job already accepted by THIS technician
+//       if (b.technician_allocated && b.technician?.id === techUserId) {
+//         return true;
+//       }
+
+//       // ❌ Job accepted by another technician
+//       if (b.technician_allocated && b.technician?.id !== techUserId) {
+//         return false;
+//       }
+
+//       // ✅ Show open jobs matching technician category
+//       if (!b.technician_allocated) {
+//         const serviceName = b.service?.name || "";
+//         const serviceCode = b.service_code || b.service?.service_code || "";
+
+//         if (categoryMatchesService(techCategory, serviceName, serviceCode)) {
+//           return true;
+//         }
+//       }
+
+//       return false;
+//     });
+
+//     // ✅ FIX 3 — Auto close popup if another technician accepted the job
+//     if (
+//       newJobAlert &&
+//       allBookings.some(
+//         (b) =>
+//           b.order_id === newJobAlert.order_id &&
+//           b.technician_allocated &&
+//           b.technician?.id !== techUserId
+//       )
+//     ) {
+//       setShowNewJobPopup(false);
+//       setNewJobAlert(null);
+//     }
+
+//     // ✅ Find new unseen jobs
+//     const newUnseenJobs = relevantBookings.filter(
+//       (b) =>
+//         !b.technician_allocated &&
+//         !seenJobIdsRef.current.has(b.order_id)
+//     );
+
+//     // ✅ Only allow valid open jobs
+//     const validNewJobs = newUnseenJobs.filter(
+//       (job) => !job.technician_allocated
+//     );
+
+//     if (validNewJobs.length > 0) {
+//       const nextJob = validNewJobs[0];
+
+//       if (!seenJobIdsRef.current.has(nextJob.order_id)) {
+//         setNewJobAlert(nextJob);
+//         setShowNewJobPopup(true);
+
+//         // 🔔 Play notification sound
+//         playNotificationSound();
+
+//         // 📳 Vibrate if supported
+//         if (navigator.vibrate) {
+//           navigator.vibrate([200, 100, 200]);
+//         }
+//       }
+//     }
+
+//     // ✅ Update job list
+//     setBookings(relevantBookings);
+
+//     // ✅ Update notification list
+//     setNotifications(
+//       relevantBookings.filter((b) => !b.technician_allocated)
+//     );
+
+//   } catch (error) {
+//     console.error("Polling error:", error);
+//   }
+// };
+
+
+
+
+
+
+////////// current one code /////////
+// const fetchBookingsWithNotification = async (techUserId: number) => {
+//   try {
+//     const userDataStr = sessionStorage.getItem("user");
+//     const userData = userDataStr ? JSON.parse(userDataStr) : null;
+
+//     const techCategory = userData?.technicianDetails?.techCategory;
+
+//     // ✅ GET CORRECT technician_id
+//     const technicianId = userData?.technicianDetails?.technician_id;
+
+//     // ✅ WALLET API
+//     const walletRes = await fetch(`${API_BASE}/api/wallet/${technicianId}`);
+//     const walletData = await walletRes.json();
+
+//     const walletBalance = Number(walletData?.balance || 0);
+
+//     console.log("Wallet Balance:", walletBalance);
+
+//     const res = await fetch(`${API_BASE}/api/service-on-booking`);
+//     if (!res.ok) return;
+
+//     const data = await res.json();
+//     const allBookings: Booking[] = data.bookings || [];
+
+//     const relevantBookings = allBookings.filter((b: Booking) => {
+
+//       // ❌ Ignore unpaid
+//       if (b.payment_status !== "PAID") {
+//         return false;
+//       }
+
+//       // ✅ Already accepted by THIS technician
+//       if (b.technician_allocated && b.technician?.id === techUserId) {
+//         return true;
+//       }
+
+//       // ❌ Accepted by another technician
+//       if (b.technician_allocated && b.technician?.id !== techUserId) {
+//         return false;
+//       }
+
+//       // ✅ OPEN JOB
+//       if (!b.technician_allocated) {
+
+//         const serviceName = b.service?.name || "";
+//         const serviceCode = b.service_code || b.service?.service_code || "";
+
+//         const categoryMatch = categoryMatchesService(
+//           techCategory,
+//           serviceName,
+//           serviceCode
+//         );
+
+//         if (!categoryMatch) return false;
+
+//         const bookingPrice = Number(b.total_price || 0);
+//         const commission = bookingPrice * 0.10;
+
+//         console.log(
+//           "Wallet:", walletBalance,
+//           "Price:", bookingPrice,
+//           "Commission:", commission
+//         );
+
+//         // ⭐ Wallet balance check
+//         if (walletBalance < commission) {
+//           return false;
+//         }
+
+//         return true;
+//       }
+
+//       return false;
+//     });
+
+//     setBookings(relevantBookings);
+
+//     setNotifications(
+//       relevantBookings.filter((b) => !b.technician_allocated)
+//     );
+
+//   } catch (error) {
+//     console.error("Polling error:", error);
+//   }
+// };
+
+
+
+
+
 const fetchBookingsWithNotification = async (techUserId: number) => {
   try {
     const userDataStr = sessionStorage.getItem("user");
     const userData = userDataStr ? JSON.parse(userDataStr) : null;
+
     const techCategory = userData?.technicianDetails?.techCategory;
-    
+    const technicianId = userData?.technicianDetails?.technician_id;
+
+    // ✅ WALLET API
+    const walletRes = await fetch(`${API_BASE}/api/wallet/${technicianId}`);
+    const walletData = await walletRes.json();
+    const walletBalance = Number(walletData?.balance || 0);
+
+    console.log("Wallet Balance:", walletBalance);
 
     const res = await fetch(`${API_BASE}/api/service-on-booking`);
     if (!res.ok) return;
@@ -645,10 +849,9 @@ const fetchBookingsWithNotification = async (techUserId: number) => {
     const data = await res.json();
     const allBookings: Booking[] = data.bookings || [];
 
-    // ✅ Filter relevant bookings
     const relevantBookings = allBookings.filter((b: Booking) => {
 
-      // ❌ Ignore unpaid bookings
+      // ❌ Ignore unpaid
       if (b.payment_status !== "PAID") {
         return false;
       }
@@ -663,74 +866,83 @@ const fetchBookingsWithNotification = async (techUserId: number) => {
         return false;
       }
 
-      // ✅ Show open jobs matching technician category
+      // ✅ OPEN JOB
       if (!b.technician_allocated) {
+
         const serviceName = b.service?.name || "";
         const serviceCode = b.service_code || b.service?.service_code || "";
 
-        if (categoryMatchesService(techCategory, serviceName, serviceCode)) {
-          return true;
+        const categoryMatch = categoryMatchesService(
+          techCategory,
+          serviceName,
+          serviceCode
+        );
+
+        if (!categoryMatch) return false;
+
+        const bookingPrice = Number(b.total_price || 0);
+        const commission = bookingPrice * 0.10;
+
+        console.log(
+          "Wallet:", walletBalance,
+          "Price:", bookingPrice,
+          "Commission:", commission
+        );
+
+        // ⭐ Wallet balance check
+        if (walletBalance < commission) {
+          return false;
         }
+
+        return true;
       }
 
       return false;
     });
 
-    // ✅ FIX 3 — Auto close popup if another technician accepted the job
-    if (
-      newJobAlert &&
-      allBookings.some(
-        (b) =>
-          b.order_id === newJobAlert.order_id &&
-          b.technician_allocated &&
-          b.technician?.id !== techUserId
-      )
-    ) {
-      setShowNewJobPopup(false);
-      setNewJobAlert(null);
-    }
+    // ✅ Update job list
+    setBookings(relevantBookings);
 
-    // ✅ Find new unseen jobs
-    const newUnseenJobs = relevantBookings.filter(
-      (b) =>
-        !b.technician_allocated &&
-        !seenJobIdsRef.current.has(b.order_id)
+    // ✅ Notification list
+    const openJobs = relevantBookings.filter((b) => !b.technician_allocated);
+    setNotifications(openJobs);
+
+    // -----------------------------
+    // 🔔 NEW JOB POPUP DETECTION
+    // -----------------------------
+
+    const newUnseenJobs = openJobs.filter(
+      (b) => !seenJobIdsRef.current.has(b.order_id)
     );
 
-    // ✅ Only allow valid open jobs
-    const validNewJobs = newUnseenJobs.filter(
-      (job) => !job.technician_allocated
-    );
+    console.log("New unseen jobs:", newUnseenJobs);
 
-    if (validNewJobs.length > 0) {
-      const nextJob = validNewJobs[0];
+    if (newUnseenJobs.length > 0) {
+      const nextJob = newUnseenJobs[0];
 
       if (!seenJobIdsRef.current.has(nextJob.order_id)) {
         setNewJobAlert(nextJob);
         setShowNewJobPopup(true);
 
-        // 🔔 Play notification sound
+        // 🔊 play sound
         playNotificationSound();
 
-        // 📳 Vibrate if supported
+        // 📳 vibrate
         if (navigator.vibrate) {
           navigator.vibrate([200, 100, 200]);
         }
       }
     }
 
-    // ✅ Update job list
-    setBookings(relevantBookings);
-
-    // ✅ Update notification list
-    setNotifications(
-      relevantBookings.filter((b) => !b.technician_allocated)
-    );
-
   } catch (error) {
     console.error("Polling error:", error);
   }
 };
+
+
+
+
+
 
   // NEW: Play notification sound
   const playNotificationSound = () => {
@@ -817,75 +1029,173 @@ const fetchBookingsWithNotification = async (techUserId: number) => {
   // Fetch bookings for technician:
   // 1. All bookings assigned to this technician
   // 2. Unassigned bookings matching technician's category (for accepting)
-  const fetchBookings = async (techUserId: number) => {
-    setLoading(true);
-    try {
-      // Get the user profile to know their techCategory
-      const userDataStr = sessionStorage.getItem("user");
-      const userData = userDataStr ? JSON.parse(userDataStr) : null;
-      const techCategory = userData?.technicianDetails?.techCategory;
+//   const fetchBookings = async (techUserId: number) => {
+//     setLoading(true);
+//     try {
+//       // Get the user profile to know their techCategory
+//       const userDataStr = sessionStorage.getItem("user");
+//       const userData = userDataStr ? JSON.parse(userDataStr) : null;
+//       const techCategory = userData?.technicianDetails?.techCategory;
 
-      // Fetch ALL bookings using existing Swagger API
-      const res = await fetch(`${API_BASE}/api/service-on-booking`);
-      if (!res.ok) throw new Error("Failed to fetch bookings");
+//       // Fetch ALL bookings using existing Swagger API
+//       const res = await fetch(`${API_BASE}/api/service-on-booking`);
+//       if (!res.ok) throw new Error("Failed to fetch bookings");
 
-      const data = await res.json();
-      const allBookings: Booking[] = data.bookings || [];
+//       const data = await res.json();
+//       const allBookings: Booking[] = data.bookings || [];
 
-      // Filter bookings:
-      // 1. Bookings assigned to this technician (any status)
-      // 2. Unassigned bookings (technician_allocated: false) matching technician's categor
+//       // Filter bookings:
+//       // 1. Bookings assigned to this technician (any status)
+//       // 2. Unassigned bookings (technician_allocated: false) matching technician's categor
 
 
-      const relevantBookings = allBookings.filter((b: Booking) => {
+//       const relevantBookings = allBookings.filter((b: Booking) => {
 
-  // ❌ Ignore unpaid bookings
-  if (b.payment_status !== "PAID") {
-    return false;
+//   // ❌ Ignore unpaid bookings
+//   if (b.payment_status !== "PAID") {
+//     return false;
+//   }
+
+//   // ✅ Already assigned to this technician
+//   // if (b.technician_allocated && b.technician?.id === techUserId) {
+//   //   return true;
+//   // }
+
+//   // ✅ Job already accepted by THIS technician
+// if (b.technician_allocated && b.technician?.id === techUserId) {
+//   return true;
+// }
+
+// // ❌ Job accepted by another technician → hide
+// if (b.technician_allocated && b.technician?.id !== techUserId) {
+//   return false;
+// }
+
+//   // ✅ New jobs for this technician category
+//   if (!b.technician_allocated) {
+//     const serviceName = b.service?.name || "";
+//     const serviceCode = b.service_code || b.service?.service_code || "";
+
+//     if (categoryMatchesService(techCategory, serviceName, serviceCode)) {
+//       return true;
+//     }
+//   }
+
+//   return false;
+// });
+
+//       setBookings(relevantBookings);
+
+//       // New bookings = unassigned ones that match category (for notifications)
+//       setNotifications(
+//         relevantBookings.filter((b: Booking) => !b.technician_allocated)
+//       );
+//     } catch (error) {
+//       console.error("Error fetching bookings:", error);
+//       setBookings([]);
+//       setNotifications([]);
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+
+
+
+
+
+const fetchBookings = async (techUserId: number) => {
+  setLoading(true);
+  try {
+
+    const userDataStr = sessionStorage.getItem("user");
+    const userData = userDataStr ? JSON.parse(userDataStr) : null;
+
+    const techCategory = userData?.technicianDetails?.techCategory;
+
+    // ✅ GET CORRECT technician_id
+    const technicianId = userData?.technicianDetails?.technician_id;
+
+    // ✅ WALLET API CALL
+    const walletRes = await fetch(`${API_BASE}/api/wallet/${technicianId}`);
+    const walletData = await walletRes.json();
+
+    const walletBalance = Number(walletData?.balance || 0);
+
+    console.log("Wallet Balance:", walletBalance);
+
+    const res = await fetch(`${API_BASE}/api/service-on-booking`);
+    if (!res.ok) throw new Error("Failed to fetch bookings");
+
+    const data = await res.json();
+    const allBookings: Booking[] = data.bookings || [];
+
+    const relevantBookings = allBookings.filter((b: Booking) => {
+
+      // ❌ Ignore unpaid bookings
+      if (b.payment_status !== "PAID") {
+        return false;
+      }
+
+      // ✅ Job already accepted by THIS technician
+      if (b.technician_allocated && b.technician?.id === techUserId) {
+        return true;
+      }
+
+      // ❌ Job accepted by another technician
+      if (b.technician_allocated && b.technician?.id !== techUserId) {
+        return false;
+      }
+
+      // ✅ New job
+      if (!b.technician_allocated) {
+
+        const serviceName = b.service?.name || "";
+        const serviceCode = b.service_code || b.service?.service_code || "";
+
+        const categoryMatch = categoryMatchesService(
+          techCategory,
+          serviceName,
+          serviceCode
+        );
+
+        if (!categoryMatch) return false;
+
+        // ⭐ Commission check
+        const bookingPrice = Number(b.total_price || 0);
+        const commission = bookingPrice * 0.10;
+
+        console.log(
+          "Wallet:", walletBalance,
+          "Price:", bookingPrice,
+          "Commission:", commission
+        );
+
+        // ❌ wallet insufficient
+        if (walletBalance < commission) {
+          return false;
+        }
+
+        return true;
+      }
+
+      return false;
+    });
+
+    setBookings(relevantBookings);
+
+    setNotifications(
+      relevantBookings.filter((b: Booking) => !b.technician_allocated)
+    );
+
+  } catch (error) {
+    console.error("Error fetching bookings:", error);
+    setBookings([]);
+    setNotifications([]);
+  } finally {
+    setLoading(false);
   }
-
-  // ✅ Already assigned to this technician
-  // if (b.technician_allocated && b.technician?.id === techUserId) {
-  //   return true;
-  // }
-
-  // ✅ Job already accepted by THIS technician
-if (b.technician_allocated && b.technician?.id === techUserId) {
-  return true;
-}
-
-// ❌ Job accepted by another technician → hide
-if (b.technician_allocated && b.technician?.id !== techUserId) {
-  return false;
-}
-
-  // ✅ New jobs for this technician category
-  if (!b.technician_allocated) {
-    const serviceName = b.service?.name || "";
-    const serviceCode = b.service_code || b.service?.service_code || "";
-
-    if (categoryMatchesService(techCategory, serviceName, serviceCode)) {
-      return true;
-    }
-  }
-
-  return false;
-});
-
-      setBookings(relevantBookings);
-
-      // New bookings = unassigned ones that match category (for notifications)
-      setNotifications(
-        relevantBookings.filter((b: Booking) => !b.technician_allocated)
-      );
-    } catch (error) {
-      console.error("Error fetching bookings:", error);
-      setBookings([]);
-      setNotifications([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+};
 
   // Accept job using existing Swagger API: POST /api/service-on-booking/accept/:order_id
   // This API both assigns the technician AND accepts the job (opinion=1)

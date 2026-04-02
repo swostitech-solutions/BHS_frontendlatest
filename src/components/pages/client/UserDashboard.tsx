@@ -601,6 +601,7 @@ interface Booking {
   date: string;
   time_slot: string;
   total_price: number;
+  quantity: number;   // ✅ ADD THIS
   gst: number;
   work_status: number;
   work_status_code: string;
@@ -970,7 +971,7 @@ const fetchBookings = async (userId: number) => {
                     </div>
 
                     {/* Info Row */}
-                    <div className="flex flex-wrap items-center gap-6 text-slate-500 text-sm mb-6">
+                    {/* <div className="flex flex-wrap items-center gap-6 text-slate-500 text-sm mb-6">
                       <span className="flex items-center gap-2">
                         <Calendar size={16} />
                         {booking.date}
@@ -983,7 +984,35 @@ const fetchBookings = async (userId: number) => {
                         <MapPin size={16} />
                         {booking.address?.substring(0, 40) || "Address not set"}...
                       </span>
-                    </div>
+                    </div> */}
+
+
+
+                    {/* Info Row */}
+<div className="flex flex-wrap items-center gap-6 text-slate-500 text-sm mb-6">
+
+  <span className="flex items-center gap-2">
+    <Calendar size={16} />
+    {booking.date}
+  </span>
+
+  <span className="flex items-center gap-2">
+    <Clock size={16} />
+    {booking.time_slot}
+  </span>
+
+  {/* ✅ Quantity */}
+  <span className="flex items-center gap-2">
+    <Package size={16} />
+    Qty: {booking.quantity || 1}
+  </span>
+
+  <span className="flex items-center gap-2">
+    <MapPin size={16} />
+    {booking.address?.substring(0, 40) || "Address not set"}...
+  </span>
+
+</div>
 
                     {/* Progress Tracker */}
                     <div className="mb-6">
