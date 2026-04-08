@@ -75,7 +75,22 @@ useEffect(() => {
 
   setUser(JSON.parse(userData));
 
-  if (cartData) setCart(JSON.parse(cartData));
+  // if (cartData) setCart(JSON.parse(cartData));
+  if (cartData) {
+  const parsed = JSON.parse(cartData);
+
+  const normalizedCart = parsed.map((item: any) => ({
+    ...item,
+    price: Number(item.price ?? 0),
+    quantity: Number(item.quantity ?? 1),
+    emergencyPrice:
+      item.emergencyPrice !== undefined
+        ? Number(item.emergencyPrice)
+        : undefined,
+  }));
+
+  setCart(normalizedCart);
+}
   if (bookingInfo) setBookingData(JSON.parse(bookingInfo));
 
   setLoading(false);
@@ -94,23 +109,41 @@ useEffect(() => {
 
 
   // Base subtotal (for GST calculation only)
-const baseSubtotal = cart.reduce(
-  (sum, item) => sum + item.price * item.quantity,
-  0
-);
+// const baseSubtotal = cart.reduce(
+//   (sum, item) => sum + item.price * item.quantity,
+//   0
+// );
 
-// Subtotal including emergency pricing
-const subtotal = cart.reduce(
-  (sum, item) =>
-    sum + (item.emergencyPrice ?? item.price) * item.quantity,
-  0
-);
+// // Subtotal including emergency pricing
+// const subtotal = cart.reduce(
+//   (sum, item) =>
+//     sum + (item.emergencyPrice ?? item.price) * item.quantity,
+//   0
+// );
 
-// GST only on base price
-const gst = baseSubtotal * 0.18;
+// // GST only on base price
+// // const gst = baseSubtotal * 0.18;
 
-// Final total
-const total = subtotal + gst;
+// const gst = subtotal * 0.18;
+
+// // Final total
+// const total = subtotal + gst;
+
+
+
+const subtotal = cart.reduce((sum, item) => {
+  const price = Number(item.price ?? 0);
+  const emergency = Number(item.emergencyPrice ?? price);
+  const qty = Number(item.quantity ?? 1);
+
+  const finalPrice = emergency > 0 ? emergency : price;
+
+  return sum + finalPrice * qty;
+}, 0);
+
+const gst = Number((subtotal * 0.18).toFixed(2));
+
+const total = Number((subtotal + gst).toFixed(2));
 
 
   // Create booking for each cart item
@@ -134,73 +167,148 @@ const handleConfirmBooking = async () => {
 
     /* ================= ONLINE PAYMENT ================= */
 
-    if (paymentMethod === "ONLINE") {
-      const firstItem = cart[0];
+    // if (paymentMethod === "ONLINE") {
+    //   const firstItem = cart[0];
 
-      const basePrice = firstItem.price * firstItem.quantity;
+    //   const basePrice = firstItem.price * firstItem.quantity;
 
-      const emergencyExtra = firstItem.emergencyPrice
-        ? (firstItem.emergencyPrice - firstItem.price) * firstItem.quantity
-        : 0;
+    //   const emergencyExtra = firstItem.emergencyPrice
+    //     ? (firstItem.emergencyPrice - firstItem.price) * firstItem.quantity
+    //     : 0;
 
-      const gstAmount = basePrice * 0.18;
+    //   const gstAmount = basePrice * 0.18;
 
-      const totalAmount = basePrice + emergencyExtra + gstAmount;
+    //   const totalAmount = basePrice + emergencyExtra + gstAmount;
 
-      const response = await fetch(
-        `${API_BASE}/api/payment/juspay/initiate`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            amount: totalAmount,
+    //   const response = await fetch(
+    //     `${API_BASE}/api/payment/juspay/initiate`,
+    //     {
+    //       method: "POST",
+    //       headers: { "Content-Type": "application/json" },
+    //       body: JSON.stringify({
+    //         amount: totalAmount,
 
-            customerId: user.id,
-            email: user.email || "",
-            mobile: user.mobile || "",
+    //         customerId: user.id,
+    //         email: user.email || "",
+    //         mobile: user.mobile || "",
 
-            service_code: firstItem.service_code || "",
-            subservice_code:
-              firstItem.subservice_code ||
-              firstItem.subservice_id?.toString() ||
-              "",
+    //         service_code: firstItem.service_code || "",
+    //         subservice_code:
+    //           firstItem.subservice_code ||
+    //           firstItem.subservice_id?.toString() ||
+    //           "",
 
-            address:
-              bookingData?.address || user.address || "Not specified",
+    //         address:
+    //           bookingData?.address || user.address || "Not specified",
 
-            date:
-              bookingData?.date ||
-              new Date().toISOString().split("T")[0],
+    //         date:
+    //           bookingData?.date ||
+    //           new Date().toISOString().split("T")[0],
 
-            time_slot:
-              bookingData?.time_slot || "10:00 AM - 12:00 PM",
+    //         time_slot:
+    //           bookingData?.time_slot || "10:00 AM - 12:00 PM",
 
-            gst: gstAmount.toFixed(2),
-            emergency_price: emergencyExtra.toFixed(2),
+    //         gst: gstAmount.toFixed(2),
+    //         emergency_price: emergencyExtra.toFixed(2),
 
-            quantity: firstItem.quantity,
-            price: firstItem.price,
-          }),
-        }
-      );
+    //         quantity: firstItem.quantity,
+    //         price: firstItem.price,
+    //       }),
+    //     }
+    //   );
 
-      const data = await response.json();
+    //   const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.message || "Payment initiation failed");
-      }
+    //   if (!response.ok) {
+    //     throw new Error(data.message || "Payment initiation failed");
+    //   }
 
-      if (!data.payment_urls?.web) {
-        throw new Error("Payment URL not received");
-      }
+    //   if (!data.payment_urls?.web) {
+    //     throw new Error("Payment URL not received");
+    //   }
 
-      /* SAVE CART BEFORE REDIRECT */
-      sessionStorage.setItem("pendingCart", JSON.stringify(cart));
+    //   /* SAVE CART BEFORE REDIRECT */
+    //   sessionStorage.setItem("pendingCart", JSON.stringify(cart));
 
-      /* REDIRECT TO PAYMENT PAGE */
-      window.location.href = data.payment_urls.web;
-      return;
+    //   /* REDIRECT TO PAYMENT PAGE */
+    //   window.location.href = data.payment_urls.web;
+    //   return;
+    // }
+
+
+
+    /* ================= ONLINE PAYMENT ================= */
+
+if (paymentMethod === "ONLINE") {
+
+  // const services = cart.map((item) => ({
+  //   service_code: item.service_code || "",
+  //   subservice_code:
+  //     item.subservice_code ||
+  //     item.subservice_id?.toString() ||
+  //     "",
+  //   quantity: item.quantity,
+  // }));
+
+
+  const services = cart.map((item) => ({
+  service_code: item.service_code || "",
+  subservice_code:
+    item.subservice_code ||
+    item.subservice_id?.toString() ||
+    "",
+  quantity: item.quantity,
+
+  // ✅ send emergency price
+  emergency_price: item.emergencyPrice ?? 0
+}));
+
+  const response = await fetch(
+    `${API_BASE}/api/payment/juspay/initiate`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        customerId: user.id,
+        email: user.email || "",
+        mobile: user.mobile || "",
+
+        services, // ✅ send full cart
+
+        address:
+          bookingData?.address || user.address || "Not specified",
+
+        date:
+          bookingData?.date ||
+          new Date().toISOString().split("T")[0],
+
+        time_slot:
+          bookingData?.time_slot || "10:00 AM - 12:00 PM",
+
+        gst: gst.toFixed(2),
+        emergency_price: 0,
+      }),
     }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Payment initiation failed");
+  }
+
+  if (!data.payment_urls?.web) {
+    throw new Error("Payment URL not received");
+  }
+
+  /* SAVE CART BEFORE REDIRECT */
+  sessionStorage.setItem("pendingCart", JSON.stringify(cart));
+
+  /* REDIRECT TO PAYMENT PAGE */
+  window.location.href = data.payment_urls.web;
+
+  return;
+}
 
 
     /* ================= COD BOOKING ================= */
@@ -483,7 +591,11 @@ const handleConfirmBooking = async () => {
                       </p>
                     </div>
                     <p className="font-black text-slate-900">
-                      ₹{((item.emergencyPrice ?? item.price) * item.quantity).toFixed(0)}
+                      {/* ₹{((item.emergencyPrice ?? item.price) * item.quantity).toFixed(0)} */}
+₹{(
+  (Number(item.emergencyPrice ?? item.price ?? 0) || 0) *
+  (Number(item.quantity ?? 1) || 1)
+).toFixed(2)}
                     </p>
                   </div>
                 ))}

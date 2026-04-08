@@ -1,321 +1,4 @@
-// import { useEffect, useState } from "react";
-// import { Trash2, Plus, Minus, ArrowLeft } from "lucide-react";
-// import { useNavigate } from "react-router-dom";
 
-// // 👉 Cart Item Type
-// interface CartItem {
-//   id: number;
-//   name: string;
-//   price: number;
-//   quantity: number;
-// }
-
-// const CartPage = () => {
-//   const navigate = useNavigate();
-//   const [cart, setCart] = useState<CartItem[]>([]);
-
-//   // Load cart from sessionStorage
-//   useEffect(() => {
-//     const storedCart = sessionStorage.getItem("cart");
-//     if (storedCart) {
-//       setCart(JSON.parse(storedCart));
-//     }
-//   }, []);
-
-//   // Save cart to sessionStorage
-//   const updateCart = (updatedCart: CartItem[]) => {
-//     setCart(updatedCart);
-//     sessionStorage.setItem("cart", JSON.stringify(updatedCart));
-//   };
-
-//   const increaseQty = (id: number) => {
-//     updateCart(
-//       cart.map((item) =>
-//         item.id === id ? { ...item, quantity: item.quantity + 1 } : item
-//       )
-//     );
-//   };
-
-//   const decreaseQty = (id: number) => {
-//     updateCart(
-//       cart
-//         .map((item) =>
-//           item.id === id
-//             ? { ...item, quantity: Math.max(1, item.quantity - 1) }
-//             : item
-//         )
-//         .filter((item) => item.quantity > 0)
-//     );
-//   };
-
-//   const removeItem = (id: number) => {
-//     updateCart(cart.filter((item) => item.id !== id));
-//   };
-
-//   const totalAmount = cart.reduce(
-//     (sum, item) => sum + item.price * item.quantity,
-//     0
-//   );
-
-//   return (
-//     <div className="max-w-5xl mx-auto px-6 py-10">
-//       {/* HEADER */}
-//       <div className="flex items-center gap-4 mb-8">
-//         <button
-//           onClick={() => navigate(-1)}
-//           className="p-2 rounded-lg hover:bg-gray-100"
-//         >
-//           <ArrowLeft />
-//         </button>
-//         <h1 className="text-3xl font-black">Your Cart</h1>
-//       </div>
-
-//       {/* EMPTY CART */}
-//       {cart.length === 0 ? (
-//         <div className="text-center py-20">
-//           <p className="text-gray-500 text-lg">Your cart is empty</p>
-//         </div>
-//       ) : (
-//         <div className="grid md:grid-cols-3 gap-8">
-//           {/* CART ITEMS */}
-//           <div className="md:col-span-2 space-y-4">
-//             {cart.map((item) => (
-//               <div
-//                 key={item.id}
-//                 className="bg-white rounded-2xl shadow p-5 flex justify-between items-center"
-//               >
-//                 <div>
-//                   <h3 className="font-bold text-lg">{item.name}</h3>
-//                   <p className="text-gray-500">₹{item.price}</p>
-//                 </div>
-
-//                 <div className="flex items-center gap-4">
-//                   <div className="flex items-center gap-2 bg-gray-100 rounded-xl px-3 py-1">
-//                     <button onClick={() => decreaseQty(item.id)}>
-//                       <Minus size={16} />
-//                     </button>
-//                     <span className="font-bold">{item.quantity}</span>
-//                     <button onClick={() => increaseQty(item.id)}>
-//                       <Plus size={16} />
-//                     </button>
-//                   </div>
-
-//                   <button
-//                     onClick={() => removeItem(item.id)}
-//                     className="text-red-500 hover:bg-red-50 p-2 rounded-lg"
-//                   >
-//                     <Trash2 size={18} />
-//                   </button>
-//                 </div>
-//               </div>
-//             ))}
-//           </div>
-
-//           {/* SUMMARY */}
-//           <div className="bg-white rounded-2xl shadow p-6 h-fit">
-//             <h2 className="text-xl font-black mb-4">Summary</h2>
-
-//             <div className="flex justify-between mb-3">
-//               <span className="text-gray-600">Subtotal</span>
-//               <span className="font-bold">₹{totalAmount.toFixed(2)}</span>
-//             </div>
-
-//             <button
-//               onClick={() => navigate("/checkout")}
-//               className="w-full mt-6 bg-indigo-600 text-white py-3 rounded-xl font-black hover:bg-indigo-700 transition"
-//             >
-//               Proceed to Checkout
-//             </button>
-//           </div>
-//         </div>
-//       )}
-//     </div>
-//   );
-// };
-
-// export default CartPage;
-
-//// cart APi called ////
-
-// import { useEffect, useState } from "react";
-// import { Trash2, Plus, Minus, ArrowLeft } from "lucide-react";
-// import { useNavigate } from "react-router-dom";
-
-// // 👉 Cart Item Type
-// interface CartItem {
-//   id: number;
-//   name: string;
-//   price: number;
-//   quantity: number;
-//   image?: string;
-// }
-
-// const CartPage = () => {
-//   const navigate = useNavigate();
-//   const [cart, setCart] = useState<CartItem[]>([]);
-//   const [loading, setLoading] = useState(true);
-
-//   /* ================= FETCH CART FROM API ================= */
-//   useEffect(() => {
-//     const user = JSON.parse(sessionStorage.getItem("user") || "{}");
-
-//     if (!user?.id) {
-//       alert("Please login first to view your cart.");
-//       setLoading(false);
-//       return;
-//     }
-
-//     fetch(`http://localhost:4000/api/cart/${user.id}`)
-//       .then((res) => res.json())
-//       .then((data) => {
-//         // Transform API response to CartItem[]
-//         const cartItems: CartItem[] = data.items.map((item: any) => ({
-//           id: item.id,
-//           name: item.SubService?.name || item.Service?.name,
-//           price: Number(item.SubService?.price || item.price),
-//           quantity: item.quantity,
-//           image: item.SubService?.imageUrl || item.Service?.imageUrl,
-//         }));
-
-//         setCart(cartItems);
-//         sessionStorage.setItem("cart", JSON.stringify(cartItems));
-//         setLoading(false);
-//       })
-//       .catch((err) => {
-//         console.error(err);
-//         setLoading(false);
-//       });
-//   }, []);
-
-//   /* ================= UPDATE CART LOCALLY ================= */
-//   const updateCart = (updatedCart: CartItem[]) => {
-//     setCart(updatedCart);
-//     sessionStorage.setItem("cart", JSON.stringify(updatedCart));
-//   };
-
-//   const increaseQty = (id: number) => {
-//     updateCart(
-//       cart.map((item) =>
-//         item.id === id ? { ...item, quantity: item.quantity + 1 } : item
-//       )
-//     );
-//   };
-
-//   const decreaseQty = (id: number) => {
-//     updateCart(
-//       cart
-//         .map((item) =>
-//           item.id === id
-//             ? { ...item, quantity: Math.max(1, item.quantity - 1) }
-//             : item
-//         )
-//         .filter((item) => item.quantity > 0)
-//     );
-//   };
-
-//   const removeItem = (id: number) => {
-//     updateCart(cart.filter((item) => item.id !== id));
-//   };
-
-//   const totalAmount = cart.reduce(
-//     (sum, item) => sum + item.price * item.quantity,
-//     0
-//   );
-
-//   if (loading) {
-//     return (
-//       <div className="text-center py-20 font-black text-2xl">
-//         Loading your cart...
-//       </div>
-//     );
-//   }
-
-//   return (
-//     <div className="max-w-5xl mx-auto px-6 py-10">
-//       {/* HEADER */}
-//       <div className="flex items-center gap-4 mb-8">
-//         <button
-//           onClick={() => navigate(-1)}
-//           className="p-2 rounded-lg hover:bg-gray-100"
-//         >
-//           <ArrowLeft />
-//         </button>
-//         <h1 className="text-3xl font-black">Your Cart</h1>
-//       </div>
-
-//       {/* EMPTY CART */}
-//       {cart.length === 0 ? (
-//         <div className="text-center py-20">
-//           <p className="text-gray-500 text-lg">Your cart is empty</p>
-//         </div>
-//       ) : (
-//         <div className="grid md:grid-cols-3 gap-8">
-//           {/* CART ITEMS */}
-//           <div className="md:col-span-2 space-y-4">
-//             {cart.map((item) => (
-//               <div
-//                 key={item.id}
-//                 className="bg-white rounded-2xl shadow p-5 flex justify-between items-center"
-//               >
-//                 <div className="flex gap-4 items-center">
-//                   {item.image && (
-//                     <img
-//                       src={item.image}
-//                       alt={item.name}
-//                       className="w-20 h-20 rounded-xl object-cover"
-//                     />
-//                   )}
-//                   <div>
-//                     <h3 className="font-bold text-lg">{item.name}</h3>
-//                     <p className="text-gray-500">₹{item.price}</p>
-//                   </div>
-//                 </div>
-
-//                 <div className="flex items-center gap-4">
-//                   <div className="flex items-center gap-2 bg-gray-100 rounded-xl px-3 py-1">
-//                     <button onClick={() => decreaseQty(item.id)}>
-//                       <Minus size={16} />
-//                     </button>
-//                     <span className="font-bold">{item.quantity}</span>
-//                     <button onClick={() => increaseQty(item.id)}>
-//                       <Plus size={16} />
-//                     </button>
-//                   </div>
-
-//                   <button
-//                     onClick={() => removeItem(item.id)}
-//                     className="text-red-500 hover:bg-red-50 p-2 rounded-lg"
-//                   >
-//                     <Trash2 size={18} />
-//                   </button>
-//                 </div>
-//               </div>
-//             ))}
-//           </div>
-
-//           {/* SUMMARY */}
-//           <div className="bg-white rounded-2xl shadow p-6 h-fit">
-//             <h2 className="text-xl font-black mb-4">Summary</h2>
-
-//             <div className="flex justify-between mb-3">
-//               <span className="text-gray-600">Subtotal</span>
-//               <span className="font-bold">₹{totalAmount.toFixed(2)}</span>
-//             </div>
-
-//             <button
-//               onClick={() => navigate("/checkout")}
-//               className="w-full mt-6 bg-indigo-600 text-white py-3 rounded-xl font-black hover:bg-indigo-700 transition"
-//             >
-//               Proceed to Checkout
-//             </button>
-//           </div>
-//         </div>
-//       )}/cart/
-//     </div>
-//   );
-// };
-
-// export default CartPage;
 
 ///// currently code /////
 // ... Keep the previous imports
@@ -378,9 +61,11 @@ const CartPage = () => {
     { label: "2:00 PM - 4:00 PM" },
     { label: "4:00 PM - 6:00 PM" },
   ];
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState(
-    "10:00 AM - 12:00 PM",
-  );
+  // const [selectedTimeSlot, setSelectedTimeSlot] = useState(
+  //   "10:00 AM - 12:00 PM",
+  // );
+
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState("");
 
   const user = JSON.parse(sessionStorage.getItem("user") || "{}");
 
@@ -593,7 +278,8 @@ useEffect(() => {
         item.id === cartItem.id
           ? {
               ...item,
-              emergencyPrice: Number(res.data.emergency_price),
+              // emergencyPrice: Number(res.data.emergency_price),
+              emergencyPrice: Number(res?.data?.emergency_price ?? 0),
               urgency_level: option.urgency_level,
             }
           : item
@@ -727,7 +413,9 @@ useEffect(() => {
                     <div>
                       <h3 className="font-bold text-lg">{item.name}</h3>
                       <p className="text-gray-500">
-                        ₹{item.emergencyPrice ?? item.price}
+                        {/* ₹{item.emergencyPrice ?? item.price} */}
+                        {/* ₹{Number(item.emergencyPrice ?? item.price ?? 0).toFixed(2)} */}
+                        ₹{(Number(item.emergencyPrice ?? item.price ?? 0) || 0).toFixed(2)}
                       </p>
                     </div>
                   </div>
@@ -919,39 +607,50 @@ useEffect(() => {
             </button> */}
             {/* ...inside the SUMMARY div at the bottom */}
             <button
-              onClick={() => {
-                if (cart.length === 0) {
-                  alert("Your cart is empty");
-                  return;
-                }
-                if (!address.trim()) {
-                  alert("Please enter your service address");
-                  return;
-                }
+onClick={() => {
+  if (cart.length === 0) {
+    alert("Your cart is empty");
+    return;
+  }
 
-                // Save booking data to session for checkout
-                sessionStorage.setItem(
-                  "bookingData",
-                  JSON.stringify({
-                    address: address,
-                    date: selectedDate,
-                    time_slot: selectedTimeSlot,
-                  }),
-                );
+  if (!address.trim()) {
+    alert("Please enter your service address");
+    return;
+  }
 
-                // Save cart with service codes
-                const cartWithCodes = cart.map((item) => ({
-                  ...item,
-                  service_code: item.service_code || "",
-                  subservice_code:
-                    item.subservice_code ||
-                    item.subservice_id?.toString() ||
-                    "",
-                }));
-                sessionStorage.setItem("cart", JSON.stringify(cartWithCodes));
+  if (!selectedTimeSlot) {
+    alert("Please select a time slot");
+    return;
+  }
 
-                navigate("/checkout");
-              }}
+  sessionStorage.setItem(
+    "bookingData",
+    JSON.stringify({
+      address: address,
+      date: selectedDate,
+      time_slot: selectedTimeSlot,
+    })
+  );
+
+  const cartWithCodes = cart.map((item) => ({
+    ...item,
+    price: Number(item.price ?? 0),
+    quantity: Number(item.quantity ?? 1),
+    emergencyPrice:
+      item.emergencyPrice !== undefined
+        ? Number(item.emergencyPrice)
+        : undefined,
+    service_code: item.service_code || "",
+    subservice_code:
+      item.subservice_code ||
+      item.subservice_id?.toString() ||
+      "",
+  }));
+
+  sessionStorage.setItem("cart", JSON.stringify(cartWithCodes));
+
+  navigate("/checkout");
+}}
               className="w-full mt-6 bg-indigo-600 text-white py-3 rounded-xl font-black hover:bg-indigo-700 transition flex justify-center gap-3"
             >
               Proceed to Checkout

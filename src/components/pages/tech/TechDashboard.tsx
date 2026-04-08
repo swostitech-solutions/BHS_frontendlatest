@@ -827,7 +827,7 @@ const fetchTechnicianRating = async (userId: number) => {
 
 
 
-
+//// correct one 2Apr /////
 const fetchBookingsWithNotification = async (techUserId: number) => {
   try {
     const userDataStr = sessionStorage.getItem("user");
