@@ -1,7 +1,5 @@
-
-
-///// currently code /////
-// ... Keep the previous imports
+// // ///// currently code /////
+// // // ... Keep the previous imports
 import { useEffect, useState } from "react";
 import { API_BASE } from "../../../config/api";
 import { Trash2, Plus, Minus, ArrowLeft, Navigation } from "lucide-react";
@@ -134,50 +132,26 @@ const CartPage = () => {
       })
       .catch((err) => console.error(err));
   };
+  
 
-
-  // Base subtotal (used only for GST calculation)
+// ✅ ONLY BASE PRICE (for subtotal & GST)
 const baseSubtotal = cart.reduce(
   (sum, item) => sum + item.price * item.quantity,
   0
 );
 
-// Subtotal including emergency pricing (for display)
-const subtotal = cart.reduce(
+// ✅ Subtotal (NO emergency here)
+const subtotal = baseSubtotal;
+
+// ✅ Emergency total (extra only)
+const emergencyTotal = cart.reduce(
   (sum, item) =>
     sum +
-    (item.emergencyPrice !== undefined ? item.emergencyPrice : item.price) *
-      item.quantity,
+    (item.emergencyPrice
+      ? (item.emergencyPrice - item.price) * item.quantity
+      : 0),
   0
 );
-
-  /* ================= FETCH GST ================= */
-  // useEffect(() => {
-  //   const subtotal = cart.reduce(
-  //     (sum, item) =>
-  //       sum +
-  //       (item.emergencyPrice !== undefined ? item.emergencyPrice : item.price) *
-  //         item.quantity,
-  //     0,
-  //   );
-
-  //   if (subtotal === 0) {
-  //     setGstData(null);
-  //     return;
-  //   }
-
-  //   fetch(`${API_BASE}/api/gst/calculate`, {
-  //     method: "POST",
-  //     headers: { "Content-Type": "application/json" },
-  //     body: JSON.stringify({ base_amount: subtotal, is_inter_state: false }),
-  //   })
-  //     .then((res) => res.json())
-  //     .then((res) => setGstData(res.data))
-  //     .catch((err) => console.error(err));
-  // }, [cart]);
-
-
-  /* ================= FETCH GST ================= */
 /* ================= FETCH GST ================= */
 useEffect(() => {
   if (baseSubtotal === 0) {
@@ -208,38 +182,6 @@ useEffect(() => {
       })
       .catch(console.error);
   };
-
-  // const handleSelectEmergency = (
-  //   cartItem: CartItem,
-  //   option: EmergencyOption,
-  // ) => {
-  //   fetch(`${API_BASE}/api/emergency-pricing/calculate`, {
-  //     method: "POST",
-  //     headers: { "Content-Type": "application/json" },
-  //     body: JSON.stringify({
-  //       subservice_id: cartItem.subservice_id,
-  //       urgency_level: option.urgency_level,
-  //     }),
-  //   })
-  //     .then((res) => res.json())
-  //     .then((res) => {
-  //       const updatedCart = cart.map((item) =>
-  //         item.id === cartItem.id
-  //           ? {
-  //               ...item,
-  //               emergencyPrice: Number(res.data.emergency_price),
-  //               urgency_level: option.urgency_level,
-  //             }
-  //           : item,
-  //       );
-  //       updateCart(updatedCart);
-  //       setSelectedCartItem(null);
-  //     })
-  //     .catch(console.error);
-  // };
-
-
-
 
   const handleSelectEmergency = (
   cartItem: CartItem,
@@ -290,21 +232,6 @@ useEffect(() => {
     .catch(console.error);
 };
 
-  // const subtotal = cart.reduce(
-  //   (sum, item) =>
-  //     sum +
-  //     (item.emergencyPrice !== undefined ? item.emergencyPrice : item.price) *
-  //       item.quantity,
-  //   0,
-  // );
-
-
-    //   const baseSubtotal = cart.reduce(
-    //   (sum, item) => sum + item.price * item.quantity,
-    //   0,
-    // );
-
-
 
   const handleGetCurrentLocation = () => {
     if (!("geolocation" in navigator)) return;
@@ -348,32 +275,6 @@ useEffect(() => {
     );
   }
 
-
-
-
-
-
-//   // Base subtotal (for GST calculation only)
-// const baseSubtotal = cart.reduce(
-//   (sum, item) => sum + item.price * item.quantity,
-//   0
-// );
-
-// // Subtotal including emergency pricing (for UI)
-// const subtotal = cart.reduce(
-//   (sum, item) =>
-//     sum +
-//     (item.emergencyPrice !== undefined ? item.emergencyPrice : item.price) *
-//       item.quantity,
-//   0
-// );
-
-
-
-
-
-
-
   return (
     <div className="max-w-5xl mx-auto px-6 py-10 space-y-8">
       {/* HEADER */}
@@ -410,14 +311,29 @@ useEffect(() => {
                         className="w-20 h-20 rounded-xl object-cover"
                       />
                     )}
-                    <div>
+                    {/* <div>
                       <h3 className="font-bold text-lg">{item.name}</h3>
                       <p className="text-gray-500">
-                        {/* ₹{item.emergencyPrice ?? item.price} */}
-                        {/* ₹{Number(item.emergencyPrice ?? item.price ?? 0).toFixed(2)} */}
                         ₹{(Number(item.emergencyPrice ?? item.price ?? 0) || 0).toFixed(2)}
                       </p>
-                    </div>
+                    </div> */}
+
+
+                    <div>
+  <h3 className="font-bold text-lg">{item.name}</h3>
+
+  {/* Main Price */}
+  <p className="text-gray-500">
+    ₹{(Number(item.emergencyPrice ?? item.price ?? 0) || 0).toFixed(2)}
+  </p>
+
+  {/* ✅ Emergency Extra (ADD HERE) */}
+  {item.emergencyPrice && (
+    <p className="text-amber-600 text-sm">
+      + ₹{(item.emergencyPrice - item.price).toFixed(2)} Emergency
+    </p>
+  )}
+</div>
                   </div>
 
                   <div className="flex items-center gap-4">
@@ -448,21 +364,6 @@ useEffect(() => {
                   >
                     {item.urgency_level ? "Change Emergency" : "Add Emergency"}
                   </button>
-
-                  {/* {selectedCartItem === item.id && (
-                    <div className="mt-2 space-y-2">
-                      {emergencyOptions.map((opt) => (
-                        <button
-                          key={opt.id}
-                          onClick={() => handleSelectEmergency(item, opt)}
-                          className="w-full text-left px-4 py-2 border rounded-xl hover:bg-amber-50"
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
-                    </div>
-                  )} */}
-
 
                   {selectedCartItem === item.id && (
   <div className="mt-2 space-y-2">
@@ -575,37 +476,46 @@ useEffect(() => {
             </div>
 
             {/* SUBTOTAL AND GST */}
-            <h2 className="text-xl font-black">Summary</h2>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Subtotal</span>
-              <span className="font-bold">₹{subtotal.toFixed(2)}</span>
-            </div>
+<h2 className="text-xl font-black">Summary</h2>
 
-            {gstData && (
-              <>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">
-                    GST ({gstData.gst_type})
-                  </span>
-                  <span className="font-bold">₹{gstData.total_gst}</span>
-                </div>
-                <div className="flex justify-between font-black text-lg">
-                  <span>Grand Total</span>
-                  {/* <span>₹{gstData.grand_total}</span> */}
-                   <span>
-    ₹{(subtotal + Number(gstData.total_gst)).toFixed(2)}
-  </span>
-                </div>
-              </>
-            )}
+{/* Subtotal */}
+<div className="flex justify-between">
+  <span className="text-gray-600">Subtotal</span>
+  <span className="font-bold">₹{subtotal.toFixed(2)}</span>
+</div>
 
-            {/* <button
-              onClick={() => navigate("/checkout")}
-              className="w-full mt-6 bg-indigo-600 text-white py-3 rounded-xl font-black hover:bg-indigo-700 transition"
-            >
-              Proceed to Checkout
-            </button> */}
-            {/* ...inside the SUMMARY div at the bottom */}
+{/* ✅ Emergency Charges */}
+{emergencyTotal > 0 && (
+  <div className="flex justify-between text-amber-600">
+    <span>Emergency Charges</span>
+    <span>₹{emergencyTotal.toFixed(2)}</span>
+  </div>
+)}
+
+{/* GST */}
+{gstData && (
+  <>
+    <div className="flex justify-between">
+      <span className="text-gray-600">
+        GST ({gstData.gst_type})
+      </span>
+      <span className="font-bold">₹{gstData.total_gst}</span>
+    </div>
+
+    {/* ✅ Grand Total */}
+    <div className="flex justify-between font-black text-lg">
+      <span>Grand Total</span>
+      <span>
+        ₹{(
+          subtotal +
+          emergencyTotal +
+          Number(gstData.total_gst)
+        ).toFixed(2)}
+      </span>
+    </div>
+  </>
+)}
+
             <button
 onClick={() => {
   if (cart.length === 0) {
@@ -623,14 +533,41 @@ onClick={() => {
     return;
   }
 
+  // sessionStorage.setItem(
+  //   "bookingData",
+  //   JSON.stringify({
+  //     address: address,
+  //     date: selectedDate,
+  //     time_slot: selectedTimeSlot,
+  //   })
+  // );
+
+
+
   sessionStorage.setItem(
-    "bookingData",
-    JSON.stringify({
-      address: address,
-      date: selectedDate,
-      time_slot: selectedTimeSlot,
-    })
-  );
+  "bookingData",
+  JSON.stringify({
+    address: address,
+    date: selectedDate,
+    time_slot: selectedTimeSlot,
+
+    // pricing: {
+    //   subtotal: subtotal,
+    //   gst: Number(gstData?.total_gst || 0),
+    //   total: subtotal + Number(gstData?.total_gst || 0),
+    // },
+
+    pricing: {
+  subtotal: subtotal,
+  emergency: emergencyTotal,
+  gst: Number(gstData?.total_gst || 0),
+  total:
+    subtotal +
+    emergencyTotal +
+    Number(gstData?.total_gst || 0),
+},
+  })
+);
 
   const cartWithCodes = cart.map((item) => ({
     ...item,
@@ -663,3 +600,5 @@ onClick={() => {
 };
 
 export default CartPage;
+
+

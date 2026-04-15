@@ -33,6 +33,12 @@ interface BookingData {
   address: string;
   date: string;
   time_slot: string;
+  pricing?: {
+    subtotal: number;
+    emergency: number; // ✅ ADD THIS
+    gst: number;
+    total: number;
+  };
 }
 
 const Checkout: React.FC = () => {
@@ -97,53 +103,12 @@ useEffect(() => {
 
 }, [navigate]);
 
-  // Calculate totals
-  // const subtotal = cart.reduce(
-  //   (sum, item) => sum + (item.emergencyPrice ?? item.price) * item.quantity,
-  //   0
-  // );
-  // const gst = subtotal * 0.18;
-  // const total = subtotal + gst;
 
 
-
-
-  // Base subtotal (for GST calculation only)
-// const baseSubtotal = cart.reduce(
-//   (sum, item) => sum + item.price * item.quantity,
-//   0
-// );
-
-// // Subtotal including emergency pricing
-// const subtotal = cart.reduce(
-//   (sum, item) =>
-//     sum + (item.emergencyPrice ?? item.price) * item.quantity,
-//   0
-// );
-
-// // GST only on base price
-// // const gst = baseSubtotal * 0.18;
-
-// const gst = subtotal * 0.18;
-
-// // Final total
-// const total = subtotal + gst;
-
-
-
-const subtotal = cart.reduce((sum, item) => {
-  const price = Number(item.price ?? 0);
-  const emergency = Number(item.emergencyPrice ?? price);
-  const qty = Number(item.quantity ?? 1);
-
-  const finalPrice = emergency > 0 ? emergency : price;
-
-  return sum + finalPrice * qty;
-}, 0);
-
-const gst = Number((subtotal * 0.18).toFixed(2));
-
-const total = Number((subtotal + gst).toFixed(2));
+const subtotal = bookingData?.pricing?.subtotal || 0;
+const emergency = bookingData?.pricing?.emergency || 0; // ✅ NEW
+const gst = bookingData?.pricing?.gst || 0;
+const total = bookingData?.pricing?.total || 0;
 
 
   // Create booking for each cart item
@@ -163,237 +128,158 @@ const handleConfirmBooking = async () => {
   setError("");
 
   try {
-    const bookings: any[] = [];
-
-    /* ================= ONLINE PAYMENT ================= */
-
-    // if (paymentMethod === "ONLINE") {
-    //   const firstItem = cart[0];
-
-    //   const basePrice = firstItem.price * firstItem.quantity;
-
-    //   const emergencyExtra = firstItem.emergencyPrice
-    //     ? (firstItem.emergencyPrice - firstItem.price) * firstItem.quantity
-    //     : 0;
-
-    //   const gstAmount = basePrice * 0.18;
-
-    //   const totalAmount = basePrice + emergencyExtra + gstAmount;
-
-    //   const response = await fetch(
-    //     `${API_BASE}/api/payment/juspay/initiate`,
-    //     {
-    //       method: "POST",
-    //       headers: { "Content-Type": "application/json" },
-    //       body: JSON.stringify({
-    //         amount: totalAmount,
-
-    //         customerId: user.id,
-    //         email: user.email || "",
-    //         mobile: user.mobile || "",
-
-    //         service_code: firstItem.service_code || "",
-    //         subservice_code:
-    //           firstItem.subservice_code ||
-    //           firstItem.subservice_id?.toString() ||
-    //           "",
-
-    //         address:
-    //           bookingData?.address || user.address || "Not specified",
-
-    //         date:
-    //           bookingData?.date ||
-    //           new Date().toISOString().split("T")[0],
-
-    //         time_slot:
-    //           bookingData?.time_slot || "10:00 AM - 12:00 PM",
-
-    //         gst: gstAmount.toFixed(2),
-    //         emergency_price: emergencyExtra.toFixed(2),
-
-    //         quantity: firstItem.quantity,
-    //         price: firstItem.price,
-    //       }),
-    //     }
-    //   );
-
-    //   const data = await response.json();
-
-    //   if (!response.ok) {
-    //     throw new Error(data.message || "Payment initiation failed");
-    //   }
-
-    //   if (!data.payment_urls?.web) {
-    //     throw new Error("Payment URL not received");
-    //   }
-
-    //   /* SAVE CART BEFORE REDIRECT */
-    //   sessionStorage.setItem("pendingCart", JSON.stringify(cart));
-
-    //   /* REDIRECT TO PAYMENT PAGE */
-    //   window.location.href = data.payment_urls.web;
-    //   return;
-    // }
-
-
-
-    /* ================= ONLINE PAYMENT ================= */
+/* ================= ONLINE PAYMENT ================= */
 
 if (paymentMethod === "ONLINE") {
+  try {
+    let total_amount = Number(bookingData?.pricing?.total || 0);
 
-  // const services = cart.map((item) => ({
-  //   service_code: item.service_code || "",
-  //   subservice_code:
-  //     item.subservice_code ||
-  //     item.subservice_id?.toString() ||
-  //     "",
-  //   quantity: item.quantity,
-  // }));
+    const services = cart.map((item) => {
+  const base = Number(item.price || 0);
+  const qty = Number(item.quantity || 1);
 
+  const baseTotal = base * qty;
 
-  const services = cart.map((item) => ({
-  service_code: item.service_code || "",
-  subservice_code:
-    item.subservice_code ||
-    item.subservice_id?.toString() ||
-    "",
-  quantity: item.quantity,
+  // ✅ ONLY emergency EXTRA
+  const emergencyExtra = item.emergencyPrice
+    ? Math.max(Number(item.emergencyPrice) - base, 0)
+    : 0;
 
-  // ✅ send emergency price
-  emergency_price: item.emergencyPrice ?? 0
-}));
+  const emergencyTotal = emergencyExtra * qty;
 
-  const response = await fetch(
-    `${API_BASE}/api/payment/juspay/initiate`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        customerId: user.id,
-        email: user.email || "",
-        mobile: user.mobile || "",
+  // ✅ DO NOT recalc GST here
+  const gstAmount = 0;
 
-        services, // ✅ send full cart
+  const totalPrice = baseTotal + emergencyTotal;
 
-        address:
-          bookingData?.address || user.address || "Not specified",
+  return {
+    service_code: item.service_code,
+    subservice_code: item.subservice_code,
+    quantity: qty,
 
-        date:
-          bookingData?.date ||
-          new Date().toISOString().split("T")[0],
+    base_price: Number(baseTotal.toFixed(2)),
+    emergency_price: Number(emergencyTotal.toFixed(2)),
 
-        time_slot:
-          bookingData?.time_slot || "10:00 AM - 12:00 PM",
+    gst: gstAmount, // ✅ already included in total_amount
+    total_price: Number(totalPrice.toFixed(2)),
+  };
+});
 
-        gst: gst.toFixed(2),
-        emergency_price: 0,
-      }),
+    // ✅ FINAL LOCK
+    total_amount = Number(total_amount.toFixed(2));
+
+    console.log("🛒 SERVICES:", services);
+    console.log("💰 FINAL TOTAL:", total_amount);
+
+    const payload = {
+      customerId: user.id,
+      email: user.email || "",
+      mobile: user.mobile || "",
+      address: bookingData?.address || user.address || "Not specified",
+      date: bookingData?.date || new Date().toISOString().split("T")[0],
+      time_slot: bookingData?.time_slot || "10:00 AM - 12:00 PM",
+
+      total_amount, // ✅ ONLY THIS
+      services,
+    };
+
+    console.log("📦 FINAL PAYLOAD:", payload);
+
+    const response = await fetch(
+      `${API_BASE}/api/payment/juspay/initiate`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Payment failed");
     }
-  );
 
-  const data = await response.json();
+    if (!data.payment_urls?.web) {
+      throw new Error("Payment URL not received");
+    }
 
-  if (!response.ok) {
-    throw new Error(data.message || "Payment initiation failed");
+    sessionStorage.setItem("pendingCart", JSON.stringify(cart));
+
+    window.location.href = data.payment_urls.web;
+    return;
+  } catch (err: any) {
+    console.error("❌ ONLINE PAYMENT ERROR:", err);
+    setError(err.message || "Payment failed");
+    setStep("ERROR");
   }
-
-  if (!data.payment_urls?.web) {
-    throw new Error("Payment URL not received");
-  }
-
-  /* SAVE CART BEFORE REDIRECT */
-  sessionStorage.setItem("pendingCart", JSON.stringify(cart));
-
-  /* REDIRECT TO PAYMENT PAGE */
-  window.location.href = data.payment_urls.web;
-
-  return;
 }
 
 
-    /* ================= COD BOOKING ================= */
-
+    /* ================= COD ================= */
     for (const item of cart) {
-      const basePrice = item.price * item.quantity;
+      const base = Number(item.price || 0);
+      const qty = Number(item.quantity || 1);
 
       const emergencyExtra = item.emergencyPrice
-        ? (item.emergencyPrice - item.price) * item.quantity
+        ? Math.max(Number(item.emergencyPrice) - base, 0)
         : 0;
 
-      const gstAmount = basePrice * 0.18;
+      const baseTotal = base * qty;
+      const emergencyTotal = emergencyExtra * qty;
 
-      const totalPrice = basePrice + emergencyExtra + gstAmount;
+      const beforeGST = baseTotal + emergencyTotal;
+      const itemGST = beforeGST * 0.18;
+      const totalItemPrice = beforeGST + itemGST;
 
-      const response = await fetch(
-        `${API_BASE}/api/service-on-booking`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            user_id: user.id,
+      await fetch(`${API_BASE}/api/service-on-booking`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: user.id,
+          service_code: item.service_code,
+          subservice_code: item.subservice_code,
 
-            service_code: item.service_code || "",
-            subservice_code:
-              item.subservice_code ||
-              item.subservice_id?.toString() ||
-              "",
+          address:
+            bookingData?.address ||
+            user.address ||
+            "Not specified",
 
-            address:
-              bookingData?.address || user.address || "Not specified",
+          date:
+            bookingData?.date ||
+            new Date().toISOString().split("T")[0],
 
-            date:
-              bookingData?.date ||
-              new Date().toISOString().split("T")[0],
+          time_slot:
+            bookingData?.time_slot ||
+            "10:00 AM - 12:00 PM",
 
-            time_slot:
-              bookingData?.time_slot || "10:00 AM - 12:00 PM",
+          price: base,
+          quantity: qty,
 
-            price: item.price,
-            quantity: item.quantity,
-
-            gst: gstAmount.toFixed(2),
-            emergency_price: emergencyExtra.toFixed(2),
-            total_price: totalPrice.toFixed(2),
-          }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to create booking");
-      }
-
-      bookings.push(data.booking);
+          gst: itemGST.toFixed(2),
+          emergency_price: emergencyExtra.toFixed(2),
+          total_price: totalItemPrice.toFixed(2),
+        }),
+      });
     }
 
-    setCreatedBookings(bookings);
-
-    /* DELETE CART ITEMS FROM DATABASE */
-    await Promise.all(
-      cart.map((item) =>
-        fetch(`${API_BASE}/api/cart/item/${item.id}`, {
-          method: "DELETE",
-        }).catch(() => {})
-      )
-    );
-
-    /* CLEAR SESSION STORAGE */
+    /* ================= CLEANUP ================= */
     sessionStorage.removeItem("cart");
     sessionStorage.removeItem("bookingData");
     sessionStorage.removeItem("pendingCart");
 
-    /* CLEAR UI CART */
     setCart([]);
-
     setStep("SUCCESS");
 
   } catch (err: any) {
     console.error("Booking error:", err);
-    setError(err.message || "Failed to create booking. Please try again.");
+    setError(err.message || "Failed to create booking");
     setStep("ERROR");
   }
 };
+
 
 
   if (loading) {
@@ -446,17 +332,6 @@ if (paymentMethod === "ONLINE") {
               Your service has been booked successfully. A technician will be assigned soon.
             </p>
 
-            {/* {createdBookings.length > 0 && (
-              <div className="bg-slate-50 rounded-2xl p-6 mb-8 text-left">
-                <p className="text-slate-500 text-sm font-medium mb-2">Booking ID</p>
-                <p className="text-2xl font-black text-indigo-600">
-                  {createdBookings[0]?.order_id || "N/A"}
-                </p>
-              </div>
-            )} */}
-
-
-
 {createdBookings.length > 0 && (
   <div className="bg-slate-50 rounded-2xl p-6 mb-8 text-left">
     <p className="text-slate-500 text-sm font-medium mb-3">
@@ -479,9 +354,10 @@ if (paymentMethod === "ONLINE") {
             </p>
           </div>
 
+
           <span className="text-lg font-black text-indigo-600">
-            {booking?.order_id || "N/A"}
-          </span>
+  {booking?.order_id ? booking.order_id : "N/A"}
+</span>
         </div>
       ))}
     </div>
@@ -650,22 +526,37 @@ if (paymentMethod === "ONLINE") {
                 Payment Summary
               </h2>
 
+
+
               <div className="space-y-4 mb-6">
-                <div className="flex justify-between">
-                  <span className="text-slate-600">Subtotal</span>
-                  <span className="font-bold">₹{subtotal.toFixed(0)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-600">GST (18%)</span>
-                  <span className="font-bold">₹{gst.toFixed(0)}</span>
-                </div>
-                <div className="border-t border-slate-200 pt-4 flex justify-between">
-                  <span className="text-lg font-black">Total</span>
-                  <span className="text-2xl font-black text-indigo-600">
-                    ₹{total.toFixed(0)}
-                  </span>
-                </div>
-              </div>
+  {/* Subtotal */}
+  <div className="flex justify-between">
+    <span className="text-slate-600">Subtotal</span>
+    <span className="font-bold">₹{subtotal.toFixed(2)}</span>
+  </div>
+
+  {/* ✅ Emergency */}
+  {emergency > 0 && (
+    <div className="flex justify-between text-amber-600">
+      <span>Emergency Charges</span>
+      <span>₹{emergency.toFixed(2)}</span>
+    </div>
+  )}
+
+  {/* GST */}
+  <div className="flex justify-between">
+    <span className="text-slate-600">GST (18%)</span>
+    <span className="font-bold">₹{gst.toFixed(2)}</span>
+  </div>
+
+  {/* Total */}
+  <div className="border-t border-slate-200 pt-4 flex justify-between">
+    <span className="text-lg font-black">Total</span>
+    <span className="text-2xl font-black text-indigo-600">
+      ₹{total.toFixed(2)}
+    </span>
+  </div>
+</div>
 
               {/* Payment Method Selection */}
               <div className="mb-6">
@@ -746,3 +637,25 @@ if (paymentMethod === "ONLINE") {
 };
 
 export default Checkout;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

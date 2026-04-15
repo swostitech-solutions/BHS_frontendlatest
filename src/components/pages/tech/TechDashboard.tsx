@@ -631,202 +631,6 @@ const fetchTechnicianRating = async (userId: number) => {
   }
 };
 
-// NEW: Fetch bookings and check for new jobs
-// const fetchBookingsWithNotification = async (techUserId: number) => {
-//   try {
-//     const userDataStr = sessionStorage.getItem("user");
-//     const userData = userDataStr ? JSON.parse(userDataStr) : null;
-//     const techCategory = userData?.technicianDetails?.techCategory;
-    
-
-//     const res = await fetch(`${API_BASE}/api/service-on-booking`);
-//     if (!res.ok) return;
-
-//     const data = await res.json();
-//     const allBookings: Booking[] = data.bookings || [];
-
-//     // ✅ Filter relevant bookings
-//     const relevantBookings = allBookings.filter((b: Booking) => {
-
-//       // ❌ Ignore unpaid bookings
-//       if (b.payment_status !== "PAID") {
-//         return false;
-//       }
-
-//       // ✅ Job already accepted by THIS technician
-//       if (b.technician_allocated && b.technician?.id === techUserId) {
-//         return true;
-//       }
-
-//       // ❌ Job accepted by another technician
-//       if (b.technician_allocated && b.technician?.id !== techUserId) {
-//         return false;
-//       }
-
-//       // ✅ Show open jobs matching technician category
-//       if (!b.technician_allocated) {
-//         const serviceName = b.service?.name || "";
-//         const serviceCode = b.service_code || b.service?.service_code || "";
-
-//         if (categoryMatchesService(techCategory, serviceName, serviceCode)) {
-//           return true;
-//         }
-//       }
-
-//       return false;
-//     });
-
-//     // ✅ FIX 3 — Auto close popup if another technician accepted the job
-//     if (
-//       newJobAlert &&
-//       allBookings.some(
-//         (b) =>
-//           b.order_id === newJobAlert.order_id &&
-//           b.technician_allocated &&
-//           b.technician?.id !== techUserId
-//       )
-//     ) {
-//       setShowNewJobPopup(false);
-//       setNewJobAlert(null);
-//     }
-
-//     // ✅ Find new unseen jobs
-//     const newUnseenJobs = relevantBookings.filter(
-//       (b) =>
-//         !b.technician_allocated &&
-//         !seenJobIdsRef.current.has(b.order_id)
-//     );
-
-//     // ✅ Only allow valid open jobs
-//     const validNewJobs = newUnseenJobs.filter(
-//       (job) => !job.technician_allocated
-//     );
-
-//     if (validNewJobs.length > 0) {
-//       const nextJob = validNewJobs[0];
-
-//       if (!seenJobIdsRef.current.has(nextJob.order_id)) {
-//         setNewJobAlert(nextJob);
-//         setShowNewJobPopup(true);
-
-//         // 🔔 Play notification sound
-//         playNotificationSound();
-
-//         // 📳 Vibrate if supported
-//         if (navigator.vibrate) {
-//           navigator.vibrate([200, 100, 200]);
-//         }
-//       }
-//     }
-
-//     // ✅ Update job list
-//     setBookings(relevantBookings);
-
-//     // ✅ Update notification list
-//     setNotifications(
-//       relevantBookings.filter((b) => !b.technician_allocated)
-//     );
-
-//   } catch (error) {
-//     console.error("Polling error:", error);
-//   }
-// };
-
-
-
-
-
-
-////////// current one code /////////
-// const fetchBookingsWithNotification = async (techUserId: number) => {
-//   try {
-//     const userDataStr = sessionStorage.getItem("user");
-//     const userData = userDataStr ? JSON.parse(userDataStr) : null;
-
-//     const techCategory = userData?.technicianDetails?.techCategory;
-
-//     // ✅ GET CORRECT technician_id
-//     const technicianId = userData?.technicianDetails?.technician_id;
-
-//     // ✅ WALLET API
-//     const walletRes = await fetch(`${API_BASE}/api/wallet/${technicianId}`);
-//     const walletData = await walletRes.json();
-
-//     const walletBalance = Number(walletData?.balance || 0);
-
-//     console.log("Wallet Balance:", walletBalance);
-
-//     const res = await fetch(`${API_BASE}/api/service-on-booking`);
-//     if (!res.ok) return;
-
-//     const data = await res.json();
-//     const allBookings: Booking[] = data.bookings || [];
-
-//     const relevantBookings = allBookings.filter((b: Booking) => {
-
-//       // ❌ Ignore unpaid
-//       if (b.payment_status !== "PAID") {
-//         return false;
-//       }
-
-//       // ✅ Already accepted by THIS technician
-//       if (b.technician_allocated && b.technician?.id === techUserId) {
-//         return true;
-//       }
-
-//       // ❌ Accepted by another technician
-//       if (b.technician_allocated && b.technician?.id !== techUserId) {
-//         return false;
-//       }
-
-//       // ✅ OPEN JOB
-//       if (!b.technician_allocated) {
-
-//         const serviceName = b.service?.name || "";
-//         const serviceCode = b.service_code || b.service?.service_code || "";
-
-//         const categoryMatch = categoryMatchesService(
-//           techCategory,
-//           serviceName,
-//           serviceCode
-//         );
-
-//         if (!categoryMatch) return false;
-
-//         const bookingPrice = Number(b.total_price || 0);
-//         const commission = bookingPrice * 0.10;
-
-//         console.log(
-//           "Wallet:", walletBalance,
-//           "Price:", bookingPrice,
-//           "Commission:", commission
-//         );
-
-//         // ⭐ Wallet balance check
-//         if (walletBalance < commission) {
-//           return false;
-//         }
-
-//         return true;
-//       }
-
-//       return false;
-//     });
-
-//     setBookings(relevantBookings);
-
-//     setNotifications(
-//       relevantBookings.filter((b) => !b.technician_allocated)
-//     );
-
-//   } catch (error) {
-//     console.error("Polling error:", error);
-//   }
-// };
-
-
-
-
 //// correct one 2Apr /////
 const fetchBookingsWithNotification = async (techUserId: number) => {
   try {
@@ -1011,7 +815,7 @@ const fetchBookingsWithNotification = async (techUserId: number) => {
     if (!newJobAlert) return;
 
     markJobAsSeen(newJobAlert.order_id);
-    await handleAcceptJob(newJobAlert.order_id);
+    await handleAcceptJob(newJobAlert.id);
     setShowNewJobPopup(false);
     setNewJobAlert(null);
   };
@@ -1021,7 +825,7 @@ const fetchBookingsWithNotification = async (techUserId: number) => {
     if (!newJobAlert) return;
 
     markJobAsSeen(newJobAlert.order_id);
-    await handleRejectJob(newJobAlert.order_id);
+    await handleRejectJob(newJobAlert.id);
     setShowNewJobPopup(false);
     setNewJobAlert(null);
   };
@@ -1029,81 +833,6 @@ const fetchBookingsWithNotification = async (techUserId: number) => {
   // Fetch bookings for technician:
   // 1. All bookings assigned to this technician
   // 2. Unassigned bookings matching technician's category (for accepting)
-//   const fetchBookings = async (techUserId: number) => {
-//     setLoading(true);
-//     try {
-//       // Get the user profile to know their techCategory
-//       const userDataStr = sessionStorage.getItem("user");
-//       const userData = userDataStr ? JSON.parse(userDataStr) : null;
-//       const techCategory = userData?.technicianDetails?.techCategory;
-
-//       // Fetch ALL bookings using existing Swagger API
-//       const res = await fetch(`${API_BASE}/api/service-on-booking`);
-//       if (!res.ok) throw new Error("Failed to fetch bookings");
-
-//       const data = await res.json();
-//       const allBookings: Booking[] = data.bookings || [];
-
-//       // Filter bookings:
-//       // 1. Bookings assigned to this technician (any status)
-//       // 2. Unassigned bookings (technician_allocated: false) matching technician's categor
-
-
-//       const relevantBookings = allBookings.filter((b: Booking) => {
-
-//   // ❌ Ignore unpaid bookings
-//   if (b.payment_status !== "PAID") {
-//     return false;
-//   }
-
-//   // ✅ Already assigned to this technician
-//   // if (b.technician_allocated && b.technician?.id === techUserId) {
-//   //   return true;
-//   // }
-
-//   // ✅ Job already accepted by THIS technician
-// if (b.technician_allocated && b.technician?.id === techUserId) {
-//   return true;
-// }
-
-// // ❌ Job accepted by another technician → hide
-// if (b.technician_allocated && b.technician?.id !== techUserId) {
-//   return false;
-// }
-
-//   // ✅ New jobs for this technician category
-//   if (!b.technician_allocated) {
-//     const serviceName = b.service?.name || "";
-//     const serviceCode = b.service_code || b.service?.service_code || "";
-
-//     if (categoryMatchesService(techCategory, serviceName, serviceCode)) {
-//       return true;
-//     }
-//   }
-
-//   return false;
-// });
-
-//       setBookings(relevantBookings);
-
-//       // New bookings = unassigned ones that match category (for notifications)
-//       setNotifications(
-//         relevantBookings.filter((b: Booking) => !b.technician_allocated)
-//       );
-//     } catch (error) {
-//       console.error("Error fetching bookings:", error);
-//       setBookings([]);
-//       setNotifications([]);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-
-
-
-
-
 const fetchBookings = async (techUserId: number) => {
   setLoading(true);
   try {
@@ -1203,7 +932,9 @@ const fetchBookings = async (techUserId: number) => {
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [showErrorToast, setShowErrorToast] = useState<string | null>(null);
 
-  const handleAcceptJob = async (orderId: string) => {
+  // const handleAcceptJob = async (orderId: string) => {
+  const handleAcceptJob = async (bookingId: number) => {
+
     try {
       setAcceptingJob(true);
       const token = sessionStorage.getItem("accessToken");
@@ -1215,20 +946,35 @@ const fetchBookings = async (techUserId: number) => {
         return;
       }
 
+      // const res = await fetch(
+      //   `${API_BASE}/api/service-on-booking/accept/${orderId}`,
+      //   {
+      //     method: "POST",
+      //     headers: {
+      //       "Content-Type": "application/json",
+      //       Authorization: `Bearer ${token}`,
+      //     },
+      //     body: JSON.stringify({
+      //       technician_id: profile.id, // USER ID
+      //       opinion: 1, // 1 = Accept
+      //     }),
+      //   }
+      // );
+
       const res = await fetch(
-        `${API_BASE}/api/service-on-booking/accept/${orderId}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            technician_id: profile.id, // USER ID
-            opinion: 1, // 1 = Accept
-          }),
-        }
-      );
+  `${API_BASE}/api/service-on-booking/accept/${bookingId}`,
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      technician_id: profile.id,
+      opinion: 1,
+    }),
+  }
+);
 
       const data = await res.json();
 
@@ -1242,7 +988,8 @@ const fetchBookings = async (techUserId: number) => {
             "This job has already been accepted by another technician. Refreshing..."
           );
           // Mark as seen so it doesn't show again
-          markJobAsSeen(orderId);
+          // markJobAsSeen(orderId);
+          markJobAsSeen(String(bookingId))
         } else {
           setShowErrorToast(data.message || "Failed to accept job");
         }
@@ -1252,7 +999,8 @@ const fetchBookings = async (techUserId: number) => {
       }
 
       // Success! Mark job as seen and show success toast
-      markJobAsSeen(orderId);
+      // markJobAsSeen(orderId);
+      markJobAsSeen(String(bookingId))
       setShowSuccessToast(true);
       setTimeout(() => setShowSuccessToast(false), 3000);
 
@@ -1268,7 +1016,9 @@ const fetchBookings = async (techUserId: number) => {
 
   // Reject job using existing Swagger API: POST /api/service-on-booking/accept/:order_id
   // opinion=2 means reject
-  const handleRejectJob = async (orderId: string) => {
+  // const handleRejectJob = async (orderId: string) => {
+  const handleRejectJob = async (bookingId: number) => {
+
   try {
     const token = sessionStorage.getItem("accessToken");
 
@@ -1281,9 +1031,13 @@ const fetchBookings = async (techUserId: number) => {
     const resCheck = await fetch(`${API_BASE}/api/service-on-booking`);
     const dataCheck = await resCheck.json();
 
+    // const booking = dataCheck.bookings?.find(
+    //   (b: Booking) => b.order_id === orderId
+    // );
+
     const booking = dataCheck.bookings?.find(
-      (b: Booking) => b.order_id === orderId
-    );
+  (b: Booking) => b.id === bookingId
+);
 
     // ❌ If already accepted by another technician
     if (
@@ -1301,20 +1055,36 @@ const fetchBookings = async (techUserId: number) => {
     }
 
     // ✅ Call reject API
+    // const res = await fetch(
+    //   `${API_BASE}/api/service-on-booking/accept/${orderId}`,
+    //   {
+    //     method: "POST",
+    //     headers: {
+    //       "Content-Type": "application/json",
+    //       Authorization: `Bearer ${token}`,
+    //     },
+    //     body: JSON.stringify({
+    //       technician_id: profile.id,
+    //       opinion: 2,
+    //     }),
+    //   }
+    // );
+
+
     const res = await fetch(
-      `${API_BASE}/api/service-on-booking/accept/${orderId}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          technician_id: profile.id,
-          opinion: 2,
-        }),
-      }
-    );
+  `${API_BASE}/api/service-on-booking/accept/${bookingId}`,
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      technician_id: profile.id,
+      opinion: 2,
+    }),
+  }
+);
 
     const data = await res.json();
 
@@ -1337,7 +1107,8 @@ const fetchBookings = async (techUserId: number) => {
 
   // Update work status using existing Swagger API: POST /api/service-on-booking/work-status/:order_id
   const updateWorkStatus = async (
-    orderId: string,
+    // orderId: string,
+    bookingId: number,
     status: number,
     notes?: string,
     imageFile?: File
@@ -1356,7 +1127,7 @@ const fetchBookings = async (techUserId: number) => {
       }
 
       const res = await fetch(
-        `${API_BASE}/api/service-on-booking/work-status/${orderId}`,
+        `${API_BASE}/api/service-on-booking/work-status/${bookingId}`,
         {
           method: "POST",
           headers: {
@@ -1995,8 +1766,8 @@ const fetchBookings = async (techUserId: number) => {
             setShowJobModal(false);
             setSelectedJob(null);
           }}
-          onAccept={() => handleAcceptJob(selectedJob.order_id)}
-          onReject={() => handleRejectJob(selectedJob.order_id)}
+          onAccept={() => handleAcceptJob(selectedJob.id)}
+          onReject={() => handleRejectJob(selectedJob.id)}
         />
       )}
 
@@ -2153,7 +1924,7 @@ const fetchBookings = async (techUserId: number) => {
             </p>
           </div>
 
-          <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700">
+          {/* <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700">
             <div className="flex items-center gap-2 mb-1">
               <DollarSign size={14} className="text-emerald-400" />
               <p className="text-slate-400 text-xs">Earnings</p>
@@ -2161,7 +1932,56 @@ const fetchBookings = async (techUserId: number) => {
             <p className="text-emerald-400 font-bold text-sm">
               ₹{newJobAlert.total_price?.toLocaleString() || "0"}
             </p>
-          </div>
+          </div> */}
+
+
+
+          <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700">
+  <div className="flex items-center gap-2 mb-2">
+    <DollarSign size={14} className="text-emerald-400" />
+    <p className="text-slate-400 text-xs">Price Details</p>
+  </div>
+
+  <div className="space-y-1 text-sm">
+
+    {/* Subservice Price */}
+    <div className="flex justify-between text-slate-300">
+      <span>Service Price</span>
+      <span className="text-white font-semibold">
+        ₹{Number(newJobAlert.subservice?.price || 0)}
+      </span>
+    </div>
+
+    {/* Emergency Price */}
+    <div className="flex justify-between text-slate-300">
+      <span>Emergency Charge</span>
+      <span className="text-white font-semibold">
+        ₹{Number(newJobAlert.emergency_price || 0)}
+      </span>
+    </div>
+
+    {/* GST TEXT ONLY */}
+    {/* <div className="flex justify-between text-amber-400 text-xs pt-1">
+      <span>+ 18% GST</span>
+      <span>(included)</span>
+    </div> */}
+{/* GST SECTION */}
+<div className="flex justify-between text-amber-400 text-xs pt-1">
+  {Number(newJobAlert.gst) > 0 ? (
+    <>
+      <span>+ 18% GST</span>
+      <span>₹{Number(newJobAlert.gst)}</span>
+    </>
+  ) : (
+    <>
+      <span>+ 18% GST</span>
+      <span>(included)</span>
+    </>
+  )}
+</div>
+
+  </div>
+</div>
         </div>
 
         {/* Schedule */}
@@ -2450,7 +2270,8 @@ const UpdateStatusModal = ({
   job: Booking;
   onClose: () => void;
   onUpdate: (
-    orderId: string,
+    // orderId: string,
+    bookingId: number,
     status: number,
     notes?: string,
     image?: File
@@ -2648,7 +2469,8 @@ const UpdateStatusModal = ({
               );
               if (option) {
                 onUpdate(
-                  job.order_id,
+                  job.id,
+                  // job.order_id,
                   option.status,
                   note || undefined,
                   imageFile || undefined
@@ -2857,8 +2679,10 @@ const JobsTab = ({
 }: {
   bookings: Booking[];
   onViewJob: (job: Booking) => void;
-  onAccept: (orderId: string) => void;
-  onReject: (orderId: string) => void;
+  // onAccept: (orderId: string) => void;
+  // onReject: (orderId: string) => void;
+  onAccept: (bookingId: number) => void;
+onReject: (bookingId: number) => void;
 }) => {
   const [filter, setFilter] = useState<"all" | "new" | "active" | "completed">(
     "all"
@@ -2927,98 +2751,6 @@ const JobsTab = ({
       </div>
 
       {/* Jobs Grid */}
-      {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {filteredBookings.map((job) => {
-          const statusConfig = getStatusConfig(job.work_status);
-          const isNew = job.work_status === WORK_STATUS.NEW;
-
-          return (
-            <div
-              key={job.id}
-              className={`bg-slate-900/50 backdrop-blur-xl border rounded-2xl p-6 hover:border-slate-700 transition-all ${
-                isNew ? "border-violet-500/50" : "border-slate-800"
-              }`}
-            >
-              <div className="flex items-start justify-between mb-4">
-                <span
-                  className={`px-3 py-1 rounded-full text-xs font-bold ${statusConfig.color}`}
-                >
-                  {statusConfig.label}
-                </span>
-                <p className="text-slate-500 text-sm font-mono">
-                  #{job.order_id}
-                </p>
-              </div>
-
-              <h4 className="text-xl font-bold text-white mb-2">
-                {job.subservice?.name || job.subservice_code}
-              </h4>
-              <p className="text-slate-500 text-sm mb-4">
-                {job.service?.name || job.service_code}
-              </p>
-
-              <div className="space-y-2 mb-4">
-                <div className="flex items-center gap-2 text-slate-400 text-sm">
-                  <MapPin size={16} />
-                  <span className="truncate">
-                    {job.address || "Address not provided"}
-                  </span>
-                </div>
-                <div className="flex items-center gap-4 text-slate-400 text-sm">
-                  <span className="flex items-center gap-1">
-                    <Calendar size={16} /> {job.date}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Clock size={16} /> {job.time_slot}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between pt-4 border-t border-slate-800">
-                <p className="text-2xl font-black text-emerald-400">
-                  ₹{job.total_price?.toLocaleString() || 0}
-                </p>
-
-                {isNew ? (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => onReject(job.order_id)}
-                      className="px-4 py-2 bg-red-500/20 text-red-400 rounded-lg font-semibold hover:bg-red-500/30 transition-colors"
-                    >
-                      Reject
-                    </button>
-                    <button
-                      onClick={() => onAccept(job.order_id)}
-                      className="px-4 py-2 bg-emerald-500 text-white rounded-lg font-semibold hover:bg-emerald-400 transition-colors"
-                    >
-                      Accept
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => onViewJob(job)}
-                    className="px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg font-semibold hover:bg-emerald-500/30 transition-colors"
-                  >
-                    {job.work_status === WORK_STATUS.COMPLETED
-                      ? "View Details"
-                      : "Update Status"}
-                  </button>
-                )}
-              </div>
-            </div>
-          );
-        })}
-
-        {filteredBookings.length === 0 && (
-          <div className="col-span-full text-center py-16">
-            <Briefcase size={48} className="text-slate-600 mx-auto mb-4" />
-            <p className="text-slate-500">No jobs found</p>
-          </div>
-        )}
-      </div> */}
-
-
-
       <div className="max-h-[70vh] overflow-y-auto pr-2">
   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
     {filteredBookings.map((job) => {
@@ -3050,24 +2782,6 @@ const JobsTab = ({
             {job.service?.name || job.service_code}
           </p>
 
-          {/* <div className="space-y-2 mb-4">
-            <div className="flex items-center gap-2 text-slate-400 text-sm">
-              <MapPin size={16} />
-              <span className="truncate">
-                {job.address || "Address not provided"}
-              </span>
-            </div>
-            <div className="flex items-center gap-4 text-slate-400 text-sm">
-              <span className="flex items-center gap-1">
-                <Calendar size={16} /> {job.date}
-              </span>
-              <span className="flex items-center gap-1">
-                <Clock size={16} /> {job.time_slot}
-              </span>
-            </div>
-          </div> */}
-
-
           <div className="space-y-2 mb-4">
   <div className="flex items-center gap-2 text-slate-400 text-sm">
     <MapPin size={16} />
@@ -3093,20 +2807,66 @@ const JobsTab = ({
 </div>
 
           <div className="flex items-center justify-between pt-4 border-t border-slate-800">
-            <p className="text-2xl font-black text-emerald-400">
+            {/* <p className="text-2xl font-black text-emerald-400">
               ₹{job.total_price?.toLocaleString() || 0}
-            </p>
+            </p> */}
+
+
+            <div className="text-sm space-y-1">
+
+  {/* Service Price */}
+  <div className="flex justify-between text-slate-300">
+    <span>Service Price</span>
+    <span className="text-white font-semibold">
+      ₹{Number(job.subservice?.price || 0)}
+    </span>
+  </div>
+
+  {/* Emergency Price */}
+  <div className="flex justify-between text-slate-300">
+    <span>Emergency Charge</span>
+    <span className="text-white font-semibold">
+      ₹{Number(job.emergency_price || 0)}
+    </span>
+  </div>
+
+  {/* Total */}
+  <div className="flex justify-between border-t border-slate-700 pt-1 mt-1">
+    <span className="text-white font-semibold">Total</span>
+    <span className="text-emerald-400 font-bold">
+      ₹{Number(job.total_price || 0)}
+    </span>
+  </div>
+
+  {/* GST */}
+  <div className="flex justify-between text-amber-400 text-xs">
+    {Number(job.gst) > 0 ? (
+      <>
+        <span>+ 18% GST</span>
+        <span>₹{Number(job.gst)}</span>
+      </>
+    ) : (
+      <>
+        <span>+ 18% GST</span>
+        <span>(incl.)</span>
+      </>
+    )}
+  </div>
+
+</div>
 
          {isNew ? (
   <div className="flex gap-2">
     <button
-      onClick={() => onReject(job.order_id)}
+      // onClick={() => onReject(job.order_id)}
+      onClick={() => onReject(job.id)}
       className="px-4 py-2 bg-red-500/20 text-red-400 rounded-lg font-semibold hover:bg-red-500/30 transition-colors"
     >
       Reject
     </button>
     <button
-      onClick={() => onAccept(job.order_id)}
+      // onClick={() => onAccept(job.order_id)}
+      onClick={() => onAccept(job.id)}
       className="px-4 py-2 bg-emerald-500 text-white rounded-lg font-semibold hover:bg-emerald-400 transition-colors"
     >
       Accept
