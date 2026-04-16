@@ -2688,6 +2688,33 @@ onReject: (bookingId: number) => void;
     "all"
   );
 
+
+
+
+  const calculatePricing = (job: any) => {
+  const base = Number(job.subservice?.price || 0);
+  const emergency = Number(job.emergency_price || 0);
+
+  // ✅ If GST from backend is 0 → calculate 18%
+  const gst =
+    Number(job.gst) > 0 ? Number(job.gst) : base * 0.18;
+
+  const total = base + gst + emergency;
+
+  return {
+    base,
+    gst,
+    emergency,
+    total,
+  };
+};
+
+
+
+
+
+
+
   const filterBookings = () => {
     switch (filter) {
       case "new":
@@ -2755,6 +2782,8 @@ onReject: (bookingId: number) => void;
   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
     {filteredBookings.map((job) => {
       const statusConfig = getStatusConfig(job.work_status);
+
+      const price = calculatePricing(job);
       const isNew = job.work_status === WORK_STATUS.NEW;
 
       return (
@@ -2812,45 +2841,36 @@ onReject: (bookingId: number) => void;
             </p> */}
 
 
-            <div className="text-sm space-y-1">
+<div className="text-sm space-y-1">
 
   {/* Service Price */}
   <div className="flex justify-between text-slate-300">
     <span>Service Price</span>
     <span className="text-white font-semibold">
-      ₹{Number(job.subservice?.price || 0)}
-    </span>
-  </div>
-
-  {/* Emergency Price */}
-  <div className="flex justify-between text-slate-300">
-    <span>Emergency Charge</span>
-    <span className="text-white font-semibold">
-      ₹{Number(job.emergency_price || 0)}
-    </span>
-  </div>
-
-  {/* Total */}
-  <div className="flex justify-between border-t border-slate-700 pt-1 mt-1">
-    <span className="text-white font-semibold">Total</span>
-    <span className="text-emerald-400 font-bold">
-      ₹{Number(job.total_price || 0)}
+      ₹{price.base}
     </span>
   </div>
 
   {/* GST */}
   <div className="flex justify-between text-amber-400 text-xs">
-    {Number(job.gst) > 0 ? (
-      <>
-        <span>+ 18% GST</span>
-        <span>₹{Number(job.gst)}</span>
-      </>
-    ) : (
-      <>
-        <span>+ 18% GST</span>
-        <span>(incl.)</span>
-      </>
-    )}
+    <span>+ 18% GST</span>
+    <span>₹{price.gst.toFixed(2)}</span>
+  </div>
+
+  {/* Emergency */}
+  <div className="flex justify-between text-slate-300">
+    <span>Emergency Charge</span>
+    <span className="text-white font-semibold">
+      ₹{price.emergency}
+    </span>
+  </div>
+
+  {/* TOTAL */}
+  <div className="flex justify-between border-t border-slate-700 pt-1 mt-1">
+    <span className="text-white font-semibold">Total</span>
+    <span className="text-emerald-400 font-bold">
+      ₹{price.total.toFixed(2)}
+    </span>
   </div>
 
 </div>

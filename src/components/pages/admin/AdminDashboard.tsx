@@ -256,32 +256,68 @@ const AdminDashboard = () => {
     fetchAllData();
   }, []);
 
+  // const fetchAllData = async () => {
+  //   setLoading(true);
+  //   try {
+  //     const [usersRes, servicesRes, subServicesRes, bookingsRes] =
+  //       await Promise.all([
+  //         fetch(`${API_BASE}/api/auth/users`),
+  //         fetch(`${API_BASE}/api/services`),
+  //         fetch(`${API_BASE}/api/subservices`),
+  //         fetch(`${API_BASE}/api/service-on-booking`),
+  //       ]);
+
+  //     const usersData = await usersRes.json();
+  //     const servicesData = await servicesRes.json();
+  //     const subServicesData = await subServicesRes.json();
+  //     const bookingsData = await bookingsRes.json();
+
+  //     setUsers(usersData.data || []);
+  //     setServices(servicesData.data || []);
+  //     setSubServices(subServicesData || []);
+  //     setBookings(bookingsData.bookings || []);
+  //   } catch (error) {
+  //     console.error("Error fetching data:", error);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
+
+
   const fetchAllData = async () => {
-    setLoading(true);
-    try {
-      const [usersRes, servicesRes, subServicesRes, bookingsRes] =
-        await Promise.all([
-          fetch(`${API_BASE}/api/auth/users`),
-          fetch(`${API_BASE}/api/services`),
-          fetch(`${API_BASE}/api/subservices`),
-          fetch(`${API_BASE}/api/service-on-booking`),
-        ]);
+  setLoading(true);
+  try {
+    const [usersRes, servicesRes, subServicesRes, bookingsRes] =
+      await Promise.all([
+        fetch(`${API_BASE}/api/auth/users`),
+        fetch(`${API_BASE}/api/services`),
+        fetch(`${API_BASE}/api/subservices`),
+        fetch(`${API_BASE}/api/service-on-booking`),
+      ]);
 
-      const usersData = await usersRes.json();
-      const servicesData = await servicesRes.json();
-      const subServicesData = await subServicesRes.json();
-      const bookingsData = await bookingsRes.json();
+    const usersData = await usersRes.json();
+    const servicesData = await servicesRes.json();
+    const subServicesData = await subServicesRes.json();
+    const bookingsData = await bookingsRes.json();
 
-      setUsers(usersData.data || []);
-      setServices(servicesData.data || []);
-      setSubServices(subServicesData || []);
-      setBookings(bookingsData.bookings || []);
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    setUsers(usersData.data || []);
+    setServices(servicesData.data || []);
+    setSubServices(subServicesData || []);
+
+    // ✅ ONLY PAID BOOKINGS
+    const paidBookings = (bookingsData.bookings || []).filter(
+      (b: any) => b.payment_status === "PAID"
+    );
+
+    setBookings(paidBookings);
+
+  } catch (error) {
+    console.error("Error fetching data:", error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Stats calculations
   const stats = {
@@ -3172,6 +3208,19 @@ const BookingsTab = ({
     }
   };
 
+
+
+
+  const calculateFinalAmount = (booking: any) => {
+  const basePrice = Number(booking.subservice?.price || 0);
+  const gstAmount = basePrice * 0.18;
+  const emergencyPrice = Number(booking.emergency_price || 0);
+
+  const finalAmount = basePrice + gstAmount + emergencyPrice;
+
+  return finalAmount.toFixed(2);
+};
+
   return (
     <div className="space-y-6">
       {/* Stats */}
@@ -3326,7 +3375,8 @@ const BookingsTab = ({
                     </td>
                     <td className="p-4">
                       <span className="text-emerald-400 font-bold">
-                        ₹{booking.total_price}
+                        {/* ₹{booking.total_price} */}
+                        ₹{calculateFinalAmount(booking)}
                       </span>
                     </td>
                     <td className="p-4">
@@ -3531,10 +3581,12 @@ const BookingsTab = ({
       {/* View Booking Modal */}
 {showViewModal && viewBooking && (
   <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
-    <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-2xl mx-4 animate-in zoom-in-95 duration-200">
+    {/* <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-2xl mx-4 animate-in zoom-in-95 duration-200"> */}
+    <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-4xl mx-4 max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-200">
 
       {/* Header */}
-      <div className="flex items-center justify-between p-6 border-b border-slate-800">
+      {/* <div className="flex items-center justify-between p-6 border-b border-slate-800"> */}
+      <div className="flex items-center justify-between p-6 border-b border-slate-800 sticky top-0 bg-slate-900 z-10">
         <h3 className="text-xl font-bold text-white">
           Booking Details
         </h3>
@@ -3551,7 +3603,8 @@ const BookingsTab = ({
       </div>
 
       {/* Body */}
-      <div className="p-6 space-y-6">
+      {/* <div className="p-6 space-y-6"> */}
+      <div className="p-6 space-y-6 overflow-y-auto">
 
         {/* Order Info */}
         <div className="grid grid-cols-2 gap-4">
@@ -3635,17 +3688,54 @@ const BookingsTab = ({
         </div>
 
         {/* Price */}
-        <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 flex justify-between items-center">
+        {/* <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 flex justify-between items-center">
           <p className="text-slate-400">Total Price</p>
           <p className="text-emerald-400 text-xl font-bold">
             ₹{viewBooking.total_price}
           </p>
-        </div>
+        </div> */}
+
+
+        {/* Price Breakdown */}
+<div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 space-y-2">
+
+  <div className="flex justify-between">
+    <p className="text-slate-400">Base Price</p>
+    <p className="text-white">
+      ₹ {viewBooking.subservice?.price || 0}
+    </p>
+  </div>
+
+  <div className="flex justify-between">
+    <p className="text-slate-400">GST (18%)</p>
+    <p className="text-white">
+      ₹ {(Number(viewBooking.subservice?.price || 0) * 0.18).toFixed(2)}
+    </p>
+  </div>
+
+  <div className="flex justify-between">
+    <p className="text-slate-400">Emergency Charge</p>
+    <p className="text-white">
+      ₹ {viewBooking.emergency_price || 0}
+    </p>
+  </div>
+
+  <hr className="border-slate-700" />
+
+  <div className="flex justify-between items-center">
+    <p className="text-slate-300 font-semibold">Total Price</p>
+    <p className="text-emerald-400 text-xl font-bold">
+      ₹ {calculateFinalAmount(viewBooking)}
+    </p>
+  </div>
+
+</div>
 
       </div>
 
       {/* Footer */}
-      <div className="p-6 border-t border-slate-800 flex justify-end">
+      {/* <div className="p-6 border-t border-slate-800 flex justify-end"> */}
+      <div className="p-6 border-t border-slate-800 flex justify-end sticky bottom-0 bg-slate-900">
         <button
           onClick={() => {
             setShowViewModal(false);
@@ -3663,499 +3753,6 @@ const BookingsTab = ({
     </div>
   );
 };
-
-// ==================== SETTINGS TAB ====================
-// const SettingsTab = () => {
-//   const [showPasswordModal, setShowPasswordModal] = useState(false);
-//   const [step, setStep] = useState(1);
-//   const [cpLoading, setCpLoading] = useState(false);
-
-//   const [cpData, setCpData] = useState({
-//     current_password: "",
-//     otp: "",
-//     token: "",
-//     new_password: "",
-//     confirm_password: "",
-//   });
-
-//   const [showCP, setShowCP] = useState({
-//     current: false,
-//     new: false,
-//     confirm: false,
-//   });
-
-//   const currentRef = useRef<HTMLInputElement>(null);
-//   const newRef = useRef<HTMLInputElement>(null);
-//   const confirmRef = useRef<HTMLInputElement>(null);
-
-//   const user = JSON.parse(sessionStorage.getItem("user") || "{}");
-
-//   // ================= EMERGENCY STATE =================
-//   const [emergencyRules, setEmergencyRules] = useState<any[]>([]);
-//   const [showEmergencyModal, setShowEmergencyModal] = useState(false);
-//   const [editingRule, setEditingRule] = useState<any>(null);
-//   const [emergencyLoading, setEmergencyLoading] = useState(false);
-
-//   const [emergencyForm, setEmergencyForm] = useState({
-//     urgency_level: "",
-//     label: "",
-//     percentage_markup: "",
-//     multiplier: "",
-//     is_active: true,
-//   });
-
-//   // ================= FETCH RULES =================
-//   const fetchEmergencyRules = async () => {
-//     try {
-//       const res = await fetch(`${API_BASE}/api/emergency-pricing`);
-//       const data = await res.json();
-//       setEmergencyRules(data || []);
-//     } catch {
-//       console.error("Fetch failed");
-//     }
-//   };
-
-//   useEffect(() => {
-//     fetchEmergencyRules();
-//   }, []);
-
-//   // ================= PASSWORD APIs =================
-//   const handleRequestOtp = async () => {
-//     if (!cpData.current_password) return alert("Enter current password");
-
-//     setCpLoading(true);
-
-//     try {
-//       const res = await fetch(`${API_BASE}/api/change-password/request-otp`, {
-//         method: "POST",
-//         headers: { "Content-Type": "application/json" },
-//         body: JSON.stringify({ username: user.username, current_password: cpData.current_password }),
-//       });
-
-//       const data = await res.json();
-//       setCpLoading(false);
-
-//       if (!res.ok) return alert(data.message);
-
-//       alert("OTP sent");
-//       setStep(2);
-//     } catch {
-//       setCpLoading(false);
-//       alert("Error");
-//     }
-//   };
-
-//   const handleVerifyOtp = async () => {
-//     if (!cpData.otp) return alert("Enter OTP");
-
-//     setCpLoading(true);
-
-//     try {
-//       const res = await fetch(`${API_BASE}/api/change-password/verify-otp`, {
-//         method: "POST",
-//         headers: { "Content-Type": "application/json" },
-//         body: JSON.stringify({ username: user.username, otp: cpData.otp }),
-//       });
-
-//       const data = await res.json();
-//       setCpLoading(false);
-
-//       if (!res.ok) return alert(data.message);
-
-//       setCpData(prev => ({ ...prev, token: data.token }));
-//       setStep(3);
-//     } catch {
-//       setCpLoading(false);
-//       alert("Verification failed");
-//     }
-//   };
-
-//   const handleChangePassword = async () => {
-//     if (cpData.new_password !== cpData.confirm_password)
-//       return alert("Passwords mismatch");
-
-//     setCpLoading(true);
-
-//     try {
-//       const res = await fetch(`${API_BASE}/api/change-password`, {
-//         method: "POST",
-//         headers: { "Content-Type": "application/json" },
-//         body: JSON.stringify({
-//           username: user.username,
-//           token: cpData.token,
-//           new_password: cpData.new_password,
-//           confirm_password: cpData.confirm_password,
-//         }),
-//       });
-
-//       const data = await res.json();
-//       setCpLoading(false);
-
-//       if (!res.ok) return alert(data.message);
-
-//       alert("Password updated");
-
-//       setShowPasswordModal(false);
-//       setStep(1);
-//       setCpData({
-//         current_password: "",
-//         otp: "",
-//         token: "",
-//         new_password: "",
-//         confirm_password: "",
-//       });
-//     } catch {
-//       setCpLoading(false);
-//       alert("Error");
-//     }
-//   };
-
-//   // ================= EMERGENCY CRUD =================
-// const handleSaveEmergency = async () => {
-//   if (!emergencyForm.urgency_level || !emergencyForm.label) {
-//     return alert("Fill required fields");
-//   }
-
-//   setEmergencyLoading(true);
-
-//   try {
-//     const url = editingRule
-//       ? `${API_BASE}/api/emergency-pricing/${editingRule.id}`
-//       : `${API_BASE}/api/emergency-pricing`;
-
-//     const method = editingRule ? "PUT" : "POST";
-
-//     const payload = {
-//       urgency_level: emergencyForm.urgency_level,
-//       label: emergencyForm.label,
-
-//       // ✅ FIXED VALUES
-//       percentage_markup: 40,
-//       multiplier: 1.4,
-//       is_active: true,
-//     };
-
-//     const res = await fetch(url, {
-//       method,
-//       headers: { "Content-Type": "application/json" },
-//       body: JSON.stringify(payload),
-//     });
-
-//     const data = await res.json();
-//     setEmergencyLoading(false);
-
-//     if (!res.ok) return alert(data.message);
-
-//     alert(editingRule ? "Updated" : "Created");
-
-//     setShowEmergencyModal(false);
-//     setEditingRule(null);
-
-//     setEmergencyForm({
-//       urgency_level: "",
-//       label: "",
-//     });
-
-//     fetchEmergencyRules();
-//   } catch {
-//     setEmergencyLoading(false);
-//     alert("Error saving");
-//   }
-// };
-
-//   const handleDeleteEmergency = async (id: number) => {
-//     if (!confirm("Delete rule?")) return;
-
-//     await fetch(`${API_BASE}/api/emergency-pricing/${id}`, {
-//       method: "DELETE",
-//     });
-
-//     fetchEmergencyRules();
-//   };
-
-//   const handleEditEmergency = (rule: any) => {
-//     setEditingRule(rule);
-//     setEmergencyForm(rule);
-//     setShowEmergencyModal(true);
-//   };
-
-//   // ================= UI =================
-
-//   return (
-//   <div className="space-y-6">
-
-//       {/* SETTINGS */}
-//       <div className="bg-slate-900 border rounded-2xl p-6">
-//         <h3 className="text-white text-xl mb-4 font-bold">Settings</h3>
-
-//         <button
-//           onClick={() => setShowPasswordModal(true)}
-//           className="bg-indigo-600 px-4 py-2 rounded text-white"
-//         >
-//           Change Password
-//         </button>
-//       </div>
-
-//       {/* EMERGENCY RULES */}
-//       <div className="bg-slate-900 border rounded-2xl p-6">
-//         <div className="flex justify-between mb-4">
-//           <h3 className="text-white text-xl font-bold">
-//             Emergency Pricing
-//           </h3>
-
-//           <button
-//             onClick={() => {
-//               setEditingRule(null);
-//               setShowEmergencyModal(true);
-//             }}
-//             className="bg-indigo-600 px-4 py-2 text-white rounded"
-//           >
-//             + Add
-//           </button>
-//         </div>
-
-//         {emergencyRules.map(rule => (
-//           <div key={rule.id} className="bg-slate-800 p-4 rounded mb-2 flex justify-between">
-//             <div>
-//               <p className="text-white">{rule.label}</p>
-//               <p className="text-slate-400 text-sm">
-//                 {rule.percentage_markup}% | x{rule.multiplier}
-//               </p>
-//             </div>
-
-//             <div className="flex gap-2">
-//               <button onClick={() => handleEditEmergency(rule)} className="bg-yellow-500 px-3 py-1 rounded text-white">Edit</button>
-//               <button onClick={() => handleDeleteEmergency(rule.id)} className="bg-red-500 px-3 py-1 rounded text-white">Delete</button>
-//             </div>
-//           </div>
-//         ))}
-//       </div>
-
-//       {/* EMERGENCY MODAL */}
-// {showEmergencyModal && (
-//   <div className="fixed inset-0 bg-black/70 flex justify-center items-center z-50">
-//     <div className="bg-slate-900 p-6 rounded-xl w-full max-w-md relative">
-
-//       {/* ❌ CLOSE */}
-//       <button
-//         onClick={() => {
-//           setShowEmergencyModal(false);
-//           setEditingRule(null);
-//         }}
-//         className="absolute top-4 right-4 text-slate-400 hover:text-white"
-//       >
-//         <X size={20} />
-//       </button>
-
-//       <h3 className="text-white mb-4 font-bold text-lg">
-//         {editingRule ? "Edit Rule" : "Add Rule"}
-//       </h3>
-
-//       <div className="space-y-4">
-
-//         {/* URGENCY LEVEL */}
-//         <input
-//           placeholder="Urgency Level (e.g. super_emergency)"
-//           className="w-full p-3 bg-slate-800 text-white rounded"
-//           value={emergencyForm.urgency_level}
-//           onChange={(e) =>
-//             setEmergencyForm(prev => ({
-//               ...prev,
-//               urgency_level: e.target.value
-//             }))
-//           }
-//         />
-
-//         {/* LABEL */}
-//         <input
-//           placeholder="Label (e.g. Super Emergency 30–45 mins)"
-//           className="w-full p-3 bg-slate-800 text-white rounded"
-//           value={emergencyForm.label}
-//           onChange={(e) =>
-//             setEmergencyForm(prev => ({
-//               ...prev,
-//               label: e.target.value
-//             }))
-//           }
-//         />
-
-//         {/* ACTION BUTTONS */}
-//         <div className="flex gap-3 pt-2">
-//           <button
-//             onClick={handleSaveEmergency}
-//             className="flex-1 bg-green-600 py-2 rounded text-white"
-//           >
-//             {emergencyLoading ? "Saving..." : "Save"}
-//           </button>
-
-//           <button
-//             onClick={() => {
-//               setShowEmergencyModal(false);
-//               setEditingRule(null);
-//             }}
-//             className="flex-1 bg-slate-700 py-2 rounded text-white"
-//           >
-//             Cancel
-//           </button>
-//         </div>
-//       </div>
-//     </div>
-//   </div>
-// )}
-
-//       {/* PASSWORD MODAL (UNCHANGED LOGIC) */}
-//  {showPasswordModal && (
-//   <div className="fixed inset-0 bg-black/70 flex justify-center items-center z-50">
-    
-//     <div className="bg-slate-900 p-8 rounded-xl w-full max-w-lg relative shadow-xl">
-
-//       {/* CLOSE BUTTON */}
-//       <button
-//         onClick={() => setShowPasswordModal(false)}
-//         className="absolute top-5 right-5 text-slate-400 hover:text-white transition"
-//       >
-//         <X size={22} />
-//       </button>
-
-//       {/* TITLE */}
-//       <h2 className="text-white text-xl font-semibold mb-6">
-//         Change Password
-//       </h2>
-
-//       {/* STEP 1 */}
-//       {step === 1 && (
-//         <>
-//           <div className="relative mb-4">
-//             <input
-//               ref={currentRef}
-//               type={showCP.current ? "text" : "password"}
-//               placeholder="Current Password"
-//               value={cpData.current_password}
-//               onChange={(e) =>
-//                 setCpData((prev) => ({
-//                   ...prev,
-//                   current_password: e.target.value,
-//                 }))
-//               }
-//               className="w-full p-3 bg-slate-800 text-white rounded pr-10"
-//             />
-
-//             <button
-//               type="button"
-//               onClick={() => {
-//                 setShowCP((prev) => ({ ...prev, current: !prev.current }));
-//                 setTimeout(() => currentRef.current?.focus(), 0);
-//               }}
-//               className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-//             >
-//               {showCP.current ? <Eye size={18} /> : <EyeOff size={18} />}
-//             </button>
-//           </div>
-
-//           <button
-//             onClick={handleRequestOtp}
-//             className="w-full bg-indigo-600 py-3 rounded text-white hover:bg-indigo-500 transition"
-//           >
-//             Send OTP
-//           </button>
-//         </>
-//       )}
-
-//       {/* STEP 2 */}
-//       {step === 2 && (
-//         <>
-//           <input
-//             placeholder="Enter OTP"
-//             value={cpData.otp}
-//             onChange={(e) =>
-//               setCpData((prev) => ({ ...prev, otp: e.target.value }))
-//             }
-//             className="w-full p-3 bg-slate-800 text-white rounded mb-4"
-//           />
-
-//           <button
-//             onClick={handleVerifyOtp}
-//             className="w-full bg-indigo-600 py-3 rounded text-white hover:bg-indigo-500 transition"
-//           >
-//             Verify OTP
-//           </button>
-//         </>
-//       )}
-
-//       {/* STEP 3 */}
-//       {step === 3 && (
-//         <>
-//           <div className="relative mb-4">
-//             <input
-//               ref={newRef}
-//               type={showCP.new ? "text" : "password"}
-//               placeholder="New Password"
-//               value={cpData.new_password}
-//               onChange={(e) =>
-//                 setCpData((prev) => ({
-//                   ...prev,
-//                   new_password: e.target.value,
-//                 }))
-//               }
-//               className="w-full p-3 bg-slate-800 text-white rounded pr-10"
-//             />
-
-//             <button
-//               type="button"
-//               onClick={() => {
-//                 setShowCP((prev) => ({ ...prev, new: !prev.new }));
-//                 setTimeout(() => newRef.current?.focus(), 0);
-//               }}
-//               className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-//             >
-//               {showCP.new ? <Eye size={18} /> : <EyeOff size={18} />}
-//             </button>
-//           </div>
-
-//           <div className="relative mb-4">
-//             <input
-//               ref={confirmRef}
-//               type={showCP.confirm ? "text" : "password"}
-//               placeholder="Confirm Password"
-//               value={cpData.confirm_password}
-//               onChange={(e) =>
-//                 setCpData((prev) => ({
-//                   ...prev,
-//                   confirm_password: e.target.value,
-//                 }))
-//               }
-//               className="w-full p-3 bg-slate-800 text-white rounded pr-10"
-//             />
-
-//             <button
-//               type="button"
-//               onClick={() => {
-//                 setShowCP((prev) => ({ ...prev, confirm: !prev.confirm }));
-//                 setTimeout(() => confirmRef.current?.focus(), 0);
-//               }}
-//               className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-//             >
-//               {showCP.confirm ? <Eye size={18} /> : <EyeOff size={18} />}
-//             </button>
-//           </div>
-
-//           <button
-//             onClick={handleChangePassword}
-//             className="w-full bg-green-600 py-3 rounded text-white hover:bg-green-500 transition"
-//           >
-//             Change Password
-//           </button>
-//         </>
-//       )}
-//     </div>
-//   </div>
-// )}
-
-//     </div>
-//   );
-// };
-
-
 
 
 // ==================== SETTINGS TAB ====================
@@ -4492,11 +4089,24 @@ const SettingsTab = () => {
     fetchEmergencyRules();
   };
 
+  // const handleEditEmergency = (rule: any) => {
+  //   setEditingRule(rule);
+  //   setEmergencyForm(rule);
+  //   setShowEmergencyModal(true);
+  // };
+
+
+
   const handleEditEmergency = (rule: any) => {
-    setEditingRule(rule);
-    setEmergencyForm(rule);
-    setShowEmergencyModal(true);
-  };
+  setEditingRule(rule);
+
+  setEmergencyForm({
+    urgency_level: rule.urgency_level || "",
+    label: rule.label || "",
+  });
+
+  setShowEmergencyModal(true);
+};
 
   // ================= UI =================
   return (
@@ -4550,7 +4160,7 @@ const SettingsTab = () => {
           <div className="grid md:grid-cols-2 gap-6">
 
             {/* PROFILE IMAGE */}
-            <div className="flex flex-col items-center">
+            {/* <div className="flex flex-col items-center">
 
               <img
                 src={
@@ -4574,7 +4184,38 @@ const SettingsTab = () => {
                 />
               )}
 
-            </div>
+            </div> */}
+
+
+
+            <div className="flex flex-col items-center">
+
+  <img
+    src={
+      profileForm.profileImage
+        ? URL.createObjectURL(profileForm.profileImage)
+        : profile.profileImage
+    }
+    className="w-28 h-28 rounded-full object-cover mb-3 border"
+  />
+
+</div>
+
+{/* 👉 Move input OUTSIDE and align properly */}
+{editingProfile && (
+  <div className="mt-4 flex justify-center md:justify-start">
+    <input
+      type="file"
+      onChange={(e) =>
+        setProfileForm(prev => ({
+          ...prev,
+          profileImage: e.target.files?.[0] || null,
+        }))
+      }
+      className="text-white"
+    />
+  </div>
+)}
 
             {/* PROFILE FIELDS */}
             <div className="space-y-4">
@@ -4806,6 +4447,68 @@ const SettingsTab = () => {
         className="mt-4 w-full bg-gray-600 p-2 rounded text-white"
       >
         Close
+      </button>
+
+    </div>
+  </div>
+)}
+
+
+
+
+
+{/* ================= EMERGENCY MODAL ================= */}
+{showEmergencyModal && (
+  <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+    <div className="bg-slate-900 p-6 rounded-2xl w-full max-w-md">
+
+      <h3 className="text-white text-lg font-bold mb-4">
+        {editingRule ? "Edit Emergency Rule" : "Add Emergency Rule"}
+      </h3>
+
+      <input
+        placeholder="Urgency Level"
+        value={emergencyForm.urgency_level}
+        onChange={(e) =>
+          setEmergencyForm(prev => ({
+            ...prev,
+            urgency_level: e.target.value,
+          }))
+        }
+        className="w-full p-3 mb-3 bg-slate-800 text-white rounded"
+      />
+
+      <input
+        placeholder="Label"
+        value={emergencyForm.label}
+        onChange={(e) =>
+          setEmergencyForm(prev => ({
+            ...prev,
+            label: e.target.value,
+          }))
+        }
+        className="w-full p-3 mb-3 bg-slate-800 text-white rounded"
+      />
+
+      <button
+        onClick={handleSaveEmergency}
+        className="w-full bg-indigo-600 p-3 rounded text-white"
+      >
+        {emergencyLoading
+          ? "Saving..."
+          : editingRule
+          ? "Update"
+          : "Create"}
+      </button>
+
+      <button
+        onClick={() => {
+          setShowEmergencyModal(false);
+          setEditingRule(null);
+        }}
+        className="mt-3 w-full bg-gray-600 p-2 rounded text-white"
+      >
+        Cancel
       </button>
 
     </div>
