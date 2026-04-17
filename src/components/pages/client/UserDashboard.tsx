@@ -80,40 +80,6 @@ const UserDashboard = () => {
     }
   }, []);
 
-  // const fetchBookings = async (userId: number) => {
-  //   setLoading(true);
-  //   try {
-  //     const res = await fetch(`${API_BASE}/api/service-on-booking/user/${userId}`);
-  //     const data = await res.json();
-  //     setBookings(data.data || []);
-  //   } catch (error) {
-  //     console.error("Error fetching bookings:", error);
-  //     setBookings([]);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
-//   const fetchBookings = async (userId: number) => {
-//   setLoading(true);
-//   try {
-//     const res = await fetch(
-//       `${API_BASE}/api/service-on-booking/user/${userId}`
-//     );
-//     const data = await res.json();
-
-//     // 🔥 FIX IS HERE
-//     setBookings(data.bookings || []);
-//   } catch (error) {
-//     console.error("Error fetching bookings:", error);
-//     setBookings([]);
-//   } finally {
-//     setLoading(false);
-//   }
-// };
-
-
-
 
 
 const fetchBookings = async (userId: number) => {
@@ -169,14 +135,7 @@ const fetchBookings = async (userId: number) => {
     return true;
   });
 
-  // const stats = {
-  //   total: bookings.length,
-  //   active: bookings.filter((b) => b.work_status < 3).length,
-  //   completed: bookings.filter((b) => b.work_status === 3).length,
-  //   totalSpent: bookings
-  //     .filter((b) => b.work_status === 3)
-  //     .reduce((sum, b) => sum + (b.total_price || 0), 0),
-  // };
+
 
   const stats = {
   total: bookings.length,
@@ -407,50 +366,53 @@ const fetchBookings = async (userId: number) => {
 
 
 
-                      <div className="text-right">
-  {/* Base Price */}
-  <p className="text-lg text-slate-500">
-    ₹{Number(booking.subservice?.price || 0).toLocaleString()}
-  </p>
+<div className="text-right">
+  {(() => {
+    const basePrice = Number(booking.subservice?.price || 0);
+    const emergencyPrice = Number(booking.emergency_price || 0);
 
-  {/* Emergency Price (only if exists) */}
-  {Number(booking.emergency_price) > 0 && (
-    <p className="text-sm text-amber-600 font-semibold">
-      + ₹{Number(booking.emergency_price).toLocaleString()} (Emergency)
-    </p>
-  )}
+    // ✅ Calculate GST (18%)
+    const gstAmount = basePrice * 0.18;
 
-  {/* Final Price */}
-  <p className="text-3xl font-black text-slate-900">
-    ₹{(
-      Number(booking.subservice?.price || 0) +
-      Number(booking.emergency_price || 0)
-    ).toLocaleString()}
-  </p>
+    // ✅ Subtotal (price + GST)
+    const subtotal = basePrice + gstAmount;
 
-  {/* Hardcoded GST */}
-  <p className="text-slate-400 text-sm">
-    incl. 18% GST
-  </p>
+    // ✅ Final Total
+    const finalTotal = subtotal + emergencyPrice;
+
+    return (
+      <>
+        {/* Base Price */}
+        <p className="text-lg text-slate-500">
+          ₹{basePrice.toLocaleString()}
+        </p>
+
+        {/* GST */}
+        <p className="text-sm text-indigo-600 font-medium">
+          + ₹{gstAmount.toFixed(2)} (GST 18%)
+        </p>
+
+        {/* Emergency */}
+        {emergencyPrice > 0 && (
+          <p className="text-sm text-amber-600 font-semibold">
+            + ₹{emergencyPrice.toLocaleString()} (Emergency)
+          </p>
+        )}
+
+        {/* Final Price */}
+        <p className="text-3xl font-black text-slate-900">
+          ₹{finalTotal.toLocaleString()}
+        </p>
+
+        {/* Label */}
+        <p className="text-slate-400 text-sm">
+          Total (incl. GST)
+        </p>
+      </>
+    );
+  })()}
 </div>
                     </div>
-
-                    {/* Info Row */}
-                    {/* <div className="flex flex-wrap items-center gap-6 text-slate-500 text-sm mb-6">
-                      <span className="flex items-center gap-2">
-                        <Calendar size={16} />
-                        {booking.date}
-                      </span>
-                      <span className="flex items-center gap-2">
-                        <Clock size={16} />
-                        {booking.time_slot}
-                      </span>
-                      <span className="flex items-center gap-2">
-                        <MapPin size={16} />
-                        {booking.address?.substring(0, 40) || "Address not set"}...
-                      </span>
-                    </div> */}
-
 
 
                     {/* Info Row */}

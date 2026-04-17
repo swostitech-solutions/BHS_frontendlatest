@@ -3288,6 +3288,16 @@ const getServiceLabel = (code?: string) => {
   const handleSaveProfile = async () => {
     setSaving(true);
 
+
+      // ✅ EMAIL VALIDATION
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  if (!editData.email || !emailRegex.test(editData.email)) {
+    alert("Please enter a valid email address");
+    setSaving(false);
+    return;
+  }
+
       if (!/^\d{10}$/.test(editData.mobile)) {
     alert("Mobile number must be exactly 10 digits");
     setSaving(false);
@@ -3693,9 +3703,15 @@ const handleChangePassword = async () => {
                 <input
                   type="email"
                   value={editData.email}
-                  onChange={(e) => handleInputChange("email", e.target.value)}
-                  placeholder="Email address"
-                  className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
+                  // onChange={(e) => handleInputChange("email", e.target.value)}
+                    onChange={(e) => {
+    const value = e.target.value.trim();
+    handleInputChange("email", value);
+  }}
+                  // placeholder="Email address"
+                  // className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
+                    placeholder="Enter valid email (e.g. name@gmail.com)"
+  className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
                 />
               ) : (
                 <span className="text-white">

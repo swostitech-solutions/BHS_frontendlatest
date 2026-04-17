@@ -108,6 +108,8 @@ interface Booking {
   work_status: number;
   work_status_code: string;
   payment_method: string;
+    // ✅ ADD THIS
+  payment_status?: string;
   technician_allocated: boolean;
   technician_id?: number;
   user_id: number;
@@ -285,8 +287,9 @@ const AdminDashboard = () => {
 
 
 
-  const fetchAllData = async () => {
+const fetchAllData = async () => {
   setLoading(true);
+
   try {
     const [usersRes, servicesRes, subServicesRes, bookingsRes] =
       await Promise.all([
@@ -301,19 +304,37 @@ const AdminDashboard = () => {
     const subServicesData = await subServicesRes.json();
     const bookingsData = await bookingsRes.json();
 
-    setUsers(usersData.data || []);
-    setServices(servicesData.data || []);
+    setUsers(usersData?.data || []);
+    setServices(servicesData?.data || []);
     setSubServices(subServicesData || []);
 
-    // ✅ ONLY PAID BOOKINGS
-    const paidBookings = (bookingsData.bookings || []).filter(
-      (b: any) => b.payment_status === "PAID"
-    );
+    // ✅ SAFELY EXTRACT BOOKINGS
+    const allBookings = Array.isArray(bookingsData?.bookings)
+      ? bookingsData.bookings
+      : [];
 
-    setBookings(paidBookings);
+    console.log("📦 RAW BOOKINGS:", allBookings);
+
+    // ✅ STRONG FILTER (handles all cases)
+    const paidBookings = allBookings.filter((b: any) => {
+      const status = String(
+        b?.payment_status || b?.paymentStatus || ""
+      )
+        .trim()
+        .toUpperCase();
+
+      console.log("➡️", b.order_id, "STATUS:", status);
+
+      return status === "PAID";
+    });
+
+    console.log("✅ PAID BOOKINGS:", paidBookings);
+
+    // setBookings(paidBookings);
+    setBookings(allBookings);
 
   } catch (error) {
-    console.error("Error fetching data:", error);
+    console.error("❌ Error fetching data:", error);
   } finally {
     setLoading(false);
   }
@@ -2749,7 +2770,7 @@ const TechnicianDetailModal = ({
           </div>
 
           {/* Bank Details */}
-          <div className="bg-slate-800/50 rounded-2xl p-5">
+          {/* <div className="bg-slate-800/50 rounded-2xl p-5">
             <h3 className="text-white font-bold mb-4 flex items-center gap-2">
               <Building2 size={18} className="text-blue-400" />
               Bank Details
@@ -2765,7 +2786,74 @@ const TechnicianDetailModal = ({
                 label="Bank Passbook / Cancelled Cheque"
               />
             )}
-          </div>
+          </div> */}
+
+          {/* Bank Details */}
+<div className="bg-slate-800/50 rounded-2xl p-5">
+  <h3 className="text-white font-bold mb-5 flex items-center gap-2">
+    <Building2 size={18} className="text-blue-400" />
+    Bank Details
+  </h3>
+
+  {/* Grid Layout */}
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+    {/* Bank Name */}
+    <div className="bg-slate-900/60 border border-slate-700 rounded-xl p-4">
+      <p className="text-slate-400 text-xs mb-1">Bank Name</p>
+      <p className="text-white font-semibold text-sm">
+        {t?.bankName || "Not Provided"}
+      </p>
+    </div>
+
+    {/* IFSC */}
+    <div className="bg-slate-900/60 border border-slate-700 rounded-xl p-4">
+      <p className="text-slate-400 text-xs mb-1">IFSC Code</p>
+      <p className="text-white font-mono text-sm tracking-wide">
+        {t?.ifscNo || "Not Provided"}
+      </p>
+    </div>
+
+    {/* Branch */}
+    <div className="bg-slate-900/60 border border-slate-700 rounded-xl p-4">
+      <p className="text-slate-400 text-xs mb-1">Branch</p>
+      <p className="text-white font-semibold text-sm">
+        {t?.branchName || "Not Provided"}
+      </p>
+    </div>
+
+  </div>
+
+  {/* Divider */}
+  <div className="border-t border-slate-700 my-5" />
+
+  {/* Document Section */}
+  {t?.bankPassbookDoc ? (
+    <div>
+      <p className="text-slate-400 text-sm mb-3">
+        Bank Proof Document
+      </p>
+
+      <div className="bg-slate-900/60 border border-slate-700 rounded-xl p-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <FileText size={18} className="text-blue-400" />
+          <p className="text-white text-sm font-medium">
+            Passbook / Cheque
+          </p>
+        </div>
+
+        <DocumentPreview
+          url={t.bankPassbookDoc}
+          label="View"
+        />
+      </div>
+    </div>
+  ) : (
+    <p className="text-slate-500 text-sm">
+      No bank document uploaded
+    </p>
+  )}
+</div>
 
           {/* Experience Certificate */}
           {t?.experienceCertDoc && (
@@ -3114,6 +3202,34 @@ const BookingsTab = ({
     },
   };
 
+
+
+
+
+  // ✅ Fix broken / mixed image URLs (dynamic)
+const getValidImageUrl = (url?: string) => {
+  if (!url) return null;
+
+  const httpsIndex = url.indexOf("https://");
+  const httpIndex = url.indexOf("http://");
+
+  // Fix cases like: http://localhost:4000https://...
+  if (httpsIndex > 0) return url.substring(httpsIndex);
+  if (httpIndex > 0) return url.substring(httpIndex);
+
+  // Already valid
+  if (url.startsWith("http")) return url;
+
+  // Relative path fallback
+  return `${API_BASE}${url}`;
+};
+
+
+
+
+
+
+
   // const filteredBookings = bookings.filter((b) => {
   //   const matchesSearch =
   //     b.order_id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -3132,29 +3248,41 @@ const BookingsTab = ({
 
 
 
-  const filteredBookings = bookings
-  .filter((b) => {
-    // const searchText = searchQuery.toLowerCase();
-    const searchText = localSearch.toLowerCase();
+  // const filteredBookings = bookings
+  // .filter((b) => {
+  //   // const searchText = searchQuery.toLowerCase();
+  //   const searchText = localSearch.toLowerCase();
 
-    const matchesSearch =
-      b.order_id?.toLowerCase().includes(searchText) ||
-      b.User?.name?.toLowerCase().includes(searchText) ||
-      b.subservice?.name?.toLowerCase().includes(searchText) ||
-      b.service?.name?.toLowerCase().includes(searchText); // ✅ added service search
+  //   const matchesSearch =
+  //     b.order_id?.toLowerCase().includes(searchText) ||
+  //     b.User?.name?.toLowerCase().includes(searchText) ||
+  //     b.subservice?.name?.toLowerCase().includes(searchText) ||
+  //     b.service?.name?.toLowerCase().includes(searchText); // ✅ added service search
 
-    if (filter === "ALL") return matchesSearch;
-    if (filter === "NEW") return matchesSearch && !b.technician_allocated;
-    if (filter === "PENDING")
-      return matchesSearch && b.technician_allocated && b.work_status === 1;
-    if (filter === "IN_PROGRESS")
-      return matchesSearch && b.work_status === 2;
-    if (filter === "COMPLETED")
-      return matchesSearch && b.work_status === 3;
+  //   if (filter === "ALL") return matchesSearch;
+  //   if (filter === "NEW") return matchesSearch && !b.technician_allocated;
+  //   if (filter === "PENDING")
+  //     return matchesSearch && b.technician_allocated && b.work_status === 1;
+  //   if (filter === "IN_PROGRESS")
+  //     return matchesSearch && b.work_status === 2;
+  //   if (filter === "COMPLETED")
+  //     return matchesSearch && b.work_status === 3;
 
-    return matchesSearch;
-  })
-  .slice(0, 15); // ✅ LIMIT TO 15 BOOKINGS
+  //   return matchesSearch;
+  // })
+  // .slice(0, 15); // ✅ LIMIT TO 15 BOOKINGS
+
+
+  // const filteredBookings = bookings || [];
+
+
+  const filteredBookings = (bookings || []).filter((b) => {
+  const status = String(b?.payment_status || "")
+    .trim()
+    .toUpperCase();
+
+  return status === "PAID";
+});
 
   const stats = {
     total: bookings.length,
@@ -3178,7 +3306,7 @@ const BookingsTab = ({
       const token = sessionStorage.getItem("accessToken");
       // Use the accept API with opinion=1 (Accept) to assign the technician
       const res = await fetch(
-        `${API_BASE}/api/service-on-booking/accept/${selectedBooking.order_id}`,
+        `${API_BASE}/api/service-on-booking/accept/${selectedBooking.id}`,
         {
           method: "POST",
           headers: {
@@ -3574,22 +3702,15 @@ const BookingsTab = ({
       )}
 
 
-
-
-
-
-      {/* View Booking Modal */}
+{/* View Booking Modal */}
 {showViewModal && viewBooking && (
   <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
-    {/* <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-2xl mx-4 animate-in zoom-in-95 duration-200"> */}
+    
     <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-4xl mx-4 max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-200">
 
       {/* Header */}
-      {/* <div className="flex items-center justify-between p-6 border-b border-slate-800"> */}
       <div className="flex items-center justify-between p-6 border-b border-slate-800 sticky top-0 bg-slate-900 z-10">
-        <h3 className="text-xl font-bold text-white">
-          Booking Details
-        </h3>
+        <h3 className="text-xl font-bold text-white">Booking Details</h3>
 
         <button
           onClick={() => {
@@ -3603,7 +3724,6 @@ const BookingsTab = ({
       </div>
 
       {/* Body */}
-      {/* <div className="p-6 space-y-6"> */}
       <div className="p-6 space-y-6 overflow-y-auto">
 
         {/* Order Info */}
@@ -3634,28 +3754,20 @@ const BookingsTab = ({
           </p>
         </div>
 
-        {/* ✅ Service (with Quantity) */}
-        <div className="bg-slate-800/50 rounded-xl p-4">
-          <div className="flex items-start justify-between gap-3">
+        {/* Service */}
+        <div className="bg-slate-800/50 rounded-xl p-4 flex justify-between">
+          <div>
+            <p className="text-slate-400 text-sm mb-2">Service</p>
+            <p className="text-white">
+              {viewBooking.subservice?.name || viewBooking.subservice_code}
+            </p>
+            <p className="text-slate-500 text-sm">
+              {viewBooking.service?.name || viewBooking.service_code}
+            </p>
+          </div>
 
-            {/* Left: Service Info */}
-            <div>
-              <p className="text-slate-400 text-sm mb-2">Service</p>
-
-              <p className="text-white">
-                {viewBooking.subservice?.name || viewBooking.subservice_code}
-              </p>
-
-              <p className="text-slate-500 text-sm">
-                {viewBooking.service?.name || viewBooking.service_code}
-              </p>
-            </div>
-
-            {/* Right: Quantity */}
-            <div className="bg-violet-500/20 border border-violet-500/40 text-violet-300 px-3 py-1 rounded-lg text-xs font-bold">
-              Qty: {viewBooking.quantity ?? 1}
-            </div>
-
+          <div className="bg-violet-500/20 border border-violet-500/40 text-violet-300 px-3 py-1 rounded-lg text-xs font-bold">
+            Qty: {viewBooking.quantity ?? 1}
           </div>
         </div>
 
@@ -3677,7 +3789,6 @@ const BookingsTab = ({
         {/* Technician */}
         <div className="bg-slate-800/50 rounded-xl p-4">
           <p className="text-slate-400 text-sm mb-2">Technician</p>
-
           {viewBooking.technician ? (
             <p className="text-white font-semibold">
               {viewBooking.technician.name}
@@ -3687,54 +3798,80 @@ const BookingsTab = ({
           )}
         </div>
 
-        {/* Price */}
-        {/* <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 flex justify-between items-center">
-          <p className="text-slate-400">Total Price</p>
-          <p className="text-emerald-400 text-xl font-bold">
-            ₹{viewBooking.total_price}
-          </p>
-        </div> */}
+        {/* 💰 Price Breakdown */}
+        <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 space-y-2">
 
+          <div className="flex justify-between">
+            <p className="text-slate-400">Base Price</p>
+            <p className="text-white">
+              ₹ {viewBooking.subservice?.price || 0}
+            </p>
+          </div>
 
-        {/* Price Breakdown */}
-<div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 space-y-2">
+          <div className="flex justify-between">
+            <p className="text-slate-400">GST (18%)</p>
+            <p className="text-white">
+              ₹ {(Number(viewBooking.subservice?.price || 0) * 0.18).toFixed(2)}
+            </p>
+          </div>
 
-  <div className="flex justify-between">
-    <p className="text-slate-400">Base Price</p>
-    <p className="text-white">
-      ₹ {viewBooking.subservice?.price || 0}
-    </p>
-  </div>
+          <div className="flex justify-between">
+            <p className="text-slate-400">Emergency Charge</p>
+            <p className="text-white">
+              ₹ {viewBooking.emergency_price || 0}
+            </p>
+          </div>
 
-  <div className="flex justify-between">
-    <p className="text-slate-400">GST (18%)</p>
-    <p className="text-white">
-      ₹ {(Number(viewBooking.subservice?.price || 0) * 0.18).toFixed(2)}
-    </p>
-  </div>
+          <hr className="border-slate-700" />
 
-  <div className="flex justify-between">
-    <p className="text-slate-400">Emergency Charge</p>
-    <p className="text-white">
-      ₹ {viewBooking.emergency_price || 0}
-    </p>
-  </div>
+          <div className="flex justify-between items-center">
+            <p className="text-slate-300 font-semibold">Total Price</p>
+            <p className="text-emerald-400 text-xl font-bold">
+              ₹ {calculateFinalAmount(viewBooking)}
+            </p>
+          </div>
 
-  <hr className="border-slate-700" />
+        </div>
 
-  <div className="flex justify-between items-center">
-    <p className="text-slate-300 font-semibold">Total Price</p>
-    <p className="text-emerald-400 text-xl font-bold">
-      ₹ {calculateFinalAmount(viewBooking)}
-    </p>
-  </div>
+        {/* ✅ NEW: Work Completion Details */}
+        {viewBooking.work_status === 3 && (
+          <div className="bg-slate-800/50 rounded-xl p-4 space-y-4">
 
-</div>
+            <p className="text-slate-400 text-sm">Work Completion</p>
+
+            {/* Notes */}
+            {viewBooking.work_notes && (
+              <div>
+                <p className="text-slate-500 text-sm">Notes</p>
+                <p className="text-white font-medium">
+                  {viewBooking.work_notes}
+                </p>
+              </div>
+            )}
+
+            {/* Image */}
+            {getValidImageUrl(viewBooking.image) ? (
+              <div>
+                <p className="text-slate-500 text-sm mb-2">Work Image</p>
+
+                <img
+                  src={getValidImageUrl(viewBooking.image)!}
+                  alt="Work Proof"
+                  className="w-full max-h-64 object-cover rounded-xl border border-slate-700"
+                />
+              </div>
+            ) : (
+              <p className="text-red-400 text-sm">
+                No work proof uploaded
+              </p>
+            )}
+
+          </div>
+        )}
 
       </div>
 
       {/* Footer */}
-      {/* <div className="p-6 border-t border-slate-800 flex justify-end"> */}
       <div className="p-6 border-t border-slate-800 flex justify-end sticky bottom-0 bg-slate-900">
         <button
           onClick={() => {
@@ -3833,8 +3970,35 @@ const SettingsTab = () => {
     }
   };
 
+
+const validateProfile = () => {
+  const { email, mobile } = profileForm;
+
+  // ✅ Email format check
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  if (!emailRegex.test(email)) {
+    alert("Enter a valid email (example: user@gmail.com)");
+    return false;
+  }
+
+  // ✅ Mobile must be exactly 10 digits
+  const mobileRegex = /^\d{10}$/;
+
+  if (!mobileRegex.test(mobile)) {
+    alert("Mobile number must be exactly 10 digits");
+    return false;
+  }
+
+  return true;
+};
+
   // ================= UPDATE ADMIN PROFILE =================
   const handleUpdateProfile = async () => {
+
+
+    // ✅ ADD THIS LINE FIRST
+  if (!validateProfile()) return;
 
     const formData = new FormData();
 
@@ -4233,7 +4397,7 @@ const SettingsTab = () => {
                 placeholder="Name"
               />
 
-              <input
+              {/* <input
                 disabled={!editingProfile}
                 value={profileForm.email}
                 onChange={(e) =>
@@ -4244,9 +4408,31 @@ const SettingsTab = () => {
                 }
                 className="w-full p-3 bg-slate-800 text-white rounded"
                 placeholder="Email"
-              />
+              /> */}
 
               <input
+  disabled={!editingProfile}
+  value={profileForm.email}
+  onChange={(e) => {
+    let value = e.target.value;
+
+    // ✅ Remove spaces completely
+    value = value.replace(/\s/g, "");
+
+    // ✅ Optional: force lowercase (recommended)
+    value = value.toLowerCase();
+
+    setProfileForm(prev => ({
+      ...prev,
+      email: value,
+    }));
+  }}
+  type="email"
+  className="w-full p-3 bg-slate-800 text-white rounded"
+  placeholder="Email"
+/>
+
+              {/* <input
                 disabled={!editingProfile}
                 value={profileForm.mobile}
                 onChange={(e) =>
@@ -4257,7 +4443,31 @@ const SettingsTab = () => {
                 }
                 className="w-full p-3 bg-slate-800 text-white rounded"
                 placeholder="Mobile"
-              />
+              /> */}
+
+
+              <input
+  disabled={!editingProfile}
+  value={profileForm.mobile}
+  onChange={(e) => {
+    let value = e.target.value;
+
+    // ✅ Remove non-digits
+    value = value.replace(/\D/g, "");
+
+    // ✅ Limit to 10 digits
+    if (value.length > 10) return;
+
+    setProfileForm(prev => ({
+      ...prev,
+      mobile: value,
+    }));
+  }}
+  inputMode="numeric" // ✅ mobile keyboard support
+  pattern="[0-9]*"
+  className="w-full p-3 bg-slate-800 text-white rounded"
+  placeholder="Mobile"
+/>
 
               <textarea
                 disabled={!editingProfile}
