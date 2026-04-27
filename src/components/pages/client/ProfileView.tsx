@@ -175,9 +175,78 @@ const [profileImage, setProfileImage] = useState<File | null>(null);
 
 
 
+//////////// currently working on 23 APr ///////////
+// const handleSave = async () => {
+//   if (!user) return;
+
+//   try {
+//     const formData = new FormData();
+//     formData.append("userId", String(user.id));
+//     formData.append("name", editData.name);
+//     formData.append("mobile", editData.mobile);
+//     formData.append("address", editData.address);
+
+//     if (profileImage) {
+//       formData.append("profileImage", profileImage);
+//     }
+
+//     const response = await fetch(
+//       `${API_BASE}/api/auth/client/profile`,
+//       {
+//         method: "PUT",
+//         body: formData,
+//       }
+//     );
+
+//     const data = await response.json();
+
+//     if (!response.ok) {
+//       throw new Error(data.message || "Failed to update profile");
+//     }
+
+//     // ✅ Get existing session user
+//     const existingUser = JSON.parse(
+//       sessionStorage.getItem("user") || "{}"
+//     );
+
+//     // ✅ Only update modified fields
+//     const updatedUser = {
+//       ...existingUser,
+//       name: editData.name,
+//       mobile: editData.mobile,
+//       address: editData.address,
+//       ...(data.user?.profileImage && {
+//         profileImage: data.user.profileImage,
+//       }),
+//     };
+
+//     // ✅ Save back to sessionStorage
+//     sessionStorage.setItem("user", JSON.stringify(updatedUser));
+
+//     // ✅ Update local state
+//     setUser(updatedUser);
+
+//     setProfileImage(null);
+//     setIsEditing(false);
+
+//   } catch (error) {
+//     console.error("Profile update failed:", error);
+//     alert("Failed to update profile");
+//   }
+// };
+
+
+
+
 
 const handleSave = async () => {
   if (!user) return;
+
+  // ✅ Phone validation
+  if (editData.mobile.length !== 10) {
+    alert("Phone number must be exactly 10 digits");
+    return;
+  }
 
   try {
     const formData = new FormData();
@@ -204,12 +273,10 @@ const handleSave = async () => {
       throw new Error(data.message || "Failed to update profile");
     }
 
-    // ✅ Get existing session user
     const existingUser = JSON.parse(
       sessionStorage.getItem("user") || "{}"
     );
 
-    // ✅ Only update modified fields
     const updatedUser = {
       ...existingUser,
       name: editData.name,
@@ -220,10 +287,7 @@ const handleSave = async () => {
       }),
     };
 
-    // ✅ Save back to sessionStorage
     sessionStorage.setItem("user", JSON.stringify(updatedUser));
-
-    // ✅ Update local state
     setUser(updatedUser);
 
     setProfileImage(null);

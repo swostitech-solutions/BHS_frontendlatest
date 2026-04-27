@@ -1296,9 +1296,22 @@ const fetchBookings = async (techUserId: number) => {
       <aside className="w-72 bg-slate-900/50 backdrop-blur-xl border-r border-slate-800 p-6 flex flex-col">
         {/* Profile Summary */}
         <div className="flex items-center gap-4 mb-4 p-4 bg-slate-800/30 rounded-2xl">
-          <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center text-white font-bold text-xl">
+          {/* <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center text-white font-bold text-xl">
             {profile?.name?.charAt(0) || "T"}
-          </div>
+          </div> */}
+          <div className="w-14 h-14 rounded-xl overflow-hidden bg-slate-700 flex items-center justify-center">
+  {profile?.technicianDetails?.profileImage ? (
+    <img
+      src={profile.technicianDetails.profileImage}
+      alt="Profile"
+      className="w-full h-full object-cover"
+    />
+  ) : (
+    <span className="text-white font-bold text-xl">
+      {profile?.name?.charAt(0) || "T"}
+    </span>
+  )}
+</div>
           <div className="flex-1 min-w-0">
             <p className="text-white font-bold truncate">{profile?.name}</p>
             <div className="flex items-center gap-1 text-amber-400">
@@ -3133,6 +3146,9 @@ const ProfileTab = ({ onProfileUpdate }: {
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+
   const [editData, setEditData] = useState({
     name: "",
     email: "",
@@ -3285,11 +3301,100 @@ const getServiceLabel = (code?: string) => {
 
   const tech = profile.technicianDetails;
 
+  // const handleSaveProfile = async () => {
+  //   setSaving(true);
+
+
+  //     // ✅ EMAIL VALIDATION
+  // const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  // if (!editData.email || !emailRegex.test(editData.email)) {
+  //   alert("Please enter a valid email address");
+  //   setSaving(false);
+  //   return;
+  // }
+
+  //     if (!/^\d{10}$/.test(editData.mobile)) {
+  //   alert("Mobile number must be exactly 10 digits");
+  //   setSaving(false);
+  //   return;
+  // }
+
+
+  //   try {
+  //     const formData = new FormData();
+  //     formData.append("userId", String(profile.id));
+  //     formData.append("name", editData.name);
+  //     formData.append("email", editData.email);
+  //     formData.append("mobile", editData.mobile);
+  //     formData.append("address", editData.address);
+  //     formData.append("skill", editData.skill);
+  //     formData.append("experience", String(editData.experience));
+  //     formData.append("bankName", editData.bankName);
+  //     formData.append("ifscNo", editData.ifscNo);
+  //     formData.append("branchName", editData.branchName);
+  //     formData.append("timeDuration", editData.timeDuration);
+  //     formData.append(
+  //       "emergencyAvailable",
+  //       String(editData.emergencyAvailable)
+  //     );
+  //     formData.append("techCategory", editData.techCategory);
+
+  //     const token = sessionStorage.getItem("accessToken");
+
+  //     const res = await fetch(
+  //       `${API_BASE}/api/auth/technician/profile`,
+  //       {
+  //         method: "PUT",
+  //         headers: {
+  //           Authorization: `Bearer ${token}`,
+  //         },
+  //         body: formData,
+  //       }
+  //     );
+
+  //     if (res.ok) {
+  //       const updatedProfile: TechnicianProfile = {
+  //         ...profile,
+  //         ...editData,
+  //         technicianDetails: {
+  //           ...profile.technicianDetails!,
+  //           skill: editData.skill,
+  //           experience: editData.experience,
+  //           bankName: editData.bankName,
+  //           ifscNo: editData.ifscNo,
+  //           branchName: editData.branchName,
+  //           timeDuration: editData.timeDuration,
+  //           emergencyAvailable: editData.emergencyAvailable,
+  //           techCategory: editData.techCategory,
+  //         },
+  //       };
+
+  //       setProfile(updatedProfile);
+  //       sessionStorage.setItem("user", JSON.stringify(updatedProfile));
+
+  //       onProfileUpdate?.(updatedProfile);
+
+  //       setIsEditing(false);
+  //       alert("Profile updated successfully!");
+  //     } else {
+  //       const err = await res.json();
+  //       alert(err.message || "Update failed");
+  //     }
+  //   } catch (err) {
+  //     console.error(err);
+  //     alert("Error updating profile");
+  //   } finally {
+  //     setSaving(false);
+  //   }
+  // };
+
+
+
   const handleSaveProfile = async () => {
-    setSaving(true);
+  setSaving(true);
 
-
-      // ✅ EMAIL VALIDATION
+  // ✅ EMAIL VALIDATION
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   if (!editData.email || !emailRegex.test(editData.email)) {
@@ -3298,78 +3403,99 @@ const getServiceLabel = (code?: string) => {
     return;
   }
 
-      if (!/^\d{10}$/.test(editData.mobile)) {
+  // ✅ MOBILE VALIDATION
+  if (!/^\d{10}$/.test(editData.mobile)) {
     alert("Mobile number must be exactly 10 digits");
     setSaving(false);
     return;
   }
-    try {
-      const formData = new FormData();
-      formData.append("userId", String(profile.id));
-      formData.append("name", editData.name);
-      formData.append("email", editData.email);
-      formData.append("mobile", editData.mobile);
-      formData.append("address", editData.address);
-      formData.append("skill", editData.skill);
-      formData.append("experience", String(editData.experience));
-      formData.append("bankName", editData.bankName);
-      formData.append("ifscNo", editData.ifscNo);
-      formData.append("branchName", editData.branchName);
-      formData.append("timeDuration", editData.timeDuration);
-      formData.append(
-        "emergencyAvailable",
-        String(editData.emergencyAvailable)
-      );
-      formData.append("techCategory", editData.techCategory);
 
-      const token = sessionStorage.getItem("accessToken");
+  try {
+    const formData = new FormData();
 
-      const res = await fetch(
-        `${API_BASE}/api/auth/technician/profile`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: formData,
-        }
-      );
+    formData.append("userId", String(profile.id));
+    formData.append("name", editData.name);
+    formData.append("email", editData.email);
+    formData.append("mobile", editData.mobile);
+    formData.append("address", editData.address);
+    formData.append("skill", editData.skill);
+    formData.append("experience", String(editData.experience));
+    formData.append("bankName", editData.bankName);
+    formData.append("ifscNo", editData.ifscNo);
+    formData.append("branchName", editData.branchName);
+    formData.append("timeDuration", editData.timeDuration);
+    formData.append(
+      "emergencyAvailable",
+      String(editData.emergencyAvailable)
+    );
+    formData.append("techCategory", editData.techCategory);
 
-      if (res.ok) {
-        const updatedProfile: TechnicianProfile = {
-          ...profile,
-          ...editData,
-          technicianDetails: {
-            ...profile.technicianDetails!,
-            skill: editData.skill,
-            experience: editData.experience,
-            bankName: editData.bankName,
-            ifscNo: editData.ifscNo,
-            branchName: editData.branchName,
-            timeDuration: editData.timeDuration,
-            emergencyAvailable: editData.emergencyAvailable,
-            techCategory: editData.techCategory,
-          },
-        };
-
-        setProfile(updatedProfile);
-        sessionStorage.setItem("user", JSON.stringify(updatedProfile));
-
-        onProfileUpdate?.(updatedProfile);
-
-        setIsEditing(false);
-        alert("Profile updated successfully!");
-      } else {
-        const err = await res.json();
-        alert(err.message || "Update failed");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Error updating profile");
-    } finally {
-      setSaving(false);
+    // ✅ ADD THIS (IMAGE UPLOAD FIX)
+    if (profileImageFile) {
+      formData.append("profileImage", profileImageFile);
     }
-  };
+
+    const token = sessionStorage.getItem("accessToken");
+
+    const res = await fetch(
+      `${API_BASE}/api/auth/technician/profile`,
+      {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          // ❌ DO NOT set Content-Type manually for FormData
+        },
+        body: formData,
+      }
+    );
+
+    const data = await res.json();
+
+    if (res.ok) {
+      // ✅ Use backend image if returned, else fallback to preview
+      const updatedImage =
+        data?.user?.technicianDetails?.profileImage ||
+        previewImage ||
+        profile?.technicianDetails?.profileImage;
+
+      const updatedProfile: TechnicianProfile = {
+        ...profile,
+        ...editData,
+        technicianDetails: {
+          ...profile.technicianDetails!,
+          skill: editData.skill,
+          experience: editData.experience,
+          bankName: editData.bankName,
+          ifscNo: editData.ifscNo,
+          branchName: editData.branchName,
+          timeDuration: editData.timeDuration,
+          emergencyAvailable: editData.emergencyAvailable,
+          techCategory: editData.techCategory,
+          profileImage: updatedImage, // ✅ FIXED
+        },
+      };
+
+      setProfile(updatedProfile);
+      sessionStorage.setItem("user", JSON.stringify(updatedProfile));
+
+      onProfileUpdate?.(updatedProfile);
+
+      // ✅ reset image state after save
+      setProfileImageFile(null);
+      setPreviewImage(null);
+
+      setIsEditing(false);
+      alert("Profile updated successfully!");
+    } else {
+      alert(data.message || "Update failed");
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Error updating profile");
+  } finally {
+    setSaving(false);
+  }
+};
 
   const handleInputChange = (
     field: string,
@@ -3532,9 +3658,60 @@ const handleChangePassword = async () => {
       {/* Profile Header */}
       <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl p-8">
         <div className="flex items-start gap-6">
-          <div className="w-24 h-24 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl flex items-center justify-center text-white font-black text-4xl">
+          {/* <div className="w-24 h-24 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl flex items-center justify-center text-white font-black text-4xl">
             {(isEditing ? editData.name : profile.name).charAt(0)}
-          </div>
+          </div> */}
+
+          {/* <div className="w-24 h-24 rounded-2xl overflow-hidden border-2 border-emerald-500 shadow-lg bg-slate-800 flex items-center justify-center">
+  {profile?.technicianDetails?.profileImage ? (
+    <img
+      src={profile.technicianDetails.profileImage}
+      alt="Profile"
+      className="w-full h-full object-cover"
+    />
+  ) : (
+    <span className="text-white font-black text-4xl">
+      {(isEditing ? editData.name : profile.name).charAt(0)}
+    </span>
+  )}
+</div> */}
+
+
+
+<div className="relative w-24 h-24 rounded-2xl overflow-hidden border-2 border-emerald-500 shadow-lg bg-slate-800 flex items-center justify-center">
+
+  {previewImage ? (
+    <img src={previewImage} className="w-full h-full object-cover" />
+  ) : profile?.technicianDetails?.profileImage ? (
+    <img
+      src={profile.technicianDetails.profileImage}
+      className="w-full h-full object-cover"
+    />
+  ) : (
+    <span className="text-white font-black text-4xl">
+      {(isEditing ? editData.name : profile.name).charAt(0)}
+    </span>
+  )}
+
+  {/* Upload button */}
+  {isEditing && (
+    <label className="absolute inset-0 bg-black/40 flex items-center justify-center cursor-pointer opacity-0 hover:opacity-100 transition">
+      <span className="text-white text-xs">Upload</span>
+      <input
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) {
+            setProfileImageFile(file);
+            setPreviewImage(URL.createObjectURL(file));
+          }
+        }}
+      />
+    </label>
+  )}
+</div>
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
               {isEditing ? (

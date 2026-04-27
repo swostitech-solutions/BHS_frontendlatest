@@ -3225,57 +3225,6 @@ const getValidImageUrl = (url?: string) => {
 };
 
 
-
-
-
-
-
-  // const filteredBookings = bookings.filter((b) => {
-  //   const matchesSearch =
-  //     b.order_id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-  //     b.User?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-  //     b.subservice?.name?.toLowerCase().includes(searchQuery.toLowerCase());
-
-  //   if (filter === "ALL") return matchesSearch;
-  //   // "NEW" filter now shows all unassigned bookings (technician_allocated: false)
-  //   if (filter === "NEW") return matchesSearch && !b.technician_allocated;
-  //   if (filter === "PENDING")
-  //     return matchesSearch && b.technician_allocated && b.work_status === 1;
-  //   if (filter === "IN_PROGRESS") return matchesSearch && b.work_status === 2;
-  //   if (filter === "COMPLETED") return matchesSearch && b.work_status === 3;
-  //   return matchesSearch;
-  // });
-
-
-
-  // const filteredBookings = bookings
-  // .filter((b) => {
-  //   // const searchText = searchQuery.toLowerCase();
-  //   const searchText = localSearch.toLowerCase();
-
-  //   const matchesSearch =
-  //     b.order_id?.toLowerCase().includes(searchText) ||
-  //     b.User?.name?.toLowerCase().includes(searchText) ||
-  //     b.subservice?.name?.toLowerCase().includes(searchText) ||
-  //     b.service?.name?.toLowerCase().includes(searchText); // ✅ added service search
-
-  //   if (filter === "ALL") return matchesSearch;
-  //   if (filter === "NEW") return matchesSearch && !b.technician_allocated;
-  //   if (filter === "PENDING")
-  //     return matchesSearch && b.technician_allocated && b.work_status === 1;
-  //   if (filter === "IN_PROGRESS")
-  //     return matchesSearch && b.work_status === 2;
-  //   if (filter === "COMPLETED")
-  //     return matchesSearch && b.work_status === 3;
-
-  //   return matchesSearch;
-  // })
-  // .slice(0, 15); // ✅ LIMIT TO 15 BOOKINGS
-
-
-  // const filteredBookings = bookings || [];
-
-
   const filteredBookings = (bookings || []).filter((b) => {
   const status = String(b?.payment_status || "")
     .trim()
@@ -3503,7 +3452,6 @@ const getValidImageUrl = (url?: string) => {
                     </td>
                     <td className="p-4">
                       <span className="text-emerald-400 font-bold">
-                        {/* ₹{booking.total_price} */}
                         ₹{calculateFinalAmount(booking)}
                       </span>
                     </td>
@@ -3545,10 +3493,6 @@ const getValidImageUrl = (url?: string) => {
                             Assign
                           </button>
                         )}
-                        {/* <button className="p-2 hover:bg-slate-800 rounded-lg">
-                          <Eye size={16} className="text-slate-400" />
-                        </button> */}
-
                         <button
   onClick={() => {
     setViewBooking(booking);
@@ -3597,29 +3541,39 @@ const getValidImageUrl = (url?: string) => {
 
             <div className="space-y-3 max-h-80 overflow-y-auto">
               {(() => {
-                // Filter technicians by the booking's service category
-                // Use smart category matching function (supports both codes and names)
-                const serviceName = selectedBooking.service?.name || "";
-                const serviceCode =
-                  selectedBooking.service_code ||
-                  selectedBooking.service?.service_code ||
-                  "";
 
-                const matchingTechnicians = technicians.filter((tech) => {
-                  const techCategory = tech.technician?.techCategory || "";
-                  // Use smart matching that handles codes (A10002) and names (Electrical/Electrician)
-                  return categoryMatchesService(
-                    techCategory,
-                    serviceName,
-                    serviceCode,
-                  );
-                });
+// const matchingTechnicians = technicians.filter((tech) => {
+//   const techCategory = tech?.technician?.techCategory || "";
 
-                // If no matching technicians, show ALL available technicians
-                const displayTechnicians =
-                  matchingTechnicians.length > 0
-                    ? matchingTechnicians
-                    : technicians;
+//   const matchesCategory = categoryMatchesService(
+//     techCategory,
+//     selectedBooking.service?.name || "",
+//     selectedBooking.service_code || ""
+//   );
+
+//   const isApproved = tech?.technician?.status === "ACCEPT";
+
+//   return matchesCategory && isApproved;
+// });
+
+
+const matchingTechnicians = technicians.filter((tech) => {
+  const techCategory = tech?.technician?.techCategory || "";
+
+  const matchesCategory = categoryMatchesService(
+    techCategory,
+    selectedBooking.service?.name || "",
+    selectedBooking.service_code || ""
+  );
+
+  const isApproved = tech?.technician?.status === "ACCEPT";
+
+  const hasWalletBalance = Number(tech?.wallet || 0) > 0;
+
+  return matchesCategory && isApproved && hasWalletBalance;
+});
+
+                const displayTechnicians = matchingTechnicians;
 
                 if (displayTechnicians.length === 0) {
                   return (
@@ -3635,12 +3589,14 @@ const getValidImageUrl = (url?: string) => {
                 }
 
                 return displayTechnicians.map((tech) => {
-                  const techCategory = tech.technician?.techCategory || "";
-                  const isMatch = categoryMatchesService(
-                    techCategory,
-                    serviceName,
-                    serviceCode,
-                  );
+  //                 const isMatch =
+  // tech?.technician?.techCategory === serviceCode;
+
+  const isMatch = categoryMatchesService(
+  tech?.technician?.techCategory || "",
+  selectedBooking.service?.name || "",
+  selectedBooking.service_code || ""
+);
 
                   return (
                     <button
@@ -3929,9 +3885,6 @@ const SettingsTab = () => {
     confirm: false,
   });
 
-  const currentRef = useRef<HTMLInputElement>(null);
-  const newRef = useRef<HTMLInputElement>(null);
-  const confirmRef = useRef<HTMLInputElement>(null);
 
   // ================= EMERGENCY STATE =================
   const [emergencyRules, setEmergencyRules] = useState<any[]>([]);
@@ -4253,13 +4206,6 @@ const validateProfile = () => {
     fetchEmergencyRules();
   };
 
-  // const handleEditEmergency = (rule: any) => {
-  //   setEditingRule(rule);
-  //   setEmergencyForm(rule);
-  //   setShowEmergencyModal(true);
-  // };
-
-
 
   const handleEditEmergency = (rule: any) => {
   setEditingRule(rule);
@@ -4324,34 +4270,6 @@ const validateProfile = () => {
           <div className="grid md:grid-cols-2 gap-6">
 
             {/* PROFILE IMAGE */}
-            {/* <div className="flex flex-col items-center">
-
-              <img
-                src={
-                  profileForm.profileImage
-                    ? URL.createObjectURL(profileForm.profileImage)
-                    : profile.profileImage
-                }
-                className="w-28 h-28 rounded-full object-cover mb-3 border"
-              />
-
-              {editingProfile && (
-                <input
-                  type="file"
-                  onChange={(e) =>
-                    setProfileForm(prev => ({
-                      ...prev,
-                      profileImage: e.target.files?.[0] || null,
-                    }))
-                  }
-                  className="text-white"
-                />
-              )}
-
-            </div> */}
-
-
-
             <div className="flex flex-col items-center">
 
   <img
@@ -4397,18 +4315,6 @@ const validateProfile = () => {
                 placeholder="Name"
               />
 
-              {/* <input
-                disabled={!editingProfile}
-                value={profileForm.email}
-                onChange={(e) =>
-                  setProfileForm(prev => ({
-                    ...prev,
-                    email: e.target.value,
-                  }))
-                }
-                className="w-full p-3 bg-slate-800 text-white rounded"
-                placeholder="Email"
-              /> */}
 
               <input
   disabled={!editingProfile}
@@ -4431,19 +4337,6 @@ const validateProfile = () => {
   className="w-full p-3 bg-slate-800 text-white rounded"
   placeholder="Email"
 />
-
-              {/* <input
-                disabled={!editingProfile}
-                value={profileForm.mobile}
-                onChange={(e) =>
-                  setProfileForm(prev => ({
-                    ...prev,
-                    mobile: e.target.value,
-                  }))
-                }
-                className="w-full p-3 bg-slate-800 text-white rounded"
-                placeholder="Mobile"
-              /> */}
 
 
               <input
