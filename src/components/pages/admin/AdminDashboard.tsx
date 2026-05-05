@@ -443,11 +443,11 @@ const fetchAllData = async () => {
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id as TabType)}
-              className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl font-semibold transition-all duration-300 group
+              className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl font-semibold transition-all duration-200 group border
                 ${
                   activeTab === item.id
-                    ? "bg-gradient-to-r from-violet-500/20 to-fuchsia-500/20 text-white border border-violet-500/30"
-                    : "text-slate-400 hover:text-white hover:bg-slate-800/50"
+                    ? "bg-gradient-to-r from-violet-500/20 to-fuchsia-500/20 text-white border-violet-500/30 shadow-sm"
+                    : "text-slate-400 hover:text-white hover:bg-slate-800/50 border-transparent"
                 }`}
             >
               <item.icon

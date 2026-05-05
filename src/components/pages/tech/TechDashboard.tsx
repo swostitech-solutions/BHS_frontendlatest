@@ -1291,7 +1291,7 @@ const fetchBookings = async (techUserId: number) => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 flex">
+    <div className="h-screen bg-slate-950 flex overflow-hidden">
       {/* Sidebar */}
       <aside className="w-72 bg-slate-900/50 backdrop-blur-xl border-r border-slate-800 p-6 flex flex-col">
         {/* Profile Summary */}
@@ -1300,18 +1300,18 @@ const fetchBookings = async (techUserId: number) => {
             {profile?.name?.charAt(0) || "T"}
           </div> */}
           <div className="w-14 h-14 rounded-xl overflow-hidden bg-slate-700 flex items-center justify-center">
-  {profile?.technicianDetails?.profileImage ? (
-    <img
-      src={profile.technicianDetails.profileImage}
-      alt="Profile"
-      className="w-full h-full object-cover"
-    />
-  ) : (
-    <span className="text-white font-bold text-xl">
-      {profile?.name?.charAt(0) || "T"}
-    </span>
-  )}
-</div>
+            {profile?.technicianDetails?.profileImage ? (
+              <img
+                src={profile.technicianDetails.profileImage}
+                alt="Profile"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span className="text-white font-bold text-xl">
+                {profile?.name?.charAt(0) || "T"}
+              </span>
+            )}
+          </div>
           <div className="flex-1 min-w-0">
             <p className="text-white font-bold truncate">{profile?.name}</p>
             <div className="flex items-center gap-1 text-amber-400">
@@ -1330,36 +1330,36 @@ const fetchBookings = async (techUserId: number) => {
         {/* Service Specialization Badge */}
 
         {/* Service Specialization Badge */}
-{profile?.technicianDetails?.techCategory && (
-  <div className="mb-6 p-3 bg-gradient-to-r from-violet-500/10 to-purple-500/10 border border-violet-500/20 rounded-xl">
-    <p className="text-violet-400 text-xs font-bold uppercase tracking-wider mb-1">
-      Specialization
-    </p>
+        {profile?.technicianDetails?.techCategory && (
+          <div className="mb-6 p-3 bg-gradient-to-r from-violet-500/10 to-purple-500/10 border border-violet-500/20 rounded-xl">
+            <p className="text-violet-400 text-xs font-bold uppercase tracking-wider mb-1">
+              Specialization
+            </p>
 
-    <p className="text-white font-semibold text-sm">
-      {profile.technicianDetails.skill}
-      {profile?.technicianDetails?.techCategory && (
-        <> ({profile.technicianDetails.techCategory})</>
-      )}
-    </p>
+            <p className="text-white font-semibold text-sm">
+              {profile.technicianDetails.skill}
+              {profile?.technicianDetails?.techCategory && (
+                <> ({profile.technicianDetails.techCategory})</>
+              )}
+            </p>
 
-    <p className="text-slate-500 text-xs mt-1">
-      You receive jobs matching this category
-    </p>
-  </div>
-)}
+            <p className="text-slate-500 text-xs mt-1">
+              You receive jobs matching this category
+            </p>
+          </div>
+        )}
 
         {/* Navigation */}
-        <nav className="flex-1 space-y-2">
+        <nav className="flex-1 space-y-2 overflow-y-auto pr-2">
           {navItems.map((item) => (
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id as TabType)}
-              className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl font-semibold transition-all duration-300 group
+              className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl font-semibold transition-all duration-200 group border
                 ${
                   activeTab === item.id
-                    ? "bg-gradient-to-r from-emerald-500/20 to-teal-500/20 text-white border border-emerald-500/30"
-                    : "text-slate-400 hover:text-white hover:bg-slate-800/50"
+                    ? "bg-gradient-to-r from-emerald-500/20 to-teal-500/20 text-white border-emerald-500/30 shadow-sm"
+                    : "text-slate-400 hover:text-white hover:bg-slate-800/50 border-transparent"
                 }`}
             >
               <item.icon
@@ -1625,29 +1625,27 @@ const fetchBookings = async (techUserId: number) => {
           <EarningsTab bookings={bookings} stats={stats} />
         )}
 
-
         {activeTab === "wallet" && (
-  <div className="space-y-6 animate-fadeIn">
+          <div className="space-y-6 animate-fadeIn">
+            {/* Balance Card */}
+            <div className="bg-slate-800/40 border border-slate-700 rounded-3xl p-8">
+              <h2 className="text-2xl font-bold text-white mb-4">
+                Wallet Balance
+              </h2>
 
-    {/* Balance Card */}
-    <div className="bg-slate-800/40 border border-slate-700 rounded-3xl p-8">
-      <h2 className="text-2xl font-bold text-white mb-4">
-        Wallet Balance
-      </h2>
+              <p className="text-5xl font-black bg-gradient-to-r from-violet-400 to-purple-500 bg-clip-text text-transparent">
+                ₹{walletBalance.toLocaleString()}
+              </p>
+            </div>
 
-      <p className="text-5xl font-black bg-gradient-to-r from-violet-400 to-purple-500 bg-clip-text text-transparent">
-        ₹{walletBalance.toLocaleString()}
-      </p>
-    </div>
+            {/* Recharge Card */}
+            <div className="bg-slate-800/40 border border-slate-700 rounded-3xl p-8">
+              <h3 className="text-xl font-bold text-white mb-4">
+                Recharge Wallet
+              </h3>
 
-    {/* Recharge Card */}
-    <div className="bg-slate-800/40 border border-slate-700 rounded-3xl p-8">
-      <h3 className="text-xl font-bold text-white mb-4">
-        Recharge Wallet
-      </h3>
-
-      <div className="flex gap-4">
-        {/* <input
+              <div className="flex gap-4">
+                {/* <input
           type="number"
           placeholder="Enter amount"
           value={rechargeAmount}
@@ -1655,113 +1653,107 @@ const fetchBookings = async (techUserId: number) => {
           className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
         /> */}
 
-      <input
-        type="number"
-        placeholder="Enter amount"
-        value={rechargeAmount}
-        onChange={(e) => {
-          // Remove leading zeros automatically
-          const value = e.target.value.replace(/^0+(?=\d)/, "");
-          setRechargeAmount(value);
-        }}
-        className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
-      />
+                <input
+                  type="number"
+                  placeholder="Enter amount"
+                  value={rechargeAmount}
+                  onChange={(e) => {
+                    // Remove leading zeros automatically
+                    const value = e.target.value.replace(/^0+(?=\d)/, "");
+                    setRechargeAmount(value);
+                  }}
+                  className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+                />
 
+                <button
+                  onClick={handleWalletRecharge}
+                  disabled={walletLoading}
+                  className="px-6 py-3 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white font-bold transition-all shadow-lg shadow-violet-500/30"
+                >
+                  {walletLoading ? "Processing..." : "Recharge"}
+                </button>
+              </div>
+            </div>
 
-        <button
-          onClick={handleWalletRecharge}
-          disabled={walletLoading}
-          className="px-6 py-3 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white font-bold transition-all shadow-lg shadow-violet-500/30"
-        >
-          {walletLoading ? "Processing..." : "Recharge"}
-        </button>
-      </div>
-    </div>
+            {/* Withdrawal  */}
+            <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 mt-6">
+              <h3 className="text-white text-xl font-bold mb-4">
+                Withdraw Amount
+              </h3>
 
-    {/* Withdrawal  */}
-    <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 mt-6">
-  <h3 className="text-white text-xl font-bold mb-4">
-    Withdraw Amount
-  </h3>
+              <div className="flex gap-3">
+                <input
+                  type="number"
+                  placeholder="Enter amount"
+                  value={withdrawAmount}
+                  onChange={(e) => setWithdrawAmount(e.target.value)}
+                  className="flex-1 bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 text-white"
+                />
 
-  <div className="flex gap-3">
-    <input
-      type="number"
-      placeholder="Enter amount"
-      value={withdrawAmount}
-      onChange={(e) => setWithdrawAmount(e.target.value)}
-      className="flex-1 bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 text-white"
-    />
+                <button
+                  onClick={handleWithdraw}
+                  disabled={withdrawLoading}
+                  className="px-6 py-3 bg-red-500 hover:bg-red-600 rounded-xl text-white font-bold"
+                >
+                  {withdrawLoading ? "Processing..." : "Withdraw"}
+                </button>
+              </div>
+            </div>
 
-    <button
-      onClick={handleWithdraw}
-      disabled={withdrawLoading}
-      className="px-6 py-3 bg-red-500 hover:bg-red-600 rounded-xl text-white font-bold"
-    >
-      {withdrawLoading ? "Processing..." : "Withdraw"}
-    </button>
-  </div>
-</div>
+            {/* Transactions */}
+            <div className="bg-slate-800/40 border border-slate-700 rounded-3xl p-8">
+              <h3 className="text-xl font-bold text-white mb-6">
+                Recent Transactions
+              </h3>
 
-    {/* Transactions */}
-<div className="bg-slate-800/40 border border-slate-700 rounded-3xl p-8">
-  <h3 className="text-xl font-bold text-white mb-6">
-    Recent Transactions
-  </h3>
+              {walletTransactions.length === 0 ? (
+                <p className="text-slate-400">No transactions yet.</p>
+              ) : (
+                <div className="max-h-[500px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800">
+                  {walletTransactions.map((txn: any) => (
+                    <div
+                      key={txn.id}
+                      className="flex justify-between items-center py-4 border-b border-slate-700"
+                    >
+                      {/* Left Section */}
+                      <div>
+                        <p className="text-white font-semibold">{txn.source}</p>
 
-  {walletTransactions.length === 0 ? (
-    <p className="text-slate-400">No transactions yet.</p>
-  ) : (
-    <div className="max-h-[500px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800">
-      {walletTransactions.map((txn: any) => (
-        <div
-          key={txn.id}
-          className="flex justify-between items-center py-4 border-b border-slate-700"
-        >
-          {/* Left Section */}
-          <div>
-            <p className="text-white font-semibold">
-              {txn.source}
-            </p>
+                        <p className="text-slate-400 text-sm">
+                          {new Date(txn.createdAt).toLocaleString()}
+                        </p>
 
-            <p className="text-slate-400 text-sm">
-              {new Date(txn.createdAt).toLocaleString()}
-            </p>
+                        <p
+                          className={`text-xs font-bold mt-1 ${
+                            txn.status === "SUCCESS"
+                              ? "text-emerald-400"
+                              : txn.status === "PENDING"
+                                ? "text-yellow-400"
+                                : "text-red-400"
+                          }`}
+                        >
+                          {txn.status}
+                        </p>
+                      </div>
 
-            <p
-              className={`text-xs font-bold mt-1 ${
-                txn.status === "SUCCESS"
-                  ? "text-emerald-400"
-                  : txn.status === "PENDING"
-                  ? "text-yellow-400"
-                  : "text-red-400"
-              }`}
-            >
-              {txn.status}
-            </p>
+                      {/* Right Section */}
+                      <div
+                        className={`text-lg font-bold ${
+                          txn.type === "CREDIT"
+                            ? "text-emerald-400"
+                            : "text-red-400"
+                        }`}
+                      >
+                        {txn.type === "CREDIT" ? "+" : "-"}₹
+                        {Number(txn.amount).toLocaleString()}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-
-          {/* Right Section */}
-          <div
-            className={`text-lg font-bold ${
-              txn.type === "CREDIT"
-                ? "text-emerald-400"
-                : "text-red-400"
-            }`}
-          >
-            {txn.type === "CREDIT" ? "+" : "-"}₹
-            {Number(txn.amount).toLocaleString()}
-          </div>
-        </div>
-      ))}
-    </div>
-  )}
-</div>
-
-  </div>
-)}
-
-
+        )}
 
         {activeTab === "profile" && (
           <ProfileTab
@@ -1865,79 +1857,75 @@ const fetchBookings = async (techUserId: number) => {
       )}
 
       {/* NEW JOB ALERT POPUP - Auto-shows when new job arrives */}
-   {showNewJobPopup && newJobAlert && (
-  <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fadeIn">
-    <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 via-transparent to-emerald-500/20 animate-pulse" />
+      {showNewJobPopup && newJobAlert && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fadeIn">
+          <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 via-transparent to-emerald-500/20 animate-pulse" />
 
-    <div className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-3xl w-full max-w-md border-2 border-emerald-500/50 shadow-2xl shadow-emerald-500/20 overflow-hidden animate-scaleIn">
+          <div className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-3xl w-full max-w-md border-2 border-emerald-500/50 shadow-2xl shadow-emerald-500/20 overflow-hidden animate-scaleIn">
+            {/* Top Bar */}
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 via-cyan-500 to-emerald-500 animate-shimmer" />
 
-      {/* Top Bar */}
-      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 via-cyan-500 to-emerald-500 animate-shimmer" />
+            {/* Header */}
+            <div className="bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 p-6 text-center relative overflow-hidden">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(16,185,129,0.1),transparent_70%)]" />
 
-      {/* Header */}
-      <div className="bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 p-6 text-center relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(16,185,129,0.1),transparent_70%)]" />
-
-        <div className="relative inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-emerald-500 to-cyan-500 mb-4 animate-bounce shadow-lg shadow-emerald-500/50">
-          <Bell className="w-10 h-10 text-white animate-wiggle" />
-        </div>
-
-        <h2 className="text-2xl font-bold text-white mb-1">
-          New Job Request!
-        </h2>
-        <p className="text-emerald-400 text-sm font-medium">
-          A customer needs your service
-        </p>
-      </div>
-
-      {/* Details */}
-      <div className="p-6 space-y-4">
-
-        {/* ✅ Service Section with Quantity */}
-        <div className="bg-slate-800/50 rounded-2xl p-4 border border-slate-700">
-          <div className="flex items-start justify-between gap-3">
-
-            {/* Left Side: Service Info */}
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
-                <Briefcase className="w-6 h-6 text-white" />
+              <div className="relative inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-emerald-500 to-cyan-500 mb-4 animate-bounce shadow-lg shadow-emerald-500/50">
+                <Bell className="w-10 h-10 text-white animate-wiggle" />
               </div>
 
-              <div>
-                <p className="text-slate-400 text-xs uppercase tracking-wider">
-                  Service
-                </p>
-                <p className="text-white font-bold text-lg">
-                  {newJobAlert.service?.name || "Service"}
-                </p>
-                <p className="text-slate-400 text-sm">
-                  {newJobAlert.subservice?.name ||
-                    newJobAlert.subservice_code}
-                </p>
+              <h2 className="text-2xl font-bold text-white mb-1">
+                New Job Request!
+              </h2>
+              <p className="text-emerald-400 text-sm font-medium">
+                A customer needs your service
+              </p>
+            </div>
+
+            {/* Details */}
+            <div className="p-6 space-y-4">
+              {/* ✅ Service Section with Quantity */}
+              <div className="bg-slate-800/50 rounded-2xl p-4 border border-slate-700">
+                <div className="flex items-start justify-between gap-3">
+                  {/* Left Side: Service Info */}
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+                      <Briefcase className="w-6 h-6 text-white" />
+                    </div>
+
+                    <div>
+                      <p className="text-slate-400 text-xs uppercase tracking-wider">
+                        Service
+                      </p>
+                      <p className="text-white font-bold text-lg">
+                        {newJobAlert.service?.name || "Service"}
+                      </p>
+                      <p className="text-slate-400 text-sm">
+                        {newJobAlert.subservice?.name ||
+                          newJobAlert.subservice_code}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* ✅ Quantity Badge */}
+                  <div className="bg-violet-500/20 border border-violet-500/40 text-violet-300 px-3 py-1 rounded-lg text-xs font-bold">
+                    Qty: {newJobAlert.quantity ?? 1}
+                  </div>
+                </div>
               </div>
-            </div>
 
-            {/* ✅ Quantity Badge */}
-            <div className="bg-violet-500/20 border border-violet-500/40 text-violet-300 px-3 py-1 rounded-lg text-xs font-bold">
-              Qty: {newJobAlert.quantity ?? 1}
-            </div>
+              {/* Customer + Earnings */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700">
+                  <div className="flex items-center gap-2 mb-1">
+                    <User size={14} className="text-cyan-400" />
+                    <p className="text-slate-400 text-xs">Customer</p>
+                  </div>
+                  <p className="text-white font-semibold text-sm truncate">
+                    {newJobAlert.User?.name || "Customer"}
+                  </p>
+                </div>
 
-          </div>
-        </div>
-
-        {/* Customer + Earnings */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700">
-            <div className="flex items-center gap-2 mb-1">
-              <User size={14} className="text-cyan-400" />
-              <p className="text-slate-400 text-xs">Customer</p>
-            </div>
-            <p className="text-white font-semibold text-sm truncate">
-              {newJobAlert.User?.name || "Customer"}
-            </p>
-          </div>
-
-          {/* <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700">
+                {/* <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700">
             <div className="flex items-center gap-2 mb-1">
               <DollarSign size={14} className="text-emerald-400" />
               <p className="text-slate-400 text-xs">Earnings</p>
@@ -1947,173 +1935,166 @@ const fetchBookings = async (techUserId: number) => {
             </p>
           </div> */}
 
+                <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700">
+                  <div className="flex items-center gap-2 mb-2">
+                    <DollarSign size={14} className="text-emerald-400" />
+                    <p className="text-slate-400 text-xs">Price Details</p>
+                  </div>
 
+                  <div className="space-y-1 text-sm">
+                    {/* Subservice Price */}
+                    <div className="flex justify-between text-slate-300">
+                      <span>Service Price</span>
+                      <span className="text-white font-semibold">
+                        ₹{Number(newJobAlert.subservice?.price || 0)}
+                      </span>
+                    </div>
 
-          <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700">
-  <div className="flex items-center gap-2 mb-2">
-    <DollarSign size={14} className="text-emerald-400" />
-    <p className="text-slate-400 text-xs">Price Details</p>
-  </div>
+                    {/* Emergency Price */}
+                    <div className="flex justify-between text-slate-300">
+                      <span>Emergency Charge</span>
+                      <span className="text-white font-semibold">
+                        ₹{Number(newJobAlert.emergency_price || 0)}
+                      </span>
+                    </div>
 
-  <div className="space-y-1 text-sm">
-
-    {/* Subservice Price */}
-    <div className="flex justify-between text-slate-300">
-      <span>Service Price</span>
-      <span className="text-white font-semibold">
-        ₹{Number(newJobAlert.subservice?.price || 0)}
-      </span>
-    </div>
-
-    {/* Emergency Price */}
-    <div className="flex justify-between text-slate-300">
-      <span>Emergency Charge</span>
-      <span className="text-white font-semibold">
-        ₹{Number(newJobAlert.emergency_price || 0)}
-      </span>
-    </div>
-
-    {/* GST TEXT ONLY */}
-    {/* <div className="flex justify-between text-amber-400 text-xs pt-1">
+                    {/* GST TEXT ONLY */}
+                    {/* <div className="flex justify-between text-amber-400 text-xs pt-1">
       <span>+ 18% GST</span>
       <span>(included)</span>
     </div> */}
-{/* GST SECTION */}
-<div className="flex justify-between text-amber-400 text-xs pt-1">
-  {Number(newJobAlert.gst) > 0 ? (
-    <>
-      <span>+ 18% GST</span>
-      <span>₹{Number(newJobAlert.gst)}</span>
-    </>
-  ) : (
-    <>
-      <span>+ 18% GST</span>
-      <span>(included)</span>
-    </>
-  )}
-</div>
+                    {/* GST SECTION */}
+                    <div className="flex justify-between text-amber-400 text-xs pt-1">
+                      {Number(newJobAlert.gst) > 0 ? (
+                        <>
+                          <span>+ 18% GST</span>
+                          <span>₹{Number(newJobAlert.gst)}</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>+ 18% GST</span>
+                          <span>(included)</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-  </div>
-</div>
-        </div>
+              {/* Schedule */}
+              <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Calendar size={14} className="text-amber-400" />
+                    <span className="text-white text-sm font-medium">
+                      {new Date(newJobAlert.date).toLocaleDateString("en-IN", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </span>
+                  </div>
 
-        {/* Schedule */}
-        <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Calendar size={14} className="text-amber-400" />
-              <span className="text-white text-sm font-medium">
-                {new Date(newJobAlert.date).toLocaleDateString("en-IN", {
-                  day: "numeric",
-                  month: "short",
-                  year: "numeric",
-                })}
-              </span>
+                  <div className="flex items-center gap-2">
+                    <Clock size={14} className="text-amber-400" />
+                    <span className="text-white text-sm font-medium">
+                      {newJobAlert.time_slot}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Location */}
+              <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700">
+                <div className="flex items-start gap-2">
+                  <MapPin size={14} className="text-red-400 mt-0.5 shrink-0" />
+                  <p className="text-slate-300 text-sm line-clamp-2">
+                    {newJobAlert.address}
+                  </p>
+                </div>
+              </div>
+
+              {/* Urgency */}
+              <div className="flex items-center justify-center gap-2 text-amber-400 bg-amber-500/10 rounded-xl py-2 border border-amber-500/30">
+                <Zap size={16} className="animate-pulse" />
+                <span className="text-sm font-medium">
+                  Accept quickly before another technician does!
+                </span>
+              </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <Clock size={14} className="text-amber-400" />
-              <span className="text-white text-sm font-medium">
-                {newJobAlert.time_slot}
-              </span>
+            {/* Actions */}
+            <div className="p-6 pt-0 space-y-3">
+              <div className="flex gap-3">
+                <button
+                  onClick={handleRejectFromPopup}
+                  className="flex-1 py-4 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 font-bold transition-all flex items-center justify-center gap-2 border border-red-500/30"
+                >
+                  <ThumbsDown size={20} />
+                  Reject
+                </button>
+
+                <button
+                  onClick={handleAcceptFromPopup}
+                  className="flex-1 py-4 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50"
+                >
+                  <Check size={20} />
+                  Accept Job
+                </button>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 pb-4 text-center">
+              <p className="text-slate-500 text-xs">
+                Order ID:{" "}
+                <span className="text-slate-400 font-mono">
+                  {newJobAlert.order_id}
+                </span>
+              </p>
             </div>
           </div>
         </div>
-
-        {/* Location */}
-        <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700">
-          <div className="flex items-start gap-2">
-            <MapPin size={14} className="text-red-400 mt-0.5 shrink-0" />
-            <p className="text-slate-300 text-sm line-clamp-2">
-              {newJobAlert.address}
-            </p>
-          </div>
-        </div>
-
-        {/* Urgency */}
-        <div className="flex items-center justify-center gap-2 text-amber-400 bg-amber-500/10 rounded-xl py-2 border border-amber-500/30">
-          <Zap size={16} className="animate-pulse" />
-          <span className="text-sm font-medium">
-            Accept quickly before another technician does!
-          </span>
-        </div>
-      </div>
-
-      {/* Actions */}
-      <div className="p-6 pt-0 space-y-3">
-        <div className="flex gap-3">
-          <button
-            onClick={handleRejectFromPopup}
-            className="flex-1 py-4 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 font-bold transition-all flex items-center justify-center gap-2 border border-red-500/30"
-          >
-            <ThumbsDown size={20} />
-            Reject
-          </button>
-
-          <button
-            onClick={handleAcceptFromPopup}
-            className="flex-1 py-4 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50"
-          >
-            <Check size={20} />
-            Accept Job
-          </button>
-        </div>
-      </div>
-
-      {/* Footer */}
-      <div className="px-6 pb-4 text-center">
-        <p className="text-slate-500 text-xs">
-          Order ID:{" "}
-          <span className="text-slate-400 font-mono">
-            {newJobAlert.order_id}
-          </span>
-        </p>
-      </div>
-    </div>
-  </div>
-)}
-
+      )}
 
       {showWithdrawModal && (
-  <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-    <div className="bg-slate-900 p-8 rounded-2xl border border-slate-700 w-96 text-center animate-scaleIn">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+          <div className="bg-slate-900 p-8 rounded-2xl border border-slate-700 w-96 text-center animate-scaleIn">
+            <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle2 className="text-white" size={32} />
+            </div>
 
-      <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
-        <CheckCircle2 className="text-white" size={32} />
-      </div>
+            <h2 className="text-2xl font-bold text-white mb-2">
+              Withdrawal Initiated
+            </h2>
 
-      <h2 className="text-2xl font-bold text-white mb-2">
-        Withdrawal Initiated
-      </h2>
+            <p className="text-slate-400 mb-4">
+              Your withdrawal request has been initiated.
+            </p>
 
-      <p className="text-slate-400 mb-4">
-        Your withdrawal request has been initiated.
-      </p>
+            <div className="bg-slate-800 p-4 rounded-xl mb-4">
+              <p className="text-slate-400 text-sm">Amount</p>
+              <p className="text-red-400 font-bold text-xl">
+                {/* ₹{withdrawAmount} */}₹{withdrawDisplayAmount}
+              </p>
+            </div>
 
-      <div className="bg-slate-800 p-4 rounded-xl mb-4">
-        <p className="text-slate-400 text-sm">Amount</p>
-        <p className="text-red-400 font-bold text-xl">
-          {/* ₹{withdrawAmount} */}
-          ₹{withdrawDisplayAmount}
-        </p>
-      </div>
+            <div className="bg-slate-800 p-4 rounded-xl mb-6">
+              <p className="text-slate-400 text-sm">Remaining Balance</p>
+              <p className="text-green-400 font-bold text-xl">
+                ₹{remainingBalance}
+              </p>
+            </div>
 
-      <div className="bg-slate-800 p-4 rounded-xl mb-6">
-        <p className="text-slate-400 text-sm">Remaining Balance</p>
-        <p className="text-green-400 font-bold text-xl">
-          ₹{remainingBalance}
-        </p>
-      </div>
-
-      <button
-        onClick={() => setShowWithdrawModal(false)}
-        className="w-full py-3 bg-emerald-500 rounded-xl text-white font-bold"
-      >
-        OK
-      </button>
-    </div>
-  </div>
-)}
+            <button
+              onClick={() => setShowWithdrawModal(false)}
+              className="w-full py-3 bg-emerald-500 rounded-xl text-white font-bold"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
